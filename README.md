@@ -71,4 +71,8 @@
 
 ## 📄 License
 
-MIT License. 欢迎 Fork 和 Star！🌟
+Microsoft Public License (Ms-PL). 
+本项目包含部分源自 AokanaMusicPlayer 的代码逻辑，遵循其原有的 Ms-PL 协议。
+
+
+
