@@ -10,7 +10,8 @@
 ## ✨ Key Features
 
 *   **♾️ True Gapless Loop**: Implements sample-accurate seamless looping based on low-level `IWaveProvider` stream processing. No more clicks or gaps when the track loops.
-*   **🎯 Precision Control**: Supports custom **Loop Start Sample**, accurate to the single frame, perfectly recreating the in-game looping experience.
+*   **🎯 Arbitrary Loop Range**: Supports custom **Loop Start** and **Loop End** points, accurate to the single frame, allowing for infinite looping of any specific section.
+*   **📊 Visual Control**: Provides an intuitive progress bar with drag-to-seek support, click-to-jump, and real-time precise time display.
 *   **📂 Multi-Format Support**: Supports common game audio formats including **WAV**, **OGG**, and **MP3**.
 *   **🚀 Lightweight & portable**: Built on .NET 8. No installation required (via self-contained build). Just download and play.
 
@@ -28,11 +29,15 @@
 
 1.  **Launch**: Run `seamless loop music.exe`.
 2.  **Import**: Click the **"Select File"** (选择音频文件) button to load your audio track.
-3.  **Set Loop Point**:
-    *   Enter a value in the **"Loop Start Sample"** (循环起始采样数) box.
-    *   *Tip: Use `0` to loop from the very beginning.*
-    *   *Note: Many game tracks contain loop metadata, or you can manually input the sample number (e.g., 1024000).*
-4.  **Play**: Click **"Play"** (播放) and enjoy the infinite loop!
+3.  **Set Loop Points**:
+    *   The software automatically detects and fills in the total sample count.
+    *   **Loop Start Sample**: The track will jump back to this point after reaching the end point (default: 0).
+    *   **Loop End Sample**: The track will loop when it reaches this point (default: total samples).
+    *   *Simply modify these two values to define any loop range.*
+4.  **Playback Control**:
+    *   Click **"Play"** (播放) to start looping.
+    *   Supports **"Pause"** (暂停) / **"Resume"**.
+    *   Drag the progress bar to quickly seek.
 5.  **Volume**: Adjust the slider to control the volume.
 
 ---
@@ -49,16 +54,23 @@
 
 We are continuously improving the experience. Planned features include:
 
-### 🔹 Experience Improvements
-- [ ] Optimize UI layout.
-- [ ] Add Pause/Resume functionality.
-- [ ] Display total samples and current progress.
+### 🔹 Completed
 
-### 🔹 Core Features
+- [x] **Basic Control**: Play, Pause, Stop, Volume.
+- [x] **Seamless Core**: `IWaveProvider`-based loop stream.
+- [x] **Interval Loop**: Custom Loop Start and Loop End support.
+- [x] **Visual Progress**: Progress bar, drag-to-seek, time display.
+- [x] **UI Optimization**: Improved layout and spacing.
+- [x] **Info Display**: Real-time sample rate and total sample count.
+- [x] **Auto-Fill**: Automatically sets default loop range on load.
+
+### 🔹 Planned
+
 - [ ] **Loop Memory**: Auto-save and load the last used loop points for tracks.
-- [ ] **Loop End Point**: Support setting a specific "Loop End" sample.
-- [ ] **Visual Progress Bar**: Drag to seek.
 - [ ] **Fine-tuning**: +/- 1 frame buttons for precise loop point adjustment.
+- [ ] **Playlist Support**: Manage multiple tracks.
+- [ ] **Waveform Visualization**: Visual aid for finding loop points.
+- [ ] **Metadata Reading**: Auto-detect loop tags in wav/ogg headers.
 
 ### 🔹 Advanced
 - [ ] **Playlist Support**: Manage multiple tracks.

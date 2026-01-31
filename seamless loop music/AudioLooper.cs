@@ -14,12 +14,13 @@ namespace seamless_loop_music
         private WaveStream _audioStream;
         private LoopStream _loopStream;
         private long _loopStartSample;
+        private long _loopEndSample = 0; // 新增: 循环结束采样数
         private long _totalSamples;
         private bool _isPlaying;
 
         // 状态回调事件
         public event Action<string> OnStatusChanged;
-        public event Action<bool> OnPlayStateChanged;
+        public event Action<PlaybackState> OnPlayStateChanged; // 升级: 传递详细状态
         // 新增: 音频加载完成事件 (总采样数, 采样率)
         public event Action<long, int> OnAudioLoaded;
 
@@ -86,20 +87,56 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 开始无缝循环播放
+        /// 设置循环结束采样数
+        /// </summary>
+        public void SetLoopEndSample(long sample)
+        {
+            if (sample < 0)
+            {
+                sample = 0; // 0 表示末尾
+            }
+            // 如果非0且小于起点，提示错误（简单校验，具体逻辑让UI层或LoopStream处理）
+            if (sample > 0 && sample <= _loopStartSample)
+            {
+                OnStatusChanged?.Invoke($"错误: 循环终点必须大于起点({_loopStartSample})");
+                return;
+            }
+            
+            _loopEndSample = sample;
+            string endText = sample == 0 ? "文件末尾" : sample.ToString();
+            OnStatusChanged?.Invoke($"循环终点: {endText}");
+        }
+
+        /// <summary>
+        /// 开始播放 (支持从暂停处继续)
         /// </summary>
         public void Play()
         {
-            if (_isPlaying || _audioStream == null)
+            if (_audioStream == null)
             {
                 OnStatusChanged?.Invoke("播放失败:未加载音频!");
                 return;
             }
 
+            // 如果是暂停状态，直接恢复播放
+            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Paused)
+            {
+                _wavePlayer.Play();
+                OnPlayStateChanged?.Invoke(PlaybackState.Playing);
+                OnStatusChanged?.Invoke("继续播放...");
+                return;
+            }
+
+            // 如果已经在播放，不做处理
+            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
+            {
+                return;
+            }
+
             try
             {
-                // 创建循环流
-                _loopStream = new LoopStream(_audioStream, _loopStartSample);
+                // 全新开始：创建循环流
+                _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
 
                 // 创建播放器
                 _wavePlayer = new WaveOutEvent
@@ -111,17 +148,16 @@ namespace seamless_loop_music
                 _wavePlayer.Init(_loopStream);
                 _wavePlayer.PlaybackStopped += (s, e) =>
                 {
-                    if (_isPlaying)
+                    // 只有非手动暂停导致的停止才触发完全停止逻辑
+                    if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
                     {
-                        _isPlaying = false;
-                        OnPlayStateChanged?.Invoke(false);
+                        OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
                         OnStatusChanged?.Invoke("播放已停止");
                     }
                 };
 
                 _wavePlayer.Play();
-                _isPlaying = true;
-                OnPlayStateChanged?.Invoke(true);
+                OnPlayStateChanged?.Invoke(PlaybackState.Playing);
                 OnStatusChanged?.Invoke("开始无缝循环播放...");
             }
             catch (Exception ex)
@@ -132,15 +168,27 @@ namespace seamless_loop_music
         }
 
         /// <summary>
+        /// 暂停播放
+        /// </summary>
+        public void Pause()
+        {
+            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
+            {
+                _wavePlayer.Pause();
+                OnPlayStateChanged?.Invoke(PlaybackState.Paused);
+                OnStatusChanged?.Invoke("已暂停");
+            }
+        }
+
+        /// <summary>
         /// 停止播放
         /// </summary>
         public void Stop()
         {
-            if (!_isPlaying) return;
+            if (_wavePlayer == null || _wavePlayer.PlaybackState == PlaybackState.Stopped) return;
 
-            _isPlaying = false;
             _wavePlayer?.Stop();
-            OnPlayStateChanged?.Invoke(false);
+            OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
             OnStatusChanged?.Invoke("已停止播放");
         }
 
@@ -154,6 +202,48 @@ namespace seamless_loop_music
             {
                 if (_wavePlayer != null)
                     _wavePlayer.Volume = Math.Clamp(value, 0.0f, 1.0f);
+            }
+        }
+
+        /// <summary>
+        /// 获取当前播放时间
+        /// </summary>
+        public TimeSpan CurrentTime
+        {
+            get
+            {
+                if (_loopStream != null)
+                {
+                    return TimeSpan.FromSeconds((double)_loopStream.Position / _audioStream.WaveFormat.AverageBytesPerSecond);
+                }
+                return TimeSpan.Zero;
+            }
+        }
+
+        /// <summary>
+        /// 获取音频总时长
+        /// </summary>
+        public TimeSpan TotalTime
+        {
+            get
+            {
+                if (_audioStream != null)
+                {
+                    return _audioStream.TotalTime;
+                }
+                return TimeSpan.Zero;
+            }
+        }
+
+        /// <summary>
+        /// 跳转进度 (0.0 ~ 1.0)
+        /// </summary>
+        public void Seek(double percent)
+        {
+            if (_loopStream != null)
+            {
+                long position = (long)(_loopStream.Length * Math.Clamp(percent, 0.0, 1.0));
+                _loopStream.Position = position;
             }
         }
 

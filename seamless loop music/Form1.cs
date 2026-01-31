@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Forms;
+using NAudio.Wave; // 引入 NAudio 以使用 PlaybackState
 
 namespace seamless_loop_music // 同样，命名空间和项目名称一致！
 {
@@ -14,16 +15,103 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             _audioLooper = new AudioLooper();
             // 绑定事件
             _audioLooper.OnStatusChanged += (msg) => lblStatus.Text = msg;
+            
             // 新增: 监听音频信息加载
             _audioLooper.OnAudioLoaded += (totalSamples, rate) =>
             {
-                lblAudioInfo.Text = $"音频信息：总采样数 {totalSamples} | 采样率 {rate} Hz";
+                // 使用 Invoke 确保在 UI 线程更新控件
+                Invoke(new Action(() => 
+                {
+                    lblAudioInfo.Text = $"音频信息：总采样数 {totalSamples} | 采样率 {rate} Hz";
+                    // 自动填入总采样数作为默认循环结束点
+                    txtLoopEndSample.Text = totalSamples.ToString();
+                    // 默认起始点设为 0
+                    txtLoopSample.Text = "0";
+                }));
             };
-            _audioLooper.OnPlayStateChanged += (isPlaying) =>
+
+            // 升级: 根据播放状态更新按钮
+            _audioLooper.OnPlayStateChanged += (state) =>
             {
-                btnPlay.Enabled = !isPlaying;
-                btnStop.Enabled = isPlaying;
+                // 使用 Invoke 确保在 UI 线程执行
+                if (InvokeRequired)
+                {
+                    Invoke(new Action(() => UpdateButtons(state)));
+                }
+                else
+                {
+                    UpdateButtons(state);
+                }
             };
+        }
+
+        // 拖拽状态标记
+        private bool _isDraggingProgress = false;
+
+        private void UpdateButtons(PlaybackState state)
+        {
+            switch (state)
+            {
+                case PlaybackState.Playing:
+                    btnPlay.Enabled = false;
+                    btnPause.Enabled = true;
+                    btnStop.Enabled = true;
+                    tmrUpdate.Start(); // 开始更新进度
+                    break;
+                case PlaybackState.Paused:
+                    btnPlay.Enabled = true;
+                    btnPause.Enabled = false;
+                    btnStop.Enabled = true;
+                    tmrUpdate.Stop(); // 暂停更新进度
+                    break;
+                case PlaybackState.Stopped:
+                    btnPlay.Enabled = !string.IsNullOrEmpty(txtFilePath.Text) && !string.IsNullOrEmpty(txtLoopSample.Text);
+                    btnPause.Enabled = false;
+                    btnStop.Enabled = false;
+                    tmrUpdate.Stop(); // 停止更新
+                    trkProgress.Value = 0; // 重置进度条
+                    lblTime.Text = "00:00 / 00:00";
+                    break;
+            }
+        }
+
+        // 定时器: 更新进度条和时间标签
+        private void tmrUpdate_Tick(object sender, EventArgs e)
+        {
+            if (_isDraggingProgress) return; // 拖拽时不更新，防止跳变
+
+            var current = _audioLooper.CurrentTime;
+            var total = _audioLooper.TotalTime;
+
+            // 更新时间标签
+            lblTime.Text = $"{current:mm\\:ss} / {total:mm\\:ss}";
+
+            // 更新进度条
+            if (total.TotalMilliseconds > 0)
+            {
+                int value = (int)((current.TotalMilliseconds / total.TotalMilliseconds) * trkProgress.Maximum);
+                trkProgress.Value = Math.Min(value, trkProgress.Maximum);
+            }
+        }
+
+        // 鼠标按下进度条: 标记拖拽中
+        private void trkProgress_MouseDown(object sender, MouseEventArgs e)
+        {
+            _isDraggingProgress = true;
+            
+            // 可选: 支持点击跳转 (WinForms 默认 TrackBar 点击只能跳一格，这里加上点击即跳转逻辑)
+            double percent = (double)e.X / trkProgress.Width;
+            trkProgress.Value = (int)(percent * trkProgress.Maximum);
+        }
+
+        // 鼠标松开进度条: 执行跳转
+        private void trkProgress_MouseUp(object sender, MouseEventArgs e)
+        {
+            _isDraggingProgress = false;
+            
+            // 计算百分比并跳转
+            double percent = (double)trkProgress.Value / trkProgress.Maximum;
+            _audioLooper.Seek(percent);
         }
 
         // 「选择音频文件」按钮点击事件
@@ -36,8 +124,8 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
                 {
                     txtFilePath.Text = ofd.FileName;
                     _audioLooper.LoadAudio(ofd.FileName);
-                    // 启用播放相关控件（需先输入采样数）
-                    btnPlay.Enabled = !string.IsNullOrEmpty(txtLoopSample.Text);
+                    // 触发一次状态检查以更新按钮
+                    UpdateButtons(PlaybackState.Stopped);
                 }
             }
         }
@@ -45,15 +133,38 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
         // 「播放」按钮点击事件
         private void btnPlay_Click(object sender, EventArgs e)
         {
-            if (long.TryParse(txtLoopSample.Text, out long loopSample))
+            // 设置循环起始点
+            if (long.TryParse(txtLoopSample.Text, out long loopStart))
             {
-                _audioLooper.SetLoopStartSample(loopSample);
-                _audioLooper.Play();
+                _audioLooper.SetLoopStartSample(loopStart);
+            }
+
+            // 设置循环结束点
+            if (long.TryParse(txtLoopEndSample.Text, out long loopEnd))
+            {
+                _audioLooper.SetLoopEndSample(loopEnd);
             }
             else
             {
-                lblStatus.Text = "请输入有效的循环起始采样数（整数）！";
+                 // 如果为空或解析失败，默认0
+                 _audioLooper.SetLoopEndSample(0);
             }
+
+            // 播放
+            _audioLooper.Play();
+        }
+
+
+
+        private void txtLoopEndSample_TextChanged(object sender, EventArgs e)
+        {
+             // 实时更新 (可选)
+        }
+
+        // 「暂停」按钮点击事件
+        private void btnPause_Click(object sender, EventArgs e)
+        {
+            _audioLooper.Pause();
         }
 
         // 「停止」按钮点击事件
