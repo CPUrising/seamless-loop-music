@@ -9,36 +9,36 @@
 
 ## ✨ Key Features
 
-*   **♾️ True Gapless Loop**: Implements sample-accurate seamless looping based on low-level `IWaveProvider` stream processing. No more clicks or gaps when the track loops.
-*   **🎯 Arbitrary Loop Range**: Supports custom **Loop Start** and **Loop End** points, accurate to the single frame, allowing for infinite looping of any specific section.
-*   **📊 Visual Control**: Provides an intuitive progress bar with drag-to-seek support, click-to-jump, and real-time precise time display.
-*   **📂 Multi-Format Support**: Supports common game audio formats including **WAV**, **OGG**, and **MP3**.
-*   **🚀 Lightweight & portable**: Built on .NET 8. No installation required (via self-contained build). Just download and play.
+*   **♾️ True Seamless Looping**: Based on `IWaveProvider` for sample-accurate looping, eliminating any gaps or clicks.
+* **📂 Batch Management**: Support **folder import** with recursive scanning to automatically generate a playlist.
+* **💾 Config Persistence**: Automatically remembers loop points for each track (using filename + duration fingerprint) and reloads them next time.
+* **🎯 Arbitrary Loop Range**: Custom **Start** and **End** points with a **"Confirm Settings"** button for hot updates.
+* **📊 Visual Control**: Intuitive progress bar, real-time time display, and track navigation (Prev/Next).
+* **🚀 Lightweight**: Built on .NET 8, available as a standalone executable.
 
 ---
 
 ## 🎮 Use Cases
 
-*   **Game Development / QA**: Quickly verify if audio loop points are set correctly.
-*   **OST Appreciation**: Immersively listen to game soundtracks (e.g., RPG town themes, battle music) specifically designed with loop structures, without breaking the flow.
-*   **Ambience & Focus**: Infinite looping of rain sounds, white noise, or focus music for work and meditation.
+* **Game Dev/Testing**: Quickly verify loop points for massive audio assets.
+* **BGM Appreciation**: Immerse yourself in game music loops without interruptions.
+* **Ambience**: Create a white noise playlist for endless looping.
 
 ---
 
 ## 🛠️ User Guide
 
-1.  **Launch**: Run `seamless loop music.exe`.
-2.  **Import**: Click the **"Select File"** (选择音频文件) button to load your audio track.
-3.  **Set Loop Points**:
-    *   The software automatically detects and fills in the total sample count.
-    *   **Loop Start Sample**: The track will jump back to this point after reaching the end point (default: 0).
-    *   **Loop End Sample**: The track will loop when it reaches this point (default: total samples).
-    *   *Simply modify these two values to define any loop range.*
-4.  **Playback Control**:
-    *   Click **"Play"** (播放) to start looping.
-    *   Supports **"Pause"** (暂停) / **"Resume"**.
-    *   Drag the progress bar to quickly seek.
-5.  **Volume**: Adjust the slider to control the volume.
+1. **Import Music**:
+   * Click **"Import Music Folder"** to select a directory.
+   * The software will scan and populate the playlist on the right.
+2. **Playback Control**:
+   * Double-click a track in the list to play.
+   * Use **[<< Prev]** / **[Next >>]** buttons to navigate.
+3. **Set Loop Points**:
+   * Enter **Loop Start/End Samples**.
+   * The **"Confirm Settings"** button lights up upon changes.
+   * Click **"Confirm Settings"** (or just hit Play) to apply and save changes instantly.
+4. **Volume**: Adjust the slider at the bottom.
 
 ---
 
@@ -46,34 +46,23 @@
 
 *   **Platform**: Windows (WinForms)
 *   **Framework**: .NET 8.0
-*   **Core Library**: [NAudio](https://github.com/naudio/NAudio)
+*   **Core Lib**: [NAudio](https://github.com/naudio/NAudio)
 
 ---
 
 ## 📅 Roadmap
 
-We are continuously improving the experience. Planned features include:
-
 ### 🔹 Completed
 
-- [x] **Basic Control**: Play, Pause, Stop, Volume.
-- [x] **Seamless Core**: `IWaveProvider`-based loop stream.
-- [x] **Interval Loop**: Custom Loop Start and Loop End support.
-- [x] **Visual Progress**: Progress bar, drag-to-seek, time display.
-- [x] **UI Optimization**: Improved layout and spacing.
-- [x] **Info Display**: Real-time sample rate and total sample count.
-- [x] **Auto-Fill**: Automatically sets default loop range on load.
+- [x] **Core Playback**: Play/Pause/Stop, Seamless Loop Stream
+- [x] **Loop Range**: Custom Start/End, Hot Update
+- [x] **Batch Management**: Folder Import, Playlist, Navigation
+- [x] **Persistence**: CSV Storage, Config Auto-load
+- [x] **UX**: Confirm Button, Drag-to-Seek, Expanded UI
 
 ### 🔹 Planned
 
-- [ ] **Loop Memory**: Auto-save and load the last used loop points for tracks.
 - [ ] **Fine-tuning**: +/- 1 frame buttons for precise loop point adjustment.
-- [ ] **Playlist Support**: Manage multiple tracks.
-- [ ] **Waveform Visualization**: Visual aid for finding loop points.
-- [ ] **Metadata Reading**: Auto-detect loop tags in wav/ogg headers.
-
-### 🔹 Advanced
-- [ ] **Playlist Support**: Manage multiple tracks.
 - [ ] **Waveform Visualization**: Visual aid for finding loop points.
 - [ ] **Metadata Reading**: Auto-detect loop tags in wav/ogg headers.
 

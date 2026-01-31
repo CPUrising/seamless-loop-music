@@ -47,6 +47,10 @@ namespace seamless_loop_music
                 int bytesPerSample = waveFormat.BlockAlign;
                 _totalSamples = _audioStream.Length / bytesPerSample;
 
+                // 修复: 加载新音频时，强制重置循环点为默认值 (0 ~ Total)
+                _loopStartSample = 0;
+                _loopEndSample = _totalSamples; // 默认循环全曲
+
                 // 触发加载完成事件
                 OnAudioLoaded?.Invoke(_totalSamples, waveFormat.SampleRate);
                 OnStatusChanged?.Invoke("音频加载成功! 请设置循环点后播放");
@@ -83,6 +87,11 @@ namespace seamless_loop_music
                 return;
             }
             _loopStartSample = sample;
+            // 实时同步更新 LoopStream
+            if (_loopStream != null)
+            {
+                _loopStream.LoopStartPosition = sample * _audioStream.WaveFormat.BlockAlign;
+            }
             OnStatusChanged?.Invoke($"循环点已设置:{sample} (对应秒数:{sample / (double)_audioStream.WaveFormat.SampleRate:F2})");
         }
 
@@ -103,6 +112,20 @@ namespace seamless_loop_music
             }
             
             _loopEndSample = sample;
+             // 实时同步更新 LoopStream
+            if (_loopStream != null)
+            {
+                 // 需要重新计算字节位置，逻辑与 LoopStream 构造里的一致
+                 long endPos = sample * _audioStream.WaveFormat.BlockAlign;
+                 if (sample <= 0 || endPos > _audioStream.Length)
+                 {
+                     _loopStream.LoopEndPosition = _audioStream.Length;
+                 }
+                 else
+                 {
+                     _loopStream.LoopEndPosition = endPos;
+                 }
+            }
             string endText = sample == 0 ? "文件末尾" : sample.ToString();
             OnStatusChanged?.Invoke($"循环终点: {endText}");
         }
@@ -121,15 +144,36 @@ namespace seamless_loop_music
             // 如果是暂停状态，直接恢复播放
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Paused)
             {
+                // 强制同步一次配置，防止意外
+                if (_loopStream != null)
+                {
+                     _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
+                     // 同步 LoopEnd
+                     long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
+                     if (_loopEndSample <= 0 || endPos > _audioStream.Length)
+                         _loopStream.LoopEndPosition = _audioStream.Length;
+                     else
+                         _loopStream.LoopEndPosition = endPos;
+                }
+                
                 _wavePlayer.Play();
                 OnPlayStateChanged?.Invoke(PlaybackState.Playing);
                 OnStatusChanged?.Invoke("继续播放...");
                 return;
             }
 
-            // 如果已经在播放，不做处理
+            // 如果已经在播放，也同步一次配置? 
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
             {
+                 if (_loopStream != null)
+                {
+                     _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
+                     long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
+                     if (_loopEndSample <= 0 || endPos > _audioStream.Length)
+                         _loopStream.LoopEndPosition = _audioStream.Length;
+                     else
+                         _loopStream.LoopEndPosition = endPos;
+                }
                 return;
             }
 

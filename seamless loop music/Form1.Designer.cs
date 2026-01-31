@@ -44,6 +44,11 @@
             lblTime = new Label(); // 初始化时间标签
             lblLoopEndSample = new Label(); // 初始化循环结束标签
             txtLoopEndSample = new TextBox(); // 初始化循环结束输入框
+            lstPlaylist = new ListBox();
+            btnPrev = new Button();
+            btnNext = new Button();
+            btnApplyLoop = new Button(); // 新增确认按钮
+            btnSwitchLang = new Button(); // 语言切换按钮
             ((System.ComponentModel.ISupportInitialize)trkVolume).BeginInit();
             ((System.ComponentModel.ISupportInitialize)trkProgress).BeginInit(); // 别忘了这个
             SuspendLayout();
@@ -54,7 +59,7 @@
             btnSelectFile.Name = "btnSelectFile";
             btnSelectFile.Size = new Size(160, 50);
             btnSelectFile.TabIndex = 0;
-            btnSelectFile.Text = "选择音频文件";
+            btnSelectFile.Text = "导入音乐文件夹";
             btnSelectFile.UseVisualStyleBackColor = true;
             btnSelectFile.Click += btnSelectFile_Click;
             // 
@@ -199,11 +204,69 @@
             txtLoopEndSample.Text = "0"; // 默认0
             txtLoopEndSample.TextChanged += txtLoopEndSample_TextChanged;
             // 
+            // lstPlaylist
+            // 
+            lstPlaylist.FormattingEnabled = true;
+            lstPlaylist.ItemHeight = 24;
+            lstPlaylist.Location = new Point(620, 32);
+            lstPlaylist.Name = "lstPlaylist";
+            lstPlaylist.Size = new Size(350, 412);
+            lstPlaylist.TabIndex = 15;
+            lstPlaylist.HorizontalScrollbar = true;
+            lstPlaylist.DoubleClick += lstPlaylist_DoubleClick;
+            // 
+            // btnPrev
+            // 
+            btnPrev.Location = new Point(620, 450);
+            btnPrev.Name = "btnPrev";
+            btnPrev.Size = new Size(170, 40);
+            btnPrev.TabIndex = 16;
+            btnPrev.Text = "<< 上一首";
+            btnPrev.UseVisualStyleBackColor = true;
+            btnPrev.Click += btnPrev_Click;
+            // 
+            // btnNext
+            // 
+            btnNext.Location = new Point(800, 450);
+            btnNext.Name = "btnNext";
+            btnNext.Size = new Size(170, 40);
+            btnNext.TabIndex = 17;
+            btnNext.Text = "下一首 >>";
+            btnNext.UseVisualStyleBackColor = true;
+            btnNext.Click += btnNext_Click;
+            // 
+            // btnApplyLoop
+            // 
+            btnApplyLoop.Enabled = false; // 默认灰色
+            btnApplyLoop.Location = new Point(450, 190); // 放在输入框右侧
+            btnApplyLoop.Name = "btnApplyLoop";
+            btnApplyLoop.Size = new Size(100, 77); // 高度覆盖两个输入框
+            btnApplyLoop.TabIndex = 18;
+            btnApplyLoop.Text = "确认\n设置";
+            btnApplyLoop.UseVisualStyleBackColor = true;
+            btnApplyLoop.Click += btnApplyLoop_Click;
+            // 
+            // btnSwitchLang
+            // 
+            btnSwitchLang.Location = new Point(20, 440);
+            btnSwitchLang.Name = "btnSwitchLang";
+            btnSwitchLang.Size = new Size(100, 40);
+            btnSwitchLang.TabIndex = 19;
+            btnSwitchLang.Text = "English"; // 默认显示要切换到的语言
+            btnSwitchLang.UseVisualStyleBackColor = true;
+            btnSwitchLang.Click += btnSwitchLang_Click;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(800, 500); // 高度增加到 500
+            ClientSize = new Size(1000, 500); 
+            AllowDrop = false;
+            Controls.Add(btnNext);
+            Controls.Add(btnPrev);
+            Controls.Add(btnApplyLoop); // 添加到窗体
+            Controls.Add(btnSwitchLang);
+            Controls.Add(lstPlaylist);
             Controls.Add(lblAudioInfo); // 补回来！！！
             Controls.Add(lblLoopEndSample);
             Controls.Add(txtLoopEndSample);
@@ -225,6 +288,8 @@
             ((System.ComponentModel.ISupportInitialize)trkProgress).EndInit(); // 结束初始化
             ResumeLayout(false);
             PerformLayout();
+            
+            // 手动绑定事件 (防止 Designer 覆盖丢失) - 已移除拖拽事件
         }
 
         #endregion
@@ -245,5 +310,10 @@
         private Label lblTime;
         private Label lblLoopEndSample;
         private TextBox txtLoopEndSample;
+        private ListBox lstPlaylist;
+        private Button btnPrev;
+        private Button btnNext;
+        private Button btnApplyLoop;
+        private Button btnSwitchLang;
     }
 }
