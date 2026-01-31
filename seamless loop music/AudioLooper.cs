@@ -20,6 +20,8 @@ namespace seamless_loop_music
         // 状态回调事件
         public event Action<string> OnStatusChanged;
         public event Action<bool> OnPlayStateChanged;
+        // 新增: 音频加载完成事件 (总采样数, 采样率)
+        public event Action<long, int> OnAudioLoaded;
 
         /// <summary>
         /// 加载音频文件
@@ -44,7 +46,9 @@ namespace seamless_loop_music
                 int bytesPerSample = waveFormat.BlockAlign;
                 _totalSamples = _audioStream.Length / bytesPerSample;
 
-                OnStatusChanged?.Invoke($"音频加载成功!总采样数:{_totalSamples} | 采样率:{waveFormat.SampleRate}Hz");
+                // 触发加载完成事件
+                OnAudioLoaded?.Invoke(_totalSamples, waveFormat.SampleRate);
+                OnStatusChanged?.Invoke("音频加载成功! 请设置循环点后播放");
             }
             catch (Exception ex)
             {

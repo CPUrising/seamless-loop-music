@@ -14,6 +14,11 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             _audioLooper = new AudioLooper();
             // 绑定事件
             _audioLooper.OnStatusChanged += (msg) => lblStatus.Text = msg;
+            // 新增: 监听音频信息加载
+            _audioLooper.OnAudioLoaded += (totalSamples, rate) =>
+            {
+                lblAudioInfo.Text = $"音频信息：总采样数 {totalSamples} | 采样率 {rate} Hz";
+            };
             _audioLooper.OnPlayStateChanged += (isPlaying) =>
             {
                 btnPlay.Enabled = !isPlaying;

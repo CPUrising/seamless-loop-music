@@ -37,14 +37,15 @@
             txtLoopSample = new TextBox();
             trkVolume = new TrackBar();
             lblStatus = new Label();
+            lblAudioInfo = new Label(); // 初始化新标签
             ((System.ComponentModel.ISupportInitialize)trkVolume).BeginInit();
             SuspendLayout();
             // 
             // btnSelectFile
             // 
-            btnSelectFile.Location = new Point(70, 32);
+            btnSelectFile.Location = new Point(50, 30);
             btnSelectFile.Name = "btnSelectFile";
-            btnSelectFile.Size = new Size(112, 34);
+            btnSelectFile.Size = new Size(160, 50);
             btnSelectFile.TabIndex = 0;
             btnSelectFile.Text = "选择音频文件";
             btnSelectFile.UseVisualStyleBackColor = true;
@@ -126,11 +127,24 @@
             lblStatus.TabIndex = 8;
             lblStatus.Text = "就绪";
             // 
+            // lblAudioInfo
+            // 
+            lblAudioInfo.AutoSize = true;
+            lblAudioInfo.Location = new Point(102, 135); // 放在文件路径和循环输入框之间
+            lblAudioInfo.Name = "lblAudioInfo";
+            lblAudioInfo.Size = new Size(0, 24);
+            lblAudioInfo.TabIndex = 9;
+            lblAudioInfo.Text = "---";
+            lblAudioInfo.ForeColor = Color.Gray;
+            // 
             // Form1
             // 
             AutoScaleDimensions = new SizeF(11F, 24F);
             AutoScaleMode = AutoScaleMode.Font;
-            ClientSize = new Size(578, 344);
+            AutoScaleDimensions = new SizeF(11F, 24F);
+            AutoScaleMode = AutoScaleMode.Font;
+            ClientSize = new Size(800, 450);
+            Controls.Add(lblAudioInfo); // 添加新标签
             Controls.Add(lblStatus);
             Controls.Add(trkVolume);
             Controls.Add(lblLoopSample);
@@ -158,5 +172,6 @@
         private TextBox txtLoopSample;
         private TrackBar trkVolume;
         private Label lblStatus;
+        private Label lblAudioInfo; // 声明新字段
     }
 }
