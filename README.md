@@ -65,6 +65,10 @@
 
 ---
 
+## 🤝 致谢 (Acknowledgements)
+
+本项目受到了 [AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer) 的启发，特别是在无缝循环流的实现逻辑上。
+
 ## 📄 License
 
 MIT License. 欢迎 Fork 和 Star！🌟
