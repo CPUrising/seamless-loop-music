@@ -46,9 +46,9 @@
             btnSelectFile.Name = "btnSelectFile";
             btnSelectFile.Size = new Size(112, 34);
             btnSelectFile.TabIndex = 0;
-            btnSelectFile.Text = "btnSelectFile";
+            btnSelectFile.Text = "选择音频文件";
             btnSelectFile.UseVisualStyleBackColor = true;
-            btnSelectFile.Click += button1_Click;
+            btnSelectFile.Click += btnSelectFile_Click;
             // 
             // btnPlay
             // 
@@ -57,8 +57,9 @@
             btnPlay.Name = "btnPlay";
             btnPlay.Size = new Size(112, 34);
             btnPlay.TabIndex = 1;
-            btnPlay.Text = "btnPlay";
+            btnPlay.Text = "播放";
             btnPlay.UseVisualStyleBackColor = true;
+            btnPlay.Click += btnPlay_Click;
             // 
             // btnStop
             // 
@@ -67,8 +68,9 @@
             btnStop.Name = "btnStop";
             btnStop.Size = new Size(112, 34);
             btnStop.TabIndex = 2;
-            btnStop.Text = "btnStop";
+            btnStop.Text = "停止";
             btnStop.UseVisualStyleBackColor = true;
+            btnStop.Click += btnStop_Click;
             // 
             // txtFilePath
             // 
@@ -103,6 +105,7 @@
             txtLoopSample.ScrollBars = ScrollBars.Horizontal;
             txtLoopSample.Size = new Size(170, 30);
             txtLoopSample.TabIndex = 5;
+            txtLoopSample.TextChanged += txtLoopSample_TextChanged;
             // 
             // trkVolume
             // 
