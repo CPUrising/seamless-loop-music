@@ -363,3 +363,5 @@ MigrationBackup/
 FodyWeavers.xsd
 # Custom Ignore Rules
 Release_Build/
+Release_*/
+*.zip
