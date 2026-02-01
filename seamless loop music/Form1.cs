@@ -4,6 +4,7 @@ using NAudio.Wave; // 引入 NAudio 以使用 PlaybackState
 using System.Collections.Generic;
 using System.IO;
 using System.Linq; // for Linq
+using System.Drawing; // 补全绘图命名空间
 
 namespace seamless_loop_music // 同样，命名空间和项目名称一致！
 {
@@ -27,6 +28,9 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
 
         // 当前播放文件的标识，用于更新配置
         private string _currentConfigKey = null;
+        private int _currentSampleRate = 44100;
+        private long _totalSamples = 0;
+        private bool _isUpdatingUI = false; // 加锁，防止初始化时误触自动保存
 
         public Form1()
         {
@@ -46,6 +50,9 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
                 // 使用 Invoke 确保在 UI 线程更新控件
                 Invoke(new Action(() => 
                 {
+                    _currentSampleRate = rate;
+                    _totalSamples = totalSamples;
+
                     bool isZh = (_currentLang == "zh-CN");
                     string infoPrefix = isZh ? "音频信息：" : "Info: ";
                     string rateSuffix = isZh ? " 采样率 " : " Rate ";
@@ -55,32 +62,33 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
                     string fileName = Path.GetFileName(txtFilePath.Text);
                     _currentConfigKey = $"{fileName}_{totalSamples}";
 
+                    _isUpdatingUI = true; // 开始设置 UI，暂时关掉自动保存
+
                     // 尝试从配置加载
                     if (_loopConfigs.ContainsKey(_currentConfigKey))
                     {
                         var cfg = _loopConfigs[_currentConfigKey];
                         
-                        // 关键修复: 直接同步给 AudioLooper，不要等 UI 事件，确保 Play() 时拿到的是正确值！
+                        // 关键修正：如果读取到的结束点是0或者还没设置，默认设为最大
+                        if (cfg.LoopEnd <= 0) cfg.LoopEnd = totalSamples;
+
                         _audioLooper.SetLoopStartSample(cfg.LoopStart);
                         _audioLooper.SetLoopEndSample(cfg.LoopEnd);
 
                         txtLoopSample.Text = cfg.LoopStart.ToString();
                         txtLoopEndSample.Text = cfg.LoopEnd.ToString();
-                        
-                        // 填充完后，这应当视为"已确认"状态
-                        btnApplyLoop.Enabled = false;
                     }
                     else
                     {
-                        // 无配置，使用默认值
-                        // 也要同步给 Looper (虽然 Looper 内部 LoadAudio 已经重置了，但为了保险)
                         _audioLooper.SetLoopStartSample(0);
                         _audioLooper.SetLoopEndSample(totalSamples);
 
-                        txtLoopEndSample.Text = totalSamples.ToString();
                         txtLoopSample.Text = "0";
-                        btnApplyLoop.Enabled = false;
+                        txtLoopEndSample.Text = totalSamples.ToString();
                     }
+
+                    _isUpdatingUI = false; // UI 设置完毕，恢复自动保存
+                    ApplyLoopSettings();   // 统一应用一次
                 }));
             };
 
@@ -105,33 +113,36 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
         private void UpdateButtons(PlaybackState state)
         {
             bool isZh = (_currentLang == "zh-CN");
+            bool hasFile = !string.IsNullOrEmpty(txtFilePath.Text);
+
+            // 播放与暂停互斥
+            btnPlay.Enabled = hasFile && (state != PlaybackState.Playing);
+            btnPause.Enabled = hasFile && (state == PlaybackState.Playing);
+            
+            // 重新播放只要有文件就永远可用
+            btnStop.Enabled = hasFile;
+
+            // 列表控制
+            btnPrev.Enabled = hasFile;
+            btnNext.Enabled = hasFile;
+
+            // 状态文字更新
             switch (state)
             {
                 case PlaybackState.Playing:
-                    btnPlay.Enabled = false;
-                    btnPause.Enabled = true;
-                    btnStop.Enabled = true;
-                    tmrUpdate.Start(); // 开始更新进度
+                    tmrUpdate.Start();
                     lblStatus.Text = isZh ? "播放中..." : "Playing...";
                     break;
                 case PlaybackState.Paused:
-                    btnPlay.Enabled = true;
-                    btnPause.Enabled = false;
-                    btnStop.Enabled = true;
-                    tmrUpdate.Stop(); // 暂停更新进度
+                    tmrUpdate.Stop();
                     lblStatus.Text = isZh ? "已暂停" : "Paused";
                     break;
                 case PlaybackState.Stopped:
-                    btnPlay.Enabled = !string.IsNullOrEmpty(txtFilePath.Text) && !string.IsNullOrEmpty(txtLoopSample.Text);
-                    btnPause.Enabled = false;
-                    btnStop.Enabled = false;
-                    tmrUpdate.Stop(); // 停止更新
-                    trkProgress.Value = 0; // 重置进度条
+                    tmrUpdate.Stop();
+                    lblStatus.Text = isZh ? "就绪" : "Ready";
+                    // 重置进度条和时间标签
+                    trkProgress.Value = 0;
                     lblTime.Text = "00:00 / 00:00";
-                    // 如果是刚导入完，LoadPlaylist 会设置 specific text，这里会不会覆盖？
-                    // PlaybackState.Stopped 会在 Play 结束时触发。
-                    // 简单起见，这里显示停止。如果是导入操作，导入函数会在 UpdateButtons 后再覆盖一次 Text，所以没问题。
-                    lblStatus.Text = isZh ? "已停止" : "Stopped";
                     break;
             }
         }
@@ -182,7 +193,7 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             {
                 bool isZh = (_currentLang == "zh-CN");
                 fbd.Description = isZh ? "请选择包含音频文件的文件夹" : "Select a folder containing audio files";
-                fbd.UseDescriptionForTitle = true;
+                
 
                 if (fbd.ShowDialog() == DialogResult.OK)
                 {
@@ -244,33 +255,30 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             // 「播放」按钮点击事件
         private void btnPlay_Click(object sender, EventArgs e)
         {
-            // 点击播放时，视为自动确认当前设置
-            btnApplyLoop_Click(sender, e);
-
             // 播放
             _audioLooper.Play();
         }
 
 
 
-        // 采样数输入框文本变化事件（启用播放按钮 + 启用确认按钮）
+        // 采样数输入框文本变化事件 - 实时应用设置
         private void txtLoopSample_TextChanged(object sender, EventArgs e)
         {
+            UpdateSecLabels();
             btnPlay.Enabled = !string.IsNullOrEmpty(txtFilePath.Text) && !string.IsNullOrEmpty(txtLoopSample.Text);
-            // 只有手动修改时才启用确认按钮 (加载时的自动修改稍后会被 Load 逻辑覆盖回 false，或者我们需要区分是否是用户输入的? 
-            // 简单起见，只要变了就亮，Load 完了一次性灰掉)
-            btnApplyLoop.Enabled = true;
         }
 
         private void txtLoopEndSample_TextChanged(object sender, EventArgs e)
         {
-             btnApplyLoop.Enabled = true;
+            UpdateSecLabels();
         }
 
-        // 确认设置按钮点击
-        private void btnApplyLoop_Click(object sender, EventArgs e)
+        // 核心应用设置 logic (原 btnApplyLoop_Click)
+        private void ApplyLoopSettings()
         {
-            // 1. 应用设置到 AudioLooper (触发热更新)
+            if (_isUpdatingUI) return; // UI正在被莱芙自己修改时，不要反向覆盖配置！
+
+            // 1. 应用设置到 AudioLooper
              if (long.TryParse(txtLoopSample.Text, out long loopStart))
             {
                 _audioLooper.SetLoopStartSample(loopStart);
@@ -280,14 +288,123 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
                  _audioLooper.SetLoopEndSample(loopEnd);
             }
 
-            // 2. 保存到配置
+            // 2. 保存到内存字典
             UpdateCurrentConfig();
 
-            // 3. 按钮变灰
-            btnApplyLoop.Enabled = false;
-            
-            // 4. 聚焦回窗体以免回车误触? (可选)
-            lblStatus.Focus();
+            // 3. 更新秒数显示
+            UpdateSecLabels();
+        }
+
+        private void UpdateSecLabels()
+        {
+            if (_isUpdatingUI) return;
+            _isUpdatingUI = true;
+
+            if (long.TryParse(txtLoopSample.Text, out long start))
+            {
+                double sec = (double)start / _currentSampleRate;
+                txtLoopStartSec.Text = sec.ToString("F2");
+            }
+            if (long.TryParse(txtLoopEndSample.Text, out long end))
+            {
+                double sec = (double)end / _currentSampleRate;
+                txtLoopEndSec.Text = sec.ToString("F2");
+            }
+
+            _isUpdatingUI = false;
+        }
+
+        private void txtLoopStartSec_TextChanged(object sender, EventArgs e)
+        {
+            if (_isUpdatingUI) return;
+            if (double.TryParse(txtLoopStartSec.Text, out double sec))
+            {
+                _isUpdatingUI = true;
+                long samples = (long)(sec * _currentSampleRate);
+                if (samples < 0) samples = 0;
+                if (samples > _totalSamples) samples = _totalSamples;
+                txtLoopSample.Text = samples.ToString();
+                _isUpdatingUI = false;
+            }
+        }
+
+        private void txtLoopEndSec_TextChanged(object sender, EventArgs e)
+        {
+            if (_isUpdatingUI) return;
+            if (double.TryParse(txtLoopEndSec.Text, out double sec))
+            {
+                _isUpdatingUI = true;
+                long samples = (long)(sec * _currentSampleRate);
+                if (samples < 0) samples = 0;
+                if (samples > _totalSamples) samples = _totalSamples;
+                txtLoopEndSample.Text = samples.ToString();
+                _isUpdatingUI = false;
+            }
+        }
+
+        private void btnApplyLoop_Click(object sender, EventArgs e)
+        {
+             // 1. 确认生效并保存配置
+             ApplyLoopSettings();
+
+             // 2. 实现跳转：从结束点前3秒试听
+             if (long.TryParse(txtLoopEndSample.Text, out long loopEnd) &&
+                 long.TryParse(txtLoopSample.Text, out long loopStart))
+             {
+                 // 跳转位置 = 结束点 - 3秒采样数
+                 long previewOffset = _currentSampleRate * 3;
+                 long jumpSample = loopEnd - previewOffset;
+
+                 // 如果此时距离起点不足3秒，或者计算出的位置在起点之前，就直接跳转到起点
+                 if (jumpSample < loopStart)
+                 {
+                     jumpSample = loopStart;
+                 }
+
+                 _audioLooper.SeekToSample(jumpSample);
+             }
+        }
+
+        // --- 微调逻辑 ---
+        private void btnAdjust_Click(object sender, EventArgs e)
+        {
+            if (sender is Button btn && btn.Tag != null)
+            {
+                string tagStr = btn.Tag.ToString();
+                string[] parts = tagStr.Split(':');
+                if (parts.Length == 2)
+                {
+                    string targetType = parts[0]; // "Start" or "End"
+                    double seconds = double.Parse(parts[1]); // e.g. 1.0, 0.5, or 0.0 for frames
+                    
+                    long delta;
+                    if (seconds == 0) // Special marker 0 for 500 frames
+                    {
+                        // Use sign to differentiate +/- 500
+                        delta = tagStr.Contains("-") ? -500 : 500;
+                    }
+                    else
+                    {
+                        delta = (long)(_currentSampleRate * seconds);
+                    }
+
+                    TextBox targetTxt = (targetType == "Start") ? txtLoopSample : txtLoopEndSample;
+                    AdjustSample(targetTxt, delta);
+                }
+            }
+        }
+
+        private void AdjustSample(TextBox target, long delta)
+        {
+            if (long.TryParse(target.Text, out long currentVal))
+            {
+                long newVal = currentVal + delta;
+                // Boundary checks
+                if (newVal < 0) newVal = 0;
+                if (newVal > _totalSamples) newVal = _totalSamples;
+
+                target.Text = newVal.ToString();
+            }
         }
 
         private void btnSwitchLang_Click(object sender, EventArgs e)
@@ -303,10 +420,15 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             _audioLooper.Pause();
         }
 
-        // 「停止」按钮点击事件
+        // 「暂停」按钮点击事件
         private void btnStop_Click(object sender, EventArgs e)
         {
-            _audioLooper.Stop();
+            // 重新播放：无视当前状态，确保重新起航
+            if (string.IsNullOrEmpty(txtFilePath.Text)) return;
+            
+            // 关键：先启动引擎（如果没在播的话），再精准空降 0 秒位
+            _audioLooper.Play();
+            _audioLooper.SeekToSample(0);
         }
 
         // 音量滑块拖动事件
@@ -461,10 +583,10 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             btnSelectFile.Text = isZh ? "导入音乐文件夹" : "Import Music Folder";
             btnPlay.Text = isZh ? "播放" : "Play";
             btnPause.Text = isZh ? "暂停" : "Pause";
-            btnStop.Text = isZh ? "停止" : "Stop";
+            btnStop.Text = isZh ? "重新播放" : "Replay";
             btnPrev.Text = isZh ? "<< 上一首" : "<< Prev";
             btnNext.Text = isZh ? "下一首 >>" : "Next >>";
-            btnApplyLoop.Text = isZh ? "确认\n设置" : "Confirm\nSet";
+            btnApplyLoop.Text = isZh ? "确认应用\n并试听" : "Apply &\nPreview";
             
             // 标签
             lblFilePath.Text = isZh ? "音频路径：" : "File Path:";
@@ -475,6 +597,8 @@ namespace seamless_loop_music // 同样，命名空间和项目名称一致！
             // 切换按钮本身显示的文字 (显示"对方"的语言)
             btnSwitchLang.Text = isZh ? "English" : "中文";
 
+            // 微调按钮 (s 在中英文中通用，无需特殊翻译，但保留位置以便后续扩展)
+            
             // 更新一下状态栏
             lblStatus.Text = isZh ? "就绪" : "Ready";
         }

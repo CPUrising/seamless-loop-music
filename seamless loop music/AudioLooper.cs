@@ -67,13 +67,17 @@ namespace seamless_loop_music
         private WaveStream CreateAudioStream(string filePath)
         {
             string ext = Path.GetExtension(filePath).ToLower();
-            return ext switch
+            switch (ext)
             {
-                ".wav" => new WaveFileReader(filePath),
-                ".ogg" => new VorbisWaveReader(filePath),
-                ".mp3" => new Mp3FileReader(filePath),
-                _ => null
-            };
+                case ".wav":
+                    return new WaveFileReader(filePath);
+                case ".ogg":
+                    return new VorbisWaveReader(filePath);
+                case ".mp3":
+                    return new Mp3FileReader(filePath);
+                default:
+                    return null;
+            }
         }
 
         /// <summary>
@@ -245,7 +249,12 @@ namespace seamless_loop_music
             set
             {
                 if (_wavePlayer != null)
-                    _wavePlayer.Volume = Math.Clamp(value, 0.0f, 1.0f);
+                {
+                    float val = value;
+                    if (val < 0.0f) val = 0.0f;
+                    if (val > 1.0f) val = 1.0f;
+                    _wavePlayer.Volume = val;
+                }
             }
         }
 
@@ -286,7 +295,24 @@ namespace seamless_loop_music
         {
             if (_loopStream != null)
             {
-                long position = (long)(_loopStream.Length * Math.Clamp(percent, 0.0, 1.0));
+                double p = percent;
+                if (p < 0.0) p = 0.0;
+                if (p > 1.0) p = 1.0;
+                long position = (long)(_loopStream.Length * p);
+                _loopStream.Position = position;
+            }
+        }
+
+        /// <summary>
+        /// 精准跳转到指定采样数
+        /// </summary>
+        public void SeekToSample(long sample)
+        {
+            if (_loopStream != null && _audioStream != null)
+            {
+                long position = sample * _audioStream.WaveFormat.BlockAlign;
+                if (position < 0) position = 0;
+                if (position > _loopStream.Length) position = _loopStream.Length;
                 _loopStream.Position = position;
             }
         }
