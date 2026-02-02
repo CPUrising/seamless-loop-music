@@ -1,0 +1,147 @@
+<Window x:Class="seamless_loop_music.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Seamless Loop Music Player" Height="700" Width="1000"
+        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei">
+    <Window.Resources>
+        <Style x:Key="SideButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#45475A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#181825"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </Window.Resources>
+
+    <Grid Margin="15">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250"/>
+            <ColumnDefinition Width="*"/>
+        </Grid.ColumnDefinitions>
+
+        <!-- Playlist -->
+        <Grid Grid.Column="0" Margin="0,0,10,0">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Button x:Name="btnImport" Content="导入音乐文件夹" Style="{StaticResource SideButtonStyle}" Click="btnImport_Click"/>
+            
+            <ListBox x:Name="lstPlaylist" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,10"
+                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick"/>
+
+            <StackPanel Grid.Row="2">
+                <Button x:Name="btnSwitchLang" Content="English" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click"/>
+            </StackPanel>
+        </Grid>
+
+        <!-- Main Area -->
+        <Grid Grid.Column="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <StackPanel Grid.Row="0">
+                <TextBlock x:Name="lblFilePath" Text="音频路径：" FontSize="12" Foreground="#A6ADC8"/>
+                <TextBlock x:Name="txtFilePath" Text="未选择文件" FontSize="14" FontWeight="Bold" Margin="0,2,0,10" TextTrimming="CharacterEllipsis"/>
+                
+                <Border Background="#313244" CornerRadius="5" Padding="10">
+                    <StackPanel>
+                        <TextBlock x:Name="lblStatus" Text="就绪" Foreground="#89B4FA" FontWeight="Bold"/>
+                        <TextBlock x:Name="lblAudioInfo" Text="音频信息：尚未加载" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
+                    </StackPanel>
+                </Border>
+            </StackPanel>
+
+            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,20">
+                <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="20" FontWeight="Light" Margin="0,0,0,5"/>
+                <Slider x:Name="trkProgress" Maximum="1000" IsMoveToPointEnabled="True"
+                        Thumb.DragStarted="trkProgress_DragStarted"
+                        Thumb.DragCompleted="trkProgress_DragCompleted"/>
+            </StackPanel>
+
+            <Grid Grid.Row="2" Margin="0,10">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Grid.Column="0" Margin="0,0,5,0">
+                    <TextBlock x:Name="lblLoopStart" Text="循环起始采样数：" FontSize="12" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtLoopSample" Text="0" TextChanged="txtLoopSample_TextChanged"/>
+                    <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.7" TextChanged="txtLoopStartSec_TextChanged"/>
+                    
+                    <UniformGrid Columns="4" Margin="0,5">
+                        <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1.0"/>
+                        <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1"/>
+                        <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1"/>
+                        <Button Content="+1s" Click="Adjust_Click" Tag="Start:1.0"/>
+                    </UniformGrid>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Margin="5,0,0,0">
+                    <TextBlock x:Name="lblLoopEnd" Text="循环结束采样数：" FontSize="12" Margin="0,0,0,5"/>
+                    <TextBox x:Name="txtLoopEndSample" Text="0" TextChanged="txtLoopEndSample_TextChanged"/>
+                    <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.7" TextChanged="txtLoopEndSec_TextChanged"/>
+
+                    <UniformGrid Columns="4" Margin="0,5">
+                        <Button Content="-1s" Click="Adjust_Click" Tag="End:-1.0"/>
+                        <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1"/>
+                        <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1"/>
+                        <Button Content="+1s" Click="Adjust_Click" Tag="End:1.0"/>
+                    </UniformGrid>
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="3" Margin="0,15,0,0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Horizontal">
+                    <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="80" Click="btnPrev_Click"/>
+                    <Button x:Name="btnPlay" Content="播放" Style="{StaticResource SideButtonStyle}" Width="60" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
+                    <Button x:Name="btnPause" Content="暂停" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPause_Click"/>
+                    <Button x:Name="btnStop" Content="重新播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnStop_Click"/>
+                    <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="80" Click="btnNext_Click"/>
+                </StackPanel>
+
+                <Button x:Name="btnApplyLoop" Grid.Column="1" Content="确认应用并试听" HorizontalAlignment="Center" Width="150" 
+                        Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnApplyLoop_Click"/>
+
+                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                    <TextBlock Text="音量" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
+                    <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" ValueChanged="trkVolume_ValueChanged"/>
+                </StackPanel>
+            </Grid>
+        </Grid>
+    </Grid>
+</Window>
