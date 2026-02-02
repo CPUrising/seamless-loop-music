@@ -38,7 +38,7 @@ namespace seamless_loop_music
                 _audioStream = CreateAudioStream(filePath);
                 if (_audioStream == null)
                 {
-                    OnStatusChanged?.Invoke("不支持的音频格式!仅支持WAV/OGG/MP3");
+                    OnStatusChanged?.Invoke("Unsupported audio format! Only WAV/OGG/MP3 are supported.");
                     return;
                 }
 
@@ -53,11 +53,11 @@ namespace seamless_loop_music
 
                 // 触发加载完成事件
                 OnAudioLoaded?.Invoke(_totalSamples, waveFormat.SampleRate);
-                OnStatusChanged?.Invoke("音频加载成功! 请设置循环点后播放");
+                OnStatusChanged?.Invoke("Audio loaded. Set loop points and play!");
             }
             catch (Exception ex)
             {
-                OnStatusChanged?.Invoke($"加载失败:{ex.Message}");
+                OnStatusChanged?.Invoke($"Load failed: {ex.Message}");
             }
         }
 
@@ -91,12 +91,10 @@ namespace seamless_loop_music
                 return;
             }
             _loopStartSample = sample;
-            // 实时同步更新 LoopStream
             if (_loopStream != null)
-            {
                 _loopStream.LoopStartPosition = sample * _audioStream.WaveFormat.BlockAlign;
-            }
-            OnStatusChanged?.Invoke($"循环点已设置:{sample} (对应秒数:{sample / (double)_audioStream.WaveFormat.SampleRate:F2})");
+            
+            OnStatusChanged?.Invoke($"Loop Start set: {sample} ({sample / (double)_audioStream.WaveFormat.SampleRate:F2}s)");
         }
 
         /// <summary>
@@ -116,22 +114,13 @@ namespace seamless_loop_music
             }
             
             _loopEndSample = sample;
-             // 实时同步更新 LoopStream
             if (_loopStream != null)
             {
-                 // 需要重新计算字节位置，逻辑与 LoopStream 构造里的一致
                  long endPos = sample * _audioStream.WaveFormat.BlockAlign;
-                 if (sample <= 0 || endPos > _audioStream.Length)
-                 {
-                     _loopStream.LoopEndPosition = _audioStream.Length;
-                 }
-                 else
-                 {
-                     _loopStream.LoopEndPosition = endPos;
-                 }
+                 _loopStream.LoopEndPosition = (sample <= 0 || endPos > _audioStream.Length) ? _audioStream.Length : endPos;
             }
-            string endText = sample == 0 ? "文件末尾" : sample.ToString();
-            OnStatusChanged?.Invoke($"循环终点: {endText}");
+            string endLabel = sample == 0 ? "End of file" : sample.ToString();
+            OnStatusChanged?.Invoke($"Loop End set: {endLabel}");
         }
 
         /// <summary>
@@ -141,7 +130,7 @@ namespace seamless_loop_music
         {
             if (_audioStream == null)
             {
-                OnStatusChanged?.Invoke("播放失败:未加载音频!");
+                OnStatusChanged?.Invoke("Playback failed: Audio not loaded!");
                 return;
             }
 
@@ -162,7 +151,7 @@ namespace seamless_loop_music
                 
                 _wavePlayer.Play();
                 OnPlayStateChanged?.Invoke(PlaybackState.Playing);
-                OnStatusChanged?.Invoke("继续播放...");
+                OnStatusChanged?.Invoke("Resuming...");
                 return;
             }
 
@@ -200,17 +189,17 @@ namespace seamless_loop_music
                     if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
                     {
                         OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
-                        OnStatusChanged?.Invoke("播放已停止");
+                        OnStatusChanged?.Invoke("Playback stopped.");
                     }
                 };
 
                 _wavePlayer.Play();
                 OnPlayStateChanged?.Invoke(PlaybackState.Playing);
-                OnStatusChanged?.Invoke("开始无缝循环播放...");
+                OnStatusChanged?.Invoke("Loop playback started...");
             }
             catch (Exception ex)
             {
-                OnStatusChanged?.Invoke($"播放异常:{ex.Message}");
+                OnStatusChanged?.Invoke($"Error: {ex.Message}");
                 Stop();
             }
         }
@@ -224,7 +213,7 @@ namespace seamless_loop_music
             {
                 _wavePlayer.Pause();
                 OnPlayStateChanged?.Invoke(PlaybackState.Paused);
-                OnStatusChanged?.Invoke("已暂停");
+                OnStatusChanged?.Invoke("Paused");
             }
         }
 
@@ -237,7 +226,7 @@ namespace seamless_loop_music
 
             _wavePlayer?.Stop();
             OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
-            OnStatusChanged?.Invoke("已停止播放");
+            OnStatusChanged?.Invoke("Stopped.");
         }
 
         /// <summary>
@@ -293,12 +282,21 @@ namespace seamless_loop_music
         /// </summary>
         public void Seek(double percent)
         {
-            if (_loopStream != null)
-            {
-                double p = percent;
-                if (p < 0.0) p = 0.0;
-                if (p > 1.0) p = 1.0;
-                long position = (long)(_loopStream.Length * p);
+            if (_loopStream == null) {
+                // 如果没有流，先尝试记录并预加载（这里简单处理，Play+Pause会自动根据起始点初始化流）
+                Play();
+                Pause();
+            }
+
+            if (_loopStream != null) {
+                double p = Math.Max(0, Math.Min(1.0, percent));
+                long bytesPerSample = _audioStream.WaveFormat.BlockAlign;
+                long totalBytes = _audioStream.Length;
+                long position = (long)(totalBytes * p);
+                
+                // 对齐到 BlockAlign
+                position = (position / bytesPerSample) * bytesPerSample;
+
                 _loopStream.Position = position;
             }
         }

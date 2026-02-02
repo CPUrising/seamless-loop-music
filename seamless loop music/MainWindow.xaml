@@ -43,17 +43,41 @@
         <!-- Playlist -->
         <Grid Grid.Column="0" Margin="0,0,10,0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/> <!-- Header & Add -->
+                <RowDefinition Height="200"/>  <!-- My Playlists (Folders) -->
+                <RowDefinition Height="Auto"/> <!-- Spacer Text -->
+                <RowDefinition Height="*"/>    <!-- Current Track List -->
+                <RowDefinition Height="Auto"/> <!-- Lang Switch -->
             </Grid.RowDefinitions>
 
-            <Button x:Name="btnImport" Content="导入音乐文件夹" Style="{StaticResource SideButtonStyle}" Click="btnImport_Click"/>
+            <!-- Playlists Header -->
+            <Grid Grid.Row="0" Margin="0,0,0,5">
+                <TextBlock x:Name="lblMyPlaylists" Text="我的歌单" VerticalAlignment="Center" FontWeight="Bold" Foreground="#89B4FA"/>
+                <Button x:Name="btnAddPlaylist" Content="+" Style="{StaticResource SideButtonStyle}" Width="30" HorizontalAlignment="Right" Click="btnAddPlaylist_Click" ToolTip="添加新文件夹到歌单"/>
+            </Grid>
             
-            <ListBox x:Name="lstPlaylist" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,10"
+            <!-- Playlists ListBox -->
+            <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
+                     Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Name}" Padding="5" ToolTip="{Binding Path}"/>
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="重命名" Click="miRenamePlaylist_Click"/>
+                        <MenuItem Header="删除歌单" Click="miDeletePlaylist_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
+
+            <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="歌曲列表" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
+
+            <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
                      Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick"/>
 
-            <StackPanel Grid.Row="2">
+            <StackPanel Grid.Row="4">
                 <Button x:Name="btnSwitchLang" Content="English" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click"/>
             </StackPanel>
         </Grid>
@@ -82,6 +106,7 @@
             <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,20">
                 <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="20" FontWeight="Light" Margin="0,0,0,5"/>
                 <Slider x:Name="trkProgress" Maximum="1000" IsMoveToPointEnabled="True"
+                        PreviewMouseLeftButtonDown="trkProgress_MouseDown"
                         Thumb.DragStarted="trkProgress_DragStarted"
                         Thumb.DragCompleted="trkProgress_DragCompleted"/>
             </StackPanel>

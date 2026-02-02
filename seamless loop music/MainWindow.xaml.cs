@@ -20,9 +20,15 @@ namespace seamless_loop_music
         private int _currentTrackIndex = -1;
 
         private class LoopConfigItem { public long LoopStart; public long LoopEnd; }
+        private class PlaylistFolder { public string Name { get; set; } public string Path { get; set; } }
+
         private Dictionary<string, LoopConfigItem> _loopConfigs = new Dictionary<string, LoopConfigItem>();
+        private List<string> _recentFolders = new List<string>(); // Keep for backward compatibility or future use
+        private List<PlaylistFolder> _playlists = new List<PlaylistFolder>();
+
         private string _configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "loop_config.csv");
         private string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.conf");
+        private string _playlistPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "playlists.conf");
         private string _currentLang = "zh-CN";
 
         private string _currentConfigKey = null;
@@ -30,6 +36,7 @@ namespace seamless_loop_music
         private long _totalSamples = 0;
         private bool _isUpdatingUI = false;
         private bool _isDraggingProgress = false;
+        private DateTime _lastSeekTime = DateTime.MinValue; // 新增：记录最后一次跳转的时间
         private DispatcherTimer _tmrUpdate;
 
         public MainWindow()
@@ -39,7 +46,11 @@ namespace seamless_loop_music
             
             LoadSettings();
             LoadConfig();
+            LoadPlaylists();
             ApplyLanguage();
+
+            // 自动选中第一个歌单（如果有的话）
+            if (lstPlaylists.Items.Count > 0) lstPlaylists.SelectedIndex = 0;
 
             // 监听音频加载
             _audioLooper.OnAudioLoaded += (total, rate) => Dispatcher.Invoke(() => {
@@ -48,7 +59,7 @@ namespace seamless_loop_music
                 string fileName = Path.GetFileName(txtFilePath.Text);
                 _currentConfigKey = $"{fileName}_{total}";
                 
-                lblAudioInfo.Text = (_currentLang == "zh-CN") ? $"音频信息：Total {total} | 采样率 {rate} Hz" : $"Info: Total {total} | Rate {rate} Hz";
+                UpdateAudioInfoText();
 
                 _isUpdatingUI = true;
                 if (_loopConfigs.ContainsKey(_currentConfigKey)) {
@@ -74,12 +85,17 @@ namespace seamless_loop_music
             // 初始化定时器
             _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             _tmrUpdate.Tick += (s, e) => {
-                if (_isDraggingProgress) return;
+                // 如果正在拖动，或者刚刚完成跳转（500ms内），则不刷新进度条
+                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalMilliseconds < 500) return;
+                
                 var current = _audioLooper.CurrentTime;
                 var total = _audioLooper.TotalTime;
                 lblTime.Text = $"{current:mm\\:ss} / {total:mm\\:ss}";
-                if (total.TotalMilliseconds > 0)
+                if (total.TotalMilliseconds > 0) {
+                    _isUpdatingUI = true; // 标记正在由程序更新UI，防止触发 ValueChanged 逻辑循环
                     trkProgress.Value = (current.TotalMilliseconds / total.TotalMilliseconds) * trkProgress.Maximum;
+                    _isUpdatingUI = false;
+                }
             };
         }
 
@@ -97,20 +113,97 @@ namespace seamless_loop_music
             }
         }
 
-        private void btnImport_Click(object sender, RoutedEventArgs e) {
+        private void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
             var dialog = new System.Windows.Forms.FolderBrowserDialog();
             if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
+                string folderPath = dialog.SelectedPath;
+                string folderName = Path.GetFileName(folderPath);
+                if (string.IsNullOrEmpty(folderName)) folderName = folderPath; // Handle root drives
+
+                // 简单的重名处理或直接让用户输入（这里先用默认名）
+                _playlists.Add(new PlaylistFolder { Name = folderName, Path = folderPath });
+                UpdatePlaylistUI();
+                SavePlaylists();
+                
+                // 自动选中新添加的
+                lstPlaylists.SelectedIndex = _playlists.Count - 1;
+            }
+        }
+
+        private void lstPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e) {
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
+                LoadPlaylist(folder.Path);
+            }
+        }
+
+        private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
+                // 这是一个简单的演示，实际可能需要一个输入对话框
+                string newName = Microsoft.VisualBasic.Interaction.InputBox("输入新的歌单名称：", "重命名", folder.Name);
+                if (!string.IsNullOrEmpty(newName)) {
+                    folder.Name = newName;
+                    UpdatePlaylistUI();
+                    SavePlaylists();
+                }
+            }
+        }
+
+        private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
+                _playlists.Remove(folder);
+                UpdatePlaylistUI();
+                SavePlaylists();
+                lstPlaylist.Items.Clear();
+            }
+        }
+
+        private void UpdatePlaylistUI() {
+            lstPlaylists.ItemsSource = null;
+            lstPlaylists.ItemsSource = _playlists;
+        }
+
+        private void LoadPlaylists() {
+            try {
+                if (!File.Exists(_playlistPath)) return;
+                _playlists.Clear();
+                foreach (var line in File.ReadAllLines(_playlistPath)) {
+                    var parts = line.Split('|');
+                    if (parts.Length >= 2 && Directory.Exists(parts[1])) {
+                        _playlists.Add(new PlaylistFolder { Name = parts[0], Path = parts[1] });
+                    }
+                }
+                UpdatePlaylistUI();
+            } catch {}
+        }
+
+        private void SavePlaylists() {
+            try {
+                var lines = _playlists.Select(p => $"{p.Name}|{p.Path}");
+                File.WriteAllLines(_playlistPath, lines);
+            } catch {}
+        }
+
+        public void LoadPlaylist(string path, bool notify = true) {
+            try {
+                if (!Directory.Exists(path)) return;
+                
                 _playlist.Clear(); 
                 lstPlaylist.Items.Clear();
-                var files = Directory.GetFiles(dialog.SelectedPath, "*.*", SearchOption.AllDirectories)
+                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
                     .Where(s => s.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || 
                                 s.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || 
                                 s.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)).ToList();
+                
                 foreach (var f in files) { 
                     _playlist.Add(f); 
                     lstPlaylist.Items.Add(Path.GetFileName(f)); 
                 }
-                lblStatus.Text = (_currentLang == "zh-CN") ? $"成功导入 {files.Count} 首歌曲！" : $"Imported {files.Count} tracks!";
+
+                if (notify) {
+                    lblStatus.Text = (_currentLang == "zh-CN") ? $"成功导入 {files.Count} 首歌曲！" : $"Imported {files.Count} tracks!";
+                }
+            } catch (Exception ex) {
+                MessageBox.Show("加载列表失败: " + ex.Message);
             }
         }
 
@@ -152,6 +245,7 @@ namespace seamless_loop_music
             if (long.TryParse(txtLoopEndSample.Text, out long end) && long.TryParse(txtLoopSample.Text, out long start)) {
                 long previewOffset = _currentSampleRate * 3;
                 _audioLooper.SeekToSample(Math.Max(start, end - previewOffset));
+                _audioLooper.Play(); // 即使是暂停状态也强制开始试听
             }
         }
 
@@ -200,10 +294,37 @@ namespace seamless_loop_music
             }
         }
 
-        private void trkProgress_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e) => _isDraggingProgress = true;
-        private void trkProgress_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+        private void trkProgress_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e) {
+            // 点击进度条强制跳转
+            var slider = sender as Slider;
+            if (slider == null || slider.ActualWidth <= 0) return;
+            
+            _isDraggingProgress = true;
+            _lastSeekTime = DateTime.Now; // 开始跳转，抑制定时器
+
+            // 计算比例
+            double x = e.GetPosition(slider).X;
+            double ratio = x / slider.ActualWidth;
+            ratio = Math.Max(0, Math.Min(1.0, ratio));
+            
+            // 立即更新 UI 状态
+            slider.Value = ratio * slider.Maximum;
+            
+            // 执行音频跳转
+            _audioLooper.Seek(ratio);
+            
+            // 给音频引擎一点响应时间，稍后再解除抑制
             _isDraggingProgress = false;
+        }
+
+        private void trkProgress_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e) {
+            _isDraggingProgress = true;
+        }
+        
+        private void trkProgress_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+            _lastSeekTime = DateTime.Now;
             _audioLooper.Seek(trkProgress.Value / trkProgress.Maximum);
+            _isDraggingProgress = false;
         }
 
         private void trkVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -256,17 +377,32 @@ namespace seamless_loop_music
                     _currentLang = System.Globalization.CultureInfo.InstalledUICulture.Name.StartsWith("zh") ? "zh-CN" : "en-US"; 
                     return; 
                 }
-                foreach (var l in File.ReadAllLines(_settingsPath)) 
+                foreach (var l in File.ReadAllLines(_settingsPath)) {
                     if (l.StartsWith("Language=")) _currentLang = l.Substring(9).Trim();
+                    if (l.StartsWith("RecentFolders=")) {
+                        var paths = l.Substring("RecentFolders=".Length).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                        _recentFolders = paths.Where(p => Directory.Exists(p)).ToList();
+                    }
+                }
             } catch {}
         }
 
-        private void SaveSettings() { try { File.WriteAllLines(_settingsPath, new[] { $"Language={_currentLang}" }); } catch {} }
+        private void SaveSettings() { 
+            try { 
+                var lines = new List<string> { 
+                    $"Language={_currentLang}", 
+                    $"RecentFolders={string.Join(";", _recentFolders)}" 
+                };
+                File.WriteAllLines(_settingsPath, lines); 
+            } catch {} 
+        }
 
         private void ApplyLanguage() {
             bool isZh = (_currentLang == "zh-CN");
             this.Title = isZh ? "无缝循环音乐播放器" : "Seamless Loop Music Player";
-            if (btnImport != null) btnImport.Content = isZh ? "导入音乐文件夹" : "Import Music Folder";
+            if (lblMyPlaylists != null) lblMyPlaylists.Text = isZh ? "我的歌单" : "My Playlists";
+            if (lblTrackList != null) lblTrackList.Text = isZh ? "歌曲列表" : "Track List";
+            if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
             if (btnPlay != null) btnPlay.Content = isZh ? "播放" : "Play";
             if (btnPause != null) btnPause.Content = isZh ? "暂停" : "Pause";
             if (btnStop != null) btnStop.Content = isZh ? "重新播放" : "Replay";
@@ -278,6 +414,19 @@ namespace seamless_loop_music
             if (lblLoopEnd != null) lblLoopEnd.Text = isZh ? "循环结束采样数：" : "Loop End Sample:";
             if (btnSwitchLang != null) btnSwitchLang.Content = isZh ? "English" : "中文";
             if (lblStatus != null) lblStatus.Text = isZh ? "就绪" : "Ready";
+            UpdateAudioInfoText();
+        }
+
+        private void UpdateAudioInfoText() {
+            if (lblAudioInfo == null) return;
+            bool isZh = (_currentLang == "zh-CN");
+            if (_totalSamples == 0) {
+                lblAudioInfo.Text = isZh ? "音频信息：尚未加载" : "Audio Info: Not Loaded";
+            } else {
+                lblAudioInfo.Text = isZh ? 
+                    $"音频信息：Total {_totalSamples} | 采样率 {_currentSampleRate} Hz" : 
+                    $"Audio Info: Total {_totalSamples} Samples | Rate: {_currentSampleRate} Hz";
+            }
         }
 
         protected override void OnClosed(EventArgs e) {
