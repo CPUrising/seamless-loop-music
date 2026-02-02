@@ -11,36 +11,34 @@ Featuring the built-in **"Reverse Look-Behind Matching Algorithm"**, it achieves
 ![Screenshot](docs/screenshot.png)
 ![1770044319562](image/README_EN/1770044319562.png)
 
-## ✨ Key Features
-
-* **🎛️ Smart Match**: Forget manual tweaking of 0.01s. Our algorithm analyzes waveforms using unique "Audio Fingerprinting" to align loop points with sub-atomic precision.
-* **🧠 Memory Recall**: Close the app anytime. Upon reopening, it remembers your last track (and politely waits for you to press play).
-* **♾️ True Seamless**: Achieves Zero-Gap Looping by manipulating the underlying audio stream, fooling the sound driver into perceiving a continuous wave.
-* **🔧 Compatibility**: Downgraded to .NET Framework 4.8 for maximum compatibility on Windows 10/11 without extra runtime installations.
-* **📂 Playlist Management**: Folder import support included.
+* **🎛️ Smart Match**: No more manual tweaking for that 0.01s difference. The algorithm automatically analyses the waveform and uses "Audio Fingerprinting" technology to align loop points to the perfect position.
+* **🧠 Breakpoint Memory**: Close the app anytime. It remembers which track you were listening to when you open it next time (though it won't startle you by auto-playing).
+* **♾️ Physical Seamlessness**: Zero-Gap Loop based on low-level stream manipulation, tricking the sound driver into perceiving a continuous stream.
+* **🔧 Compatibility**: Downgraded to .NET Framework 4.8, ready to use on Windows 10/11 after unzipping, without extra runtime installation.
+* **📂 Playlist Management**: Support for folder import is a must.
 
 ## 🚀 Quick Start
 
-1. Download the latest [Release](https://github.com/yourusername/seamless-loop-music/releases).
+1. Go to [Releases](https://github.com/CPUrising/seamless-loop-music/releases) to download the latest version.
 2. Unzip and run `seamless loop music.exe`.
-3. Drag and drop your game BGM files (.mp3, .wav, .ogg supported).
-4. Roughly set an End point, then click **"Smart Match"**.
-5. Put on your headphones and enjoy the silky smooth transition.
+3. Click the **"+"** button next to "My Playlists" to import a folder containing BGMs, and double-click a song in the list to play.
+4. Fill in frames or seconds, adjust with fine-tune buttons, press "Apply & Preview" to jump to 3s before loop end, roughly set a loop range, then click **"Smart Match"**, and finally press "Apply & Preview".
+5. Put on your headphones and witness the miracle of seamless looping.
 
 ## 🕹️ Acknowledgement & Inspiration
 
 This project is inspired by [**AokanaMusicPlayer**](https://github.com/melodicule/AokanaMusicPlayer).
-We gratefully acknowledge the foundational architecture provided by @melodicule's open-source work.
+We gratefully acknowledge the foundational architecture provided by @melodicule's open-source work with our highest respect!
 
-Building upon that foundation, we have **independently developed** the following core technologies:
+Building upon that foundation, we have developed the following core technologies:
 
-* **Smart Alignment Algorithm**: Implements SAD (Sum of Absolute Differences) cross-correlation logic for automated waveform matching without human intervention.
-* **Non-Destructive Preview**: A new preview logic that simulates jumps in memory without disrupting the original playback stream.
+* **Smart Alignment Algorithm**: Introduced SAD (Sum of Absolute Differences) cross-correlation algorithm, achieving automated waveform matching without human intervention.
+* **Non-Destructive Preview**: A brand new preview logic that simulates jumps only in memory without disrupting the original playback stream.
 
 ## 📜 License
 
 This project is open-sourced under the **Microsoft Public License (Ms-PL)**.
-This allows you to freely use and modify the code, provided that you distribute it under the same license and include a copy of the original agreement.
+This means you are free to use and modify the code, but you must keep it open-source and include the original license when distributing, and you cannot sue contributors for patent infringement based on this.
 
 ---
 
