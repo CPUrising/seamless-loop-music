@@ -106,7 +106,7 @@
             <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,20">
                 <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="20" FontWeight="Light" Margin="0,0,0,5"/>
                 <Slider x:Name="trkProgress" Maximum="1000" IsMoveToPointEnabled="True"
-                        PreviewMouseLeftButtonDown="trkProgress_MouseDown"
+                        ValueChanged="trkProgress_ValueChanged"
                         Thumb.DragStarted="trkProgress_DragStarted"
                         Thumb.DragCompleted="trkProgress_DragCompleted"/>
             </StackPanel>
@@ -161,10 +161,13 @@
 
                 <Button x:Name="btnApplyLoop" Grid.Column="1" Content="确认应用并试听" HorizontalAlignment="Center" Width="150" 
                         Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnApplyLoop_Click"/>
+                
+                <Button x:Name="btnSmartMatch" Grid.Column="1" Content="智能匹配" HorizontalAlignment="Right" Width="80" Margin="0,0,10,0"
+                        Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnSmartMatch_Click" ToolTip="自动微调循环点以匹配波形"/>
 
                 <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="音量" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
-                    <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" ValueChanged="trkVolume_ValueChanged"/>
+                    <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
                 </StackPanel>
             </Grid>
         </Grid>

@@ -30,6 +30,7 @@ namespace seamless_loop_music
         private string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.conf");
         private string _playlistPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "playlists.conf");
         private string _currentLang = "zh-CN";
+        private string _lastLoadedFilePath = "";
 
         private string _currentConfigKey = null;
         private int _currentSampleRate = 44100;
@@ -85,18 +86,30 @@ namespace seamless_loop_music
             // 初始化定时器
             _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             _tmrUpdate.Tick += (s, e) => {
-                // 如果正在拖动，或者刚刚完成跳转（500ms内），则不刷新进度条
-                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalMilliseconds < 500) return;
+                // 如果用户正在交互（拖动中），或者刚刚完成跳转（1秒内），严禁定时器控制进度条
+                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalSeconds < 1.0) return;
                 
                 var current = _audioLooper.CurrentTime;
                 var total = _audioLooper.TotalTime;
+                
+                // 仅更新文字
                 lblTime.Text = $"{current:mm\\:ss} / {total:mm\\:ss}";
+                
                 if (total.TotalMilliseconds > 0) {
-                    _isUpdatingUI = true; // 标记正在由程序更新UI，防止触发 ValueChanged 逻辑循环
+                    _isUpdatingUI = true; // 开启保护位，防止反馈循环
                     trkProgress.Value = (current.TotalMilliseconds / total.TotalMilliseconds) * trkProgress.Maximum;
                     _isUpdatingUI = false;
                 }
             };
+
+            // 自动加载上次播放的文件（如果存在）
+            if (!string.IsNullOrEmpty(_lastLoadedFilePath) && File.Exists(_lastLoadedFilePath)) {
+                try {
+                    txtFilePath.Text = _lastLoadedFilePath;
+                    _audioLooper.LoadAudio(_lastLoadedFilePath);
+                    // 不调用 Play()，仅加载
+                } catch { /* 忽略自动加载失败 */ }
+            }
         }
 
         private void UpdateButtons(PlaybackState state) {
@@ -242,10 +255,24 @@ namespace seamless_loop_music
 
         private void btnApplyLoop_Click(object sender, RoutedEventArgs e) {
             ApplyLoopSettings();
+            SaveConfig(); // 立即保存配置到 CSV
             if (long.TryParse(txtLoopEndSample.Text, out long end) && long.TryParse(txtLoopSample.Text, out long start)) {
                 long previewOffset = _currentSampleRate * 3;
                 _audioLooper.SeekToSample(Math.Max(start, end - previewOffset));
                 _audioLooper.Play(); // 即使是暂停状态也强制开始试听
+            }
+        }
+
+        private void btnSmartMatch_Click(object sender, RoutedEventArgs e) {
+            if (long.TryParse(txtLoopSample.Text, out long start) && long.TryParse(txtLoopEndSample.Text, out long end)) {
+                long newStart, newEnd;
+                _audioLooper.FindBestLoopPoints(start, end, out newStart, out newEnd);
+                
+                // 更新UI
+                txtLoopSample.Text = newStart.ToString();
+                txtLoopEndSample.Text = newEnd.ToString();
+                // 提示
+                lblStatus.Text = (_currentLang == "zh-CN") ? "智能匹配完成" : "Smart Match Done";
             }
         }
 
@@ -261,10 +288,30 @@ namespace seamless_loop_music
         }
 
         private void txtLoopSample_TextChanged(object sender, TextChangedEventArgs e) { 
+            if (_isUpdatingUI) return;
+            if (long.TryParse(txtLoopSample.Text, out long val)) {
+                if (val > _totalSamples && _totalSamples > 0) {
+                    val = _totalSamples;
+                    _isUpdatingUI = true;
+                    txtLoopSample.Text = val.ToString();
+                    _isUpdatingUI = false;
+                }
+            }
             UpdateSecLabels(); 
             if (btnPlay != null) btnPlay.IsEnabled = !string.IsNullOrEmpty(txtFilePath.Text) && !string.IsNullOrEmpty(txtLoopSample.Text); 
         }
-        private void txtLoopEndSample_TextChanged(object sender, TextChangedEventArgs e) => UpdateSecLabels();
+        private void txtLoopEndSample_TextChanged(object sender, TextChangedEventArgs e) {
+            if (_isUpdatingUI) return;
+            if (long.TryParse(txtLoopEndSample.Text, out long val)) {
+                if (val > _totalSamples && _totalSamples > 0) {
+                    val = _totalSamples;
+                    _isUpdatingUI = true;
+                    txtLoopEndSample.Text = val.ToString();
+                    _isUpdatingUI = false;
+                }
+            }
+            UpdateSecLabels();
+        }
 
         private void UpdateSecLabels() {
             if (_isUpdatingUI) return;
@@ -294,27 +341,13 @@ namespace seamless_loop_music
             }
         }
 
-        private void trkProgress_MouseDown(object sender, System.Windows.Input.MouseButtonEventArgs e) {
-            // 点击进度条强制跳转
-            var slider = sender as Slider;
-            if (slider == null || slider.ActualWidth <= 0) return;
-            
-            _isDraggingProgress = true;
-            _lastSeekTime = DateTime.Now; // 开始跳转，抑制定时器
-
-            // 计算比例
-            double x = e.GetPosition(slider).X;
-            double ratio = x / slider.ActualWidth;
-            ratio = Math.Max(0, Math.Min(1.0, ratio));
-            
-            // 立即更新 UI 状态
-            slider.Value = ratio * slider.Maximum;
-            
-            // 执行音频跳转
-            _audioLooper.Seek(ratio);
-            
-            // 给音频引擎一点响应时间，稍后再解除抑制
-            _isDraggingProgress = false;
+        private void trkProgress_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
+            // 核心跳转逻辑：只有当不是程序更新（_isUpdatingUI=false）且不是正在拖动（_isDraggingProgress=false）时
+            // 才认为这是一次“点击跳转”
+            if (!_isUpdatingUI && !_isDraggingProgress) {
+                _lastSeekTime = DateTime.Now;
+                _audioLooper.Seek(e.NewValue / trkProgress.Maximum);
+            }
         }
 
         private void trkProgress_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e) {
@@ -322,9 +355,10 @@ namespace seamless_loop_music
         }
         
         private void trkProgress_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
+            // 拖动结束时的跳转
             _lastSeekTime = DateTime.Now;
             _audioLooper.Seek(trkProgress.Value / trkProgress.Maximum);
-            _isDraggingProgress = false;
+            _isDraggingProgress = false; // 放在跳转之后，确保跳转时定时器还没接管
         }
 
         private void trkVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
@@ -383,6 +417,7 @@ namespace seamless_loop_music
                         var paths = l.Substring("RecentFolders=".Length).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
                         _recentFolders = paths.Where(p => Directory.Exists(p)).ToList();
                     }
+                    if (l.StartsWith("LastFile=")) _lastLoadedFilePath = l.Substring(9).Trim();
                 }
             } catch {}
         }
@@ -393,6 +428,9 @@ namespace seamless_loop_music
                     $"Language={_currentLang}", 
                     $"RecentFolders={string.Join(";", _recentFolders)}" 
                 };
+                if (!string.IsNullOrEmpty(txtFilePath.Text) && File.Exists(txtFilePath.Text)) {
+                    lines.Add($"LastFile={txtFilePath.Text}");
+                }
                 File.WriteAllLines(_settingsPath, lines); 
             } catch {} 
         }
@@ -409,6 +447,10 @@ namespace seamless_loop_music
             if (btnPrev != null) btnPrev.Content = isZh ? "<< 上一首" : "<< Prev";
             if (btnNext != null) btnNext.Content = isZh ? "下一首 >>" : "Next >>";
             if (btnApplyLoop != null) btnApplyLoop.Content = isZh ? "确认应用并试听" : "Apply & Preview";
+            if (btnSmartMatch != null) {
+                btnSmartMatch.Content = isZh ? "智能匹配" : "Auto Match";
+                btnSmartMatch.ToolTip = isZh ? "自动微调循环点以匹配波形" : "Auto-adjust loop points to match waveform";
+            }
             if (lblFilePath != null) lblFilePath.Text = isZh ? "音频路径：" : "File Path:";
             if (lblLoopStart != null) lblLoopStart.Text = isZh ? "循环起始采样数：" : "Loop Start Sample:";
             if (lblLoopEnd != null) lblLoopEnd.Text = isZh ? "循环结束采样数：" : "Loop End Sample:";
@@ -431,6 +473,7 @@ namespace seamless_loop_music
 
         protected override void OnClosed(EventArgs e) {
             SaveConfig();
+            SaveSettings(); // 确保保存 LastFile 和其他设置
             _audioLooper?.Dispose();
             base.OnClosed(e);
         }

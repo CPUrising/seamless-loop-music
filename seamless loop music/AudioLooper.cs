@@ -282,22 +282,18 @@ namespace seamless_loop_music
         /// </summary>
         public void Seek(double percent)
         {
+            if (_audioStream == null) return;
+            
             if (_loopStream == null) {
-                // 如果没有流，先尝试记录并预加载（这里简单处理，Play+Pause会自动根据起始点初始化流）
                 Play();
                 Pause();
             }
 
             if (_loopStream != null) {
                 double p = Math.Max(0, Math.Min(1.0, percent));
-                long bytesPerSample = _audioStream.WaveFormat.BlockAlign;
-                long totalBytes = _audioStream.Length;
-                long position = (long)(totalBytes * p);
-                
-                // 对齐到 BlockAlign
-                position = (position / bytesPerSample) * bytesPerSample;
-
-                _loopStream.Position = position;
+                // 统一使用采样数进行跳转计算，避免字节偏移误差
+                long targetSample = (long)(_totalSamples * p);
+                SeekToSample(targetSample);
             }
         }
 
@@ -313,6 +309,137 @@ namespace seamless_loop_music
                 if (position > _loopStream.Length) position = _loopStream.Length;
                 _loopStream.Position = position;
             }
+        }
+
+        /// <summary>
+        /// 智能寻找最佳循环点 (基于回溯匹配算法 - 逆向模式)
+        /// 原理：提取 END 点之前的 1 秒音频作为“指纹”，在 START 点附近寻找完全一致的“指纹”。
+        /// 锚定 End 点不动，调整 Start 点以匹配 End 的前导波形。
+        /// </summary>
+        public void FindBestLoopPoints(long currentStart, long currentEnd, out long bestStart, out long bestEnd)
+        {
+            bestStart = currentStart; // 默认如果不匹配则不改动
+            bestEnd = currentEnd;     // End 是锚点，绝对不动
+
+            if (_audioStream == null) return;
+
+            var fmt = _audioStream.WaveFormat;
+            int sampleRate = fmt.SampleRate;
+
+            // 1. 定义匹配窗口 (1秒)
+            int windowSize = sampleRate; 
+
+            // 2. 提取 END 点的“前世指纹” (Template)
+            // End 点是确定的，我们看看 End 之前听到了什么。
+            long templateEndPos = currentEnd;
+            long templateStartPos = currentEnd - windowSize;
+
+            // 边界检查
+            if (templateStartPos < 0) templateStartPos = 0;
+            
+            long templateLen = templateEndPos - templateStartPos;
+            if (templateLen < sampleRate / 10) return; // 指纹太短
+
+            // 读取 End 前面的波形数据 -> Template
+            float[] template = ReadSamples(templateStartPos, (int)templateLen);
+
+            // 3. 定义 START 点的搜索区域 (Search Area)
+            // 我们在 Start 点附近 (比如前后 2 秒) 寻找谁也发出了这个声音
+            long searchRadius = sampleRate * 2; 
+            long searchRegionBegin = currentStart - searchRadius;
+            long searchRegionEnd = currentStart + searchRadius;
+
+            // 边界检查
+            if (searchRegionBegin < 0) searchRegionBegin = 0;
+            if (searchRegionEnd > _totalSamples) searchRegionEnd = _totalSamples;
+
+            long searchLen = searchRegionEnd - searchRegionBegin;
+            if (searchLen < templateLen) return;
+
+            // 读取搜索区波形
+            float[] searchBuffer = ReadSamples(searchRegionBegin, (int)searchLen);
+
+            if (template.Length == 0 || searchBuffer.Length == 0) return;
+
+            // 4. 核心匹配逻辑 (SAD)
+            // 拿着 End 的指纹，在 Start 附近滑动
+            double minDiff = double.MaxValue;
+            int bestMatchOffset = -1;
+
+            for (int i = 0; i <= searchBuffer.Length - template.Length; i++)
+            {
+                double diff = 0;
+                // 优化步长 4
+                for (int t = 0; t < template.Length; t += 4)
+                {
+                    float valA = template[t];        // End 指纹
+                    float valB = searchBuffer[i + t]; // Start 附近的波形
+                    diff += Math.Abs(valA - valB);
+                    if (diff > minDiff) break; 
+                }
+
+                if (diff < minDiff)
+                {
+                    minDiff = diff;
+                    bestMatchOffset = i;
+                }
+            }
+
+            // 5. 应用结果
+            // bestMatchOffset 是指纹在 searchBuffer 中的起始位置。
+            // 也就是说 searchBuffer[bestMatchOffset] 开始的这段声音，和 End 前面声音一模一样。
+            // 那么这段声音结束的地方，对应的就是 Start 点。
+            // 也就是 Start 应该设在：片段的结束位置。
+            // 片段起始绝对位置 = searchRegionBegin + bestMatchOffset
+            // 片段结束绝对位置 = searchRegionBegin + bestMatchOffset + templateLen
+            if (bestMatchOffset != -1)
+            {
+                long matchPosStart = searchRegionBegin + bestMatchOffset;
+                long matchPosEnd = matchPosStart + templateLen;
+
+                // 我们将 Start 调整为匹配片段的结束点
+                bestStart = matchPosEnd;
+                
+                OnStatusChanged?.Invoke($"Smart Match (Reverse): Diff={minDiff:F4}, Shifted Start by {(bestStart - currentStart)} samples.");
+            }
+        }
+
+        private float[] ReadSamples(long startSample, int count)
+        {
+            if (_audioStream == null) return new float[0];
+
+            int bytesPerSample = _audioStream.WaveFormat.BlockAlign;
+            int bitsPerSample = _audioStream.WaveFormat.BitsPerSample;
+            byte[] raw = new byte[count * bytesPerSample];
+
+            // 保存当前流位置用于恢复
+            long oldPos = _audioStream.Position;
+            
+            _audioStream.Position = startSample * bytesPerSample;
+            int bytesRead = _audioStream.Read(raw, 0, raw.Length);
+            
+            _audioStream.Position = oldPos; // 恢复位置
+
+            int samplesRead = bytesRead / bytesPerSample;
+            float[] samples = new float[samplesRead];
+
+            // 简单的 PCM 转 Float 解析
+            // 注意：这里只取第一个声道做匹配即可，为了速度。如果是立体声，取左声道。
+            for (int i = 0; i < samplesRead; i++)
+            {
+                if (bitsPerSample == 16)
+                {
+                    short s = BitConverter.ToInt16(raw, i * bytesPerSample);
+                    samples[i] = s / 32768f;
+                }
+                else if (bitsPerSample == 32)
+                {
+                    samples[i] = BitConverter.ToSingle(raw, i * bytesPerSample);
+                }
+                // 暂不处理8bit或24bit，通常够用
+            }
+
+            return samples;
         }
 
         /// <summary>

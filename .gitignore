@@ -365,3 +365,8 @@ FodyWeavers.xsd
 Release_Build/
 Release_*/
 *.zip
+
+# App Configs (User Data)
+loop_config.csv
+settings.conf
+playlists.conf
