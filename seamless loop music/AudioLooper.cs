@@ -248,6 +248,11 @@ namespace seamless_loop_music
         }
 
         /// <summary>
+        /// 获取当前播放状态
+        /// </summary>
+        public PlaybackState PlaybackState => _wavePlayer?.PlaybackState ?? PlaybackState.Stopped;
+
+        /// <summary>
         /// 获取当前播放时间
         /// </summary>
         public TimeSpan CurrentTime

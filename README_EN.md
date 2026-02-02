@@ -9,7 +9,7 @@ A specialized tool designed for seamless looping of game music and ambient track
 Featuring the built-in **"Reverse Look-Behind Matching Algorithm"**, it achieves millisecond-precision auto-alignment for loop points with a single click.
 
 ![Screenshot](docs/screenshot.png)
-![1770042833764](image/README/1770042833764.png)
+![1770044319562](image/README_EN/1770044319562.png)
 
 ## ✨ Key Features
 

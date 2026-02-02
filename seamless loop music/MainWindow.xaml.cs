@@ -115,15 +115,28 @@ namespace seamless_loop_music
         private void UpdateButtons(PlaybackState state) {
             bool isZh = (_currentLang == "zh-CN");
             bool hasFile = !string.IsNullOrEmpty(txtFilePath.Text);
-            btnPlay.IsEnabled = hasFile && (state != PlaybackState.Playing);
-            btnPause.IsEnabled = hasFile && (state == PlaybackState.Playing);
-            btnStop.IsEnabled = btnPrev.IsEnabled = btnNext.IsEnabled = hasFile;
-
-            switch (state) {
-                case PlaybackState.Playing: _tmrUpdate.Start(); lblStatus.Text = isZh ? "播放中..." : "Playing..."; break;
-                case PlaybackState.Paused: _tmrUpdate.Stop(); lblStatus.Text = isZh ? "已暂停" : "Paused"; break;
-                case PlaybackState.Stopped: _tmrUpdate.Stop(); lblStatus.Text = isZh ? "就绪" : "Ready"; trkProgress.Value = 0; lblTime.Text = "00:00 / 00:00"; break;
+            
+            btnPlay.IsEnabled = hasFile;
+            // Update Toggle Button Text
+            if (state == PlaybackState.Playing) {
+                btnPlay.Content = isZh ? "暂停" : "Pause";
+                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 226, 175)); // Yellowish for Pause
+                _tmrUpdate.Start(); 
+                lblStatus.Text = isZh ? "播放中..." : "Playing...";
+            } else {
+                btnPlay.Content = isZh ? "播放" : "Play";
+                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(166, 227, 161)); // Green for Play
+                if (state == PlaybackState.Paused) {
+                    _tmrUpdate.Stop(); 
+                    lblStatus.Text = isZh ? "已暂停" : "Paused";
+                } else { // Stopped
+                    _tmrUpdate.Stop(); 
+                    lblStatus.Text = isZh ? "就绪" : "Ready"; 
+                    trkProgress.Value = 0; 
+                    lblTime.Text = "00:00 / 00:00";
+                }
             }
+            btnStop.IsEnabled = btnPrev.IsEnabled = btnNext.IsEnabled = hasFile;
         }
 
         private void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
@@ -234,8 +247,13 @@ namespace seamless_loop_music
             _audioLooper.Play();
         }
 
-        private void btnPlay_Click(object sender, RoutedEventArgs e) => _audioLooper.Play();
-        private void btnPause_Click(object sender, RoutedEventArgs e) => _audioLooper.Pause();
+        private void btnPlay_Click(object sender, RoutedEventArgs e) {
+            if (_audioLooper.PlaybackState == PlaybackState.Playing) {
+                _audioLooper.Pause();
+            } else {
+                _audioLooper.Play();
+            }
+        }
         private void btnStop_Click(object sender, RoutedEventArgs e) { 
             if (!string.IsNullOrEmpty(txtFilePath.Text)) { 
                 _audioLooper.Play(); 
@@ -441,8 +459,12 @@ namespace seamless_loop_music
             if (lblMyPlaylists != null) lblMyPlaylists.Text = isZh ? "我的歌单" : "My Playlists";
             if (lblTrackList != null) lblTrackList.Text = isZh ? "歌曲列表" : "Track List";
             if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
-            if (btnPlay != null) btnPlay.Content = isZh ? "播放" : "Play";
-            if (btnPause != null) btnPause.Content = isZh ? "暂停" : "Pause";
+            if (btnPlay != null) {
+                // Refresh current state text
+                bool isPlaying = (_audioLooper != null && _audioLooper.PlaybackState == PlaybackState.Playing);
+                if (isPlaying) btnPlay.Content = isZh ? "暂停" : "Pause";
+                else btnPlay.Content = isZh ? "播放" : "Play";
+            }
             if (btnStop != null) btnStop.Content = isZh ? "重新播放" : "Replay";
             if (btnPrev != null) btnPrev.Content = isZh ? "<< 上一首" : "<< Prev";
             if (btnNext != null) btnNext.Content = isZh ? "下一首 >>" : "Next >>";

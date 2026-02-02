@@ -146,26 +146,30 @@
 
             <Grid Grid.Row="3" Margin="0,15,0,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="Auto"/> <!-- Play Controls -->
+                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
+                    <ColumnDefinition Width="Auto"/> <!-- Right Actions -->
+                    <ColumnDefinition Width="Auto"/> <!-- Volume -->
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Orientation="Horizontal">
-                    <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="80" Click="btnPrev_Click"/>
-                    <Button x:Name="btnPlay" Content="播放" Style="{StaticResource SideButtonStyle}" Width="60" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
-                    <Button x:Name="btnPause" Content="暂停" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPause_Click"/>
+                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                    <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPrev_Click"/>
+                    <Button x:Name="btnPlay" Content="播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
+                    <!-- Pause button merged into Play -->
                     <Button x:Name="btnStop" Content="重新播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnStop_Click"/>
-                    <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="80" Click="btnNext_Click"/>
+                    <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnNext_Click"/>
                 </StackPanel>
 
-                <Button x:Name="btnApplyLoop" Grid.Column="1" Content="确认应用并试听" HorizontalAlignment="Center" Width="150" 
-                        Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnApplyLoop_Click"/>
-                
-                <Button x:Name="btnSmartMatch" Grid.Column="1" Content="智能匹配" HorizontalAlignment="Right" Width="80" Margin="0,0,10,0"
-                        Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnSmartMatch_Click" ToolTip="自动微调循环点以匹配波形"/>
+                <!-- Put functional buttons in a group on the right -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0">
+                    <Button x:Name="btnApplyLoop" Content="确认应用并试听" Width="150" Margin="0,0,10,0"
+                            Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnApplyLoop_Click"/>
+                    
+                    <Button x:Name="btnSmartMatch" Content="智能匹配" Width="80"
+                            Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnSmartMatch_Click" ToolTip="自动微调循环点以匹配波形"/>
+                </StackPanel>
 
-                <StackPanel Grid.Column="2" Orientation="Horizontal" VerticalAlignment="Center">
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
                     <TextBlock Text="音量" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
                     <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
                 </StackPanel>
