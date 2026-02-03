@@ -25,6 +25,27 @@ Featuring the built-in **"Reverse Look-Behind Matching Algorithm"**, it achieves
 4. Fill in frames or seconds, adjust with fine-tune buttons, press "Apply & Preview" to jump to 3s before loop end, roughly set a loop range, then click **"Smart Match"**, and finally press "Apply & Preview".
 5. Put on your headphones and witness the miracle of seamless looping.
 
+## 📝 Roadmap
+
+We are dedicated to creating the ultimate seamless loop experience. Here are the improvements currently in progress or planned:
+
+### 🔴 High Priority
+- [ ] **Stability Enhancement**: Resolve occasional crashes and implement a global exception handling mechanism.
+- [ ] **Eliminate Popping**: Deeply optimize waveform processing during jumps to completely eliminate occasional "Click/Pop" noises.
+- [ ] **Singleton Mode**: Restrict the application to a single instance to prevent audio output conflicts.
+- [ ] **Smart Detection**: Add detection for playback device hot-plugging (e.g., unplugging headphones) to automatically pause playback.
+
+### 🟡 UX Improvements
+- [ ] **Visualization Optimization**: Optimize the timeline and unit display to make fine-tuning more intuitive.
+- [ ] **List Experience**: Automatically scroll the playlist to the current song when switching tracks.
+- [ ] **Easy Import**: Support adding playlists by directly inputting path addresses.
+- [ ] **Metadata Editing**: Support correcting song display names within the software.
+- [ ] **Algorithm Upgrade**: Enhance matching precision for short loop segments (<1s) and support forward (Start -> End) search.
+
+### 🔵 Future Plans
+- [ ] **AB Loop Support**: Adapt to the Intro + Loop (AB segment) looping structure.
+- [ ] **Advanced Filtering**: Support filtering the list based on game metadata.
+
 ## 🕹️ Acknowledgement & Inspiration
 
 This project is inspired by [**AokanaMusicPlayer**](https://github.com/melodicule/AokanaMusicPlayer).
