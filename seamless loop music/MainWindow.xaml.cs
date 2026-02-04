@@ -86,8 +86,8 @@ namespace seamless_loop_music
             // 初始化定时器
             _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
             _tmrUpdate.Tick += (s, e) => {
-                // 如果用户正在交互（拖动中），或者刚刚完成跳转（1秒内），严禁定时器控制进度条
-                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalSeconds < 1.0) return;
+                // 如果用户正在交互（拖动中），或者刚刚完成跳转（0.2秒内），严禁定时器控制进度条
+                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalSeconds < 0.2) return;
                 
                 var current = _audioLooper.CurrentTime;
                 var total = _audioLooper.TotalTime;
@@ -140,9 +140,10 @@ namespace seamless_loop_music
         }
 
         private void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog();
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK) {
-                string folderPath = dialog.SelectedPath;
+            var picker = new FolderPicker();
+            // 使用新版选择器，传入当前窗口作为父窗口
+            if (picker.ShowDialog(this)) {
+                string folderPath = picker.ResultPath;
                 string folderName = Path.GetFileName(folderPath);
                 if (string.IsNullOrEmpty(folderName)) folderName = folderPath; // Handle root drives
 
@@ -254,7 +255,7 @@ namespace seamless_loop_music
                 _audioLooper.Play();
             }
         }
-        private void btnStop_Click(object sender, RoutedEventArgs e) { 
+        private void btnReplay_Click(object sender, RoutedEventArgs e) { 
             if (!string.IsNullOrEmpty(txtFilePath.Text)) { 
                 _audioLooper.Play(); 
                 _audioLooper.SeekToSample(0); 
@@ -495,6 +496,7 @@ namespace seamless_loop_music
 
         protected override void OnClosed(EventArgs e) {
             SaveConfig();
+            SavePlaylists();
             SaveSettings(); // 确保保存 LastFile 和其他设置
             _audioLooper?.Dispose();
             base.OnClosed(e);

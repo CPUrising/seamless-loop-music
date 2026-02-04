@@ -1,3 +1,14 @@
+# ⚠️ Project Migration Notice
+
+**I have decided to abandon this WPF version! (╯°□°）╯︵ ┻━┻**
+
+In order to achieve the grand goal of **Windows + Android + iOS domination**, development on this project will cease.
+We are taking the core algorithms (seamless looping, smart waveform matching) with us to **Flutter**, starting a brand new cross-platform chapter.
+
+The new legend will continue there...
+
+---
+
 # Seamless Loop Music Player
 
 [![License: Ms-PL](https://img.shields.io/badge/License-Ms--PL-blue.svg)](https://opensource.org/licenses/MS-PL)

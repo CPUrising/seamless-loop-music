@@ -1,3 +1,14 @@
+# ⚠️ 项目迁移公告 (Project Migration Notice)
+
+**本大爷决定弃坑这个 WPF 版本了！(╯°□°）╯︵ ┻━┻**
+
+为了实现 **Windows + Android + iOS 三端制霸** 的宏伟目标，本项目将停止开发。
+我们将带着这里的核心算法（无缝循环、波形智能匹配）转战 **Flutter**，开启全新的跨平台篇章。
+
+新的传说，将在那里继续书写...
+
+---
+
 # Seamless Loop Music Player (无缝循环音乐播放器)
 
 [![License: Ms-PL](https://img.shields.io/badge/License-Ms--PL-blue.svg)](https://opensource.org/licenses/MS-PL)

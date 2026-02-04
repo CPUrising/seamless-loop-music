@@ -156,7 +156,7 @@
                     <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPrev_Click"/>
                     <Button x:Name="btnPlay" Content="播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
                     <!-- Pause button merged into Play -->
-                    <Button x:Name="btnStop" Content="重新播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnStop_Click"/>
+                    <Button x:Name="btnStop" Content="重新播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnReplay_Click"/>
                     <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnNext_Click"/>
                 </StackPanel>
 
