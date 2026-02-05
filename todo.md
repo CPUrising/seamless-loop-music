@@ -347,3 +347,7 @@ CSV + File.WriteAllLines
 
 
 下一次，我得整理好我的release... 这次太乱了
+
+configue保存音量设置
+
+时不时被打断？线程不稳定？
