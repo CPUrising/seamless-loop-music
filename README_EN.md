@@ -1,14 +1,3 @@
-# ⚠️ Project Migration Notice
-
-**I have decided to abandon this WPF version! (╯°□°）╯︵ ┻━┻**
-
-In order to achieve the grand goal of **Windows + Android + iOS domination**, development on this project will cease.
-We are taking the core algorithms (seamless looping, smart waveform matching) with us to **Flutter**, starting a brand new cross-platform chapter.
-
-The new legend will continue there...
-
----
-
 # Seamless Loop Music Player
 
 [![License: Ms-PL](https://img.shields.io/badge/License-Ms--PL-blue.svg)](https://opensource.org/licenses/MS-PL)
@@ -41,12 +30,14 @@ Featuring the built-in **"Reverse Look-Behind Matching Algorithm"**, it achieves
 We are dedicated to creating the ultimate seamless loop experience. Here are the improvements currently in progress or planned:
 
 ### 🔴 High Priority
+
 - [ ] **Stability Enhancement**: Resolve occasional crashes and implement a global exception handling mechanism.
 - [ ] **Eliminate Popping**: Deeply optimize waveform processing during jumps to completely eliminate occasional "Click/Pop" noises.
 - [ ] **Singleton Mode**: Restrict the application to a single instance to prevent audio output conflicts.
 - [ ] **Smart Detection**: Add detection for playback device hot-plugging (e.g., unplugging headphones) to automatically pause playback.
 
 ### 🟡 UX Improvements
+
 - [ ] **Visualization Optimization**: Optimize the timeline and unit display to make fine-tuning more intuitive.
 - [ ] **List Experience**: Automatically scroll the playlist to the current song when switching tracks.
 - [ ] **Easy Import**: Support adding playlists by directly inputting path addresses.
@@ -54,6 +45,7 @@ We are dedicated to creating the ultimate seamless loop experience. Here are the
 - [ ] **Algorithm Upgrade**: Enhance matching precision for short loop segments (<1s) and support forward (Start -> End) search.
 
 ### 🔵 Future Plans
+
 - [ ] **AB Loop Support**: Adapt to the Intro + Loop (AB segment) looping structure.
 - [ ] **Advanced Filtering**: Support filtering the list based on game metadata.
 
