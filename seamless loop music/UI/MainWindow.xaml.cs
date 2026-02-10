@@ -7,6 +7,8 @@ using System.Windows.Controls;
 using System.Windows.Threading;
 using Microsoft.Win32;
 using NAudio.Wave;
+using seamless_loop_music.Data;
+using seamless_loop_music.Models;
 
 namespace seamless_loop_music
 {
@@ -16,13 +18,12 @@ namespace seamless_loop_music
     public partial class MainWindow : Window
     {
         private readonly AudioLooper _audioLooper;
+        private readonly DatabaseHelper _dbHelper;
         private List<string> _playlist = new List<string>();
         private int _currentTrackIndex = -1;
 
-        private class LoopConfigItem { public long LoopStart; public long LoopEnd; }
         private class PlaylistFolder { public string Name { get; set; } public string Path { get; set; } }
 
-        private Dictionary<string, LoopConfigItem> _loopConfigs = new Dictionary<string, LoopConfigItem>();
         private List<string> _recentFolders = new List<string>(); // Keep for backward compatibility or future use
         private List<PlaylistFolder> _playlists = new List<PlaylistFolder>();
 
@@ -47,6 +48,8 @@ namespace seamless_loop_music
             
             InitializeComponent();
             _audioLooper = new AudioLooper();
+            _dbHelper = new DatabaseHelper();
+
             
             // 初始化定时器
             _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
@@ -92,13 +95,21 @@ namespace seamless_loop_music
                 UpdateAudioInfoText();
 
                 _isUpdatingUI = true;
-                if (_loopConfigs.ContainsKey(_currentConfigKey)) {
-                    var cfg = _loopConfigs[_currentConfigKey];
-                    if (cfg.LoopEnd <= 0) cfg.LoopEnd = total;
-                    _audioLooper.SetLoopStartSample(cfg.LoopStart);
-                    _audioLooper.SetLoopEndSample(cfg.LoopEnd);
-                    txtLoopSample.Text = cfg.LoopStart.ToString();
-                    txtLoopEndSample.Text = cfg.LoopEnd.ToString();
+                
+                // --- SQLite Logic (Pure Fingerprint: Filename + Samples) ---
+                var track = _dbHelper.GetTrack(txtFilePath.Text, total);
+
+                if (track != null) {
+                    if (track.LoopEnd <= 0) track.LoopEnd = total;
+                    _audioLooper.SetLoopStartSample(track.LoopStart);
+                    _audioLooper.SetLoopEndSample(track.LoopEnd);
+                    txtLoopSample.Text = track.LoopStart.ToString();
+                    txtLoopEndSample.Text = track.LoopEnd.ToString();
+                    
+                    // 如果有别名，更新状态栏或提示 (未来可以显示在标题)
+                    if (!string.IsNullOrEmpty(track.DisplayName)) {
+                        lblStatus.Text = $"{Properties.Resources.StatusPlaying}: {track.DisplayName}";
+                    }
                 } else {
                     _audioLooper.SetLoopStartSample(0);
                     _audioLooper.SetLoopEndSample(total);
@@ -296,7 +307,6 @@ namespace seamless_loop_music
             if (_isUpdatingUI) return;
             if (long.TryParse(txtLoopSample.Text, out long start)) _audioLooper.SetLoopStartSample(start);
             if (long.TryParse(txtLoopEndSample.Text, out long end)) _audioLooper.SetLoopEndSample(end);
-            UpdateCurrentConfig();
             UpdateSecLabels();
         }
 
@@ -437,37 +447,70 @@ namespace seamless_loop_music
 
         private void LoadConfig() {
             try {
-                if (!File.Exists(_configPath)) return;
+                // 1. 检查是否需要从 CSV 迁移
+                if (File.Exists(_configPath)) {
+                    MigrateCsvToSqlite();
+                }
+                // 2. 现在统一走 SQLite，无需预加载全量 Dictionary
+            } catch (Exception ex) {
+                MessageBox.Show("Load Config Error: " + ex.Message);
+            }
+        }
+
+        private void MigrateCsvToSqlite() {
+            try {
                 var lines = File.ReadAllLines(_configPath);
+                var tracksToImport = new List<MusicTrack>();
+                
                 for (int i = 1; i < lines.Length; i++) {
                     var p = lines[i].Split('|');
                     if (p.Length >= 4 && long.TryParse(p[1], out long total)) {
-                        _loopConfigs[$"{p[0]}_{p[1]}"] = new LoopConfigItem { 
-                            LoopStart = long.TryParse(p[2], out long s) ? s : 0, 
-                            LoopEnd = long.TryParse(p[3], out long e) ? e : total 
-                        };
+                        string absPath = p[0];
+                        string fileName = Path.GetFileName(absPath);
+                        
+                        tracksToImport.Add(new MusicTrack {
+                            FileName = fileName,
+                            FilePath = absPath,
+                            LoopStart = long.TryParse(p[2], out long s) ? s : 0,
+                            LoopEnd = long.TryParse(p[3], out long e) ? e : total,
+                            TotalSamples = total,
+                            DisplayName = Path.GetFileNameWithoutExtension(absPath)
+                        });
                     }
+                }
+                
+                if (tracksToImport.Count > 0) {
+                    _dbHelper.BulkInsert(tracksToImport);
+                    // 迁移成功后备份旧文件
+                    string bakPath = _configPath + ".bak";
+                    if (File.Exists(bakPath)) File.Delete(bakPath);
+                    File.Move(_configPath, bakPath);
+                    
+                    bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                    MessageBox.Show(isZh ? $"成功从旧配置文件导入 {tracksToImport.Count} 条数据！" : $"Imported {tracksToImport.Count} entries from CSV!");
                 }
             } catch {}
         }
 
         private void SaveConfig() {
+            if (string.IsNullOrEmpty(txtFilePath.Text)) return;
+            
             try {
-                var lines = new List<string> { "FileName|TotalSamples|LoopStart|LoopEnd" };
-                foreach (var kvp in _loopConfigs) {
-                    int last_ = kvp.Key.LastIndexOf('_');
-                    if (last_ > 0) lines.Add($"{kvp.Key.Substring(0, last_)}|{kvp.Key.Substring(last_ + 1)}|{kvp.Value.LoopStart}|{kvp.Value.LoopEnd}");
-                }
-                File.WriteAllLines(_configPath, lines);
+                long.TryParse(txtLoopSample.Text, out long start);
+                long.TryParse(txtLoopEndSample.Text, out long end);
+
+                var track = _dbHelper.GetTrack(txtFilePath.Text, _totalSamples) 
+                           ?? new MusicTrack { FileName = Path.GetFileName(txtFilePath.Text) };
+                
+                track.FilePath = txtFilePath.Text; 
+                track.LoopStart = start;
+                track.LoopEnd = end;
+                track.TotalSamples = _totalSamples;
+                
+                _dbHelper.SaveTrack(track);
             } catch {}
         }
 
-        private void UpdateCurrentConfig() {
-            if (string.IsNullOrEmpty(_currentConfigKey)) return;
-            if (!_loopConfigs.ContainsKey(_currentConfigKey)) _loopConfigs[_currentConfigKey] = new LoopConfigItem();
-            long.TryParse(txtLoopSample.Text, out _loopConfigs[_currentConfigKey].LoopStart);
-            long.TryParse(txtLoopEndSample.Text, out _loopConfigs[_currentConfigKey].LoopEnd);
-        }
 
         private void LoadSettings() {
             try {
