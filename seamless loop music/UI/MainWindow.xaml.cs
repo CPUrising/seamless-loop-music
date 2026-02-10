@@ -32,6 +32,7 @@ namespace seamless_loop_music
         private string _playlistPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "playlists.conf");
         private string _currentLang = "zh-CN";
         private string _lastLoadedFilePath = "";
+        private string _lastPlaylistPath = ""; // 新增：记录最后选中的歌单
 
         private string _currentConfigKey = null;
         private int _currentSampleRate = 44100;
@@ -123,18 +124,28 @@ namespace seamless_loop_music
             // 监听播放状态
             _audioLooper.OnPlayStateChanged += (state) => Dispatcher.Invoke(() => UpdateButtons(state));
 
+            // 新增：自动加载上次使用的歌单
+            if (!string.IsNullOrEmpty(_lastPlaylistPath) && Directory.Exists(_lastPlaylistPath)) {
+                // 尝试在歌单列表中找到对应的项并选中
+                var folder = _playlists.FirstOrDefault(p => p.Path == _lastPlaylistPath);
+                if (folder != null) {
+                    lstPlaylists.SelectedItem = folder;
+                    LoadPlaylist(folder.Path, false); // 加载但不发弹窗
+                }
+            }
+
             // 自动加载上次播放的文件（如果存在）
             if (!string.IsNullOrEmpty(_lastLoadedFilePath) && File.Exists(_lastLoadedFilePath)) {
                 try {
                     txtFilePath.Text = _lastLoadedFilePath;
                     _audioLooper.LoadAudio(_lastLoadedFilePath);
                     
-                    // 新增：自动在列表中定位并高亮选中
+                    // 自动在列表中定位并高亮选中
                     int idx = _playlist.IndexOf(_lastLoadedFilePath);
                     if (idx != -1) {
                         _currentTrackIndex = idx;
                         lstPlaylist.SelectedIndex = idx;
-                        lstPlaylist.ScrollIntoView(lstPlaylist.SelectedItem); // 确保它在视野内
+                        lstPlaylist.ScrollIntoView(lstPlaylist.SelectedItem); 
                     }
                 } catch { /* 忽略自动加载失败 */ }
             }
@@ -531,6 +542,7 @@ namespace seamless_loop_music
                             _recentFolders = paths.Where(p => Directory.Exists(p)).ToList();
                         }
                         if (l.StartsWith("LastFile=")) _lastLoadedFilePath = l.Substring(9).Trim();
+                        if (l.StartsWith("LastPlaylist=")) _lastPlaylistPath = l.Substring(13).Trim();
                     }
                 }
                 
@@ -554,6 +566,14 @@ namespace seamless_loop_music
                 if (!string.IsNullOrEmpty(txtFilePath.Text) && File.Exists(txtFilePath.Text)) {
                     lines.Add($"LastFile={txtFilePath.Text}");
                 }
+                
+                // 新增：保存当前选中的歌单路径
+                if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
+                    lines.Add($"LastPlaylist={folder.Path}");
+                } else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
+                    lines.Add($"LastPlaylist={_lastPlaylistPath}"); // 保留原有的
+                }
+
                 File.WriteAllLines(_settingsPath, lines); 
             } catch {} 
         }
