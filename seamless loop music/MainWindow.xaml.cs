@@ -423,8 +423,16 @@ namespace seamless_loop_music
             
             SaveSettings();
             
-            // Notify Restart
-            MessageBox.Show(Properties.Resources.MsgRestart);
+            // Notify & Auto Restart
+            bool isZh = _currentLang == "zh-CN";
+            string title = isZh ? "语言切换" : "Language Switch";
+            string msg = isZh ? "语言已切换，需要重启软件生效。现在重启吗？" : "Language switched. Restart now to apply?";
+            
+            if (MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes) {
+                // Restart logic
+                System.Diagnostics.Process.Start(System.Windows.Application.ResourceAssembly.Location);
+                System.Windows.Application.Current.Shutdown();
+            }
         }
 
         private void LoadConfig() {
