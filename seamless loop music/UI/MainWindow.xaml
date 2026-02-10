@@ -81,7 +81,13 @@
             <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="Tracks" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
-                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick"/>
+                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick">
+                <ListBox.ContextMenu>
+                    <ContextMenu>
+                        <MenuItem Header="Rename Alias" Click="miRenameTrack_Click"/>
+                    </ContextMenu>
+                </ListBox.ContextMenu>
+            </ListBox>
 
             <StackPanel Grid.Row="4">
                 <Button x:Name="btnSwitchLang" Content="中文" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click"/>

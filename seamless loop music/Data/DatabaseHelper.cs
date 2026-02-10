@@ -66,15 +66,27 @@ namespace seamless_loop_music.Data
 
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
-                return db.QueryFirstOrDefault<MusicTrack>(
+                // 1. 尝试寻找精准匹配（文件名 + 采样数）
+                var track = db.QueryFirstOrDefault<MusicTrack>(
                     "SELECT * FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
                     new { FileName = fileName, Total = totalSamples });
+
+                // 2. 如果没找到，则只寻找此文件关联的别名
+                if (track == null)
+                {
+                    var alias = db.ExecuteScalar<string>(
+                        "SELECT DisplayName FROM LoopPoints WHERE FileName = @FileName AND DisplayName IS NOT NULL LIMIT 1",
+                        new { FileName = fileName });
+                    
+                    if (!string.IsNullOrEmpty(alias))
+                    {
+                        track = new MusicTrack { FilePath = fullPath, FileName = fileName, DisplayName = alias, TotalSamples = totalSamples };
+                    }
+                }
+                return track;
             }
         }
 
-        /// <summary>
-        /// 保存或更新配置
-        /// </summary>
         public void SaveTrack(MusicTrack track)
         {
             if (string.IsNullOrEmpty(track.FileName) && !string.IsNullOrEmpty(track.FilePath))
@@ -83,12 +95,46 @@ namespace seamless_loop_music.Data
             track.LastModified = DateTime.Now;
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
-                string sql = @"
-                    INSERT OR REPLACE INTO LoopPoints 
-                    (FileName, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
-                    VALUES 
-                    (@FileName, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);";
-                db.Execute(sql, track);
+                if (track.Id > 0)
+                {
+                    // 已有 ID，执行精确更新
+                    string sql = @"
+                        UPDATE LoopPoints 
+                        SET DisplayName = @DisplayName, 
+                            LoopStart = @LoopStart, 
+                            LoopEnd = @LoopEnd, 
+                            LastModified = @LastModified
+                        WHERE Id = @Id;";
+                    db.Execute(sql, track);
+                }
+                else
+                {
+                    // 没有 ID，尝试插入或忽略（如果唯一键冲突则啥也不干，后续查询再拿 ID）
+                    // 但为了保证逻辑正确，我们这里用 INSERT OR IGNORE + SELECT last_insert_rowid
+                    // 或者更简单的：如果插入失败（冲突），则由上层逻辑保证先 Get 再 Save。
+                    // 鉴于我们现在的逻辑是 Update-First，这里用 INSERT 即可。
+                    string sql = @"
+                        INSERT INTO LoopPoints 
+                        (FileName, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
+                        VALUES 
+                        (@FileName, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);
+                        SELECT last_insert_rowid();";
+                    
+                    try {
+                        long newId = db.ExecuteScalar<long>(sql, track);
+                        track.Id = (int)newId;
+                    } catch (SQLiteException) {
+                        // 唯一键冲突？说明数据库里其实有，通过指纹（FileName+Samples）反查 ID
+                        var existing = db.QueryFirstOrDefault<MusicTrack>(
+                            "SELECT Id FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
+                            new { FileName = track.FileName, Total = track.TotalSamples });
+                        if (existing != null) {
+                            track.Id = existing.Id;
+                            // 既然已存在，就补一个 UPDATE
+                            SaveTrack(track); 
+                        }
+                    }
+                }
             }
         }
 

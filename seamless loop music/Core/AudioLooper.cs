@@ -18,6 +18,11 @@ namespace seamless_loop_music
         private long _totalSamples;
 
 
+        // 公开读取接口
+        public long LoopStartSample => _loopStartSample;
+        public long LoopEndSample => _loopEndSample;
+        public int SampleRate => _audioStream?.WaveFormat.SampleRate ?? 44100;
+
         // 状态回调事件
         public event Action<string> OnStatusChanged;
         public event Action<PlaybackState> OnPlayStateChanged; // 升级: 传递详细状态
