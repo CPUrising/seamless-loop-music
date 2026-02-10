@@ -128,7 +128,14 @@ namespace seamless_loop_music
                 try {
                     txtFilePath.Text = _lastLoadedFilePath;
                     _audioLooper.LoadAudio(_lastLoadedFilePath);
-                    // 不调用 Play()，仅加载
+                    
+                    // 新增：自动在列表中定位并高亮选中
+                    int idx = _playlist.IndexOf(_lastLoadedFilePath);
+                    if (idx != -1) {
+                        _currentTrackIndex = idx;
+                        lstPlaylist.SelectedIndex = idx;
+                        lstPlaylist.ScrollIntoView(lstPlaylist.SelectedItem); // 确保它在视野内
+                    }
                 } catch { /* 忽略自动加载失败 */ }
             }
         }

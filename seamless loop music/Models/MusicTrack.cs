@@ -3,7 +3,7 @@ using System;
 namespace seamless_loop_music.Models
 {
     /// <summary>
-    /// 音乐轨道模型，用于 SQLite 存储和 UI 列表显示
+    /// 音乐轨道模型，用于 SQLite 存储 and UI 列表显示
     /// </summary>
     public class MusicTrack
     {
@@ -50,3 +50,4 @@ namespace seamless_loop_music.Models
         public string Title => string.IsNullOrEmpty(DisplayName) ? System.IO.Path.GetFileNameWithoutExtension(FilePath) : DisplayName;
     }
 }
+
