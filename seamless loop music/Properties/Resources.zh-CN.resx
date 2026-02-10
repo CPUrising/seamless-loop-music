@@ -1,0 +1,130 @@
+<?xml version="1.0" encoding="utf-8"?>
+<root>
+  <xsd:schema id="root" xmlns="" xmlns:xsd="http://www.w3.org/2001/XMLSchema" xmlns:msdata="urn:schemas-microsoft-com:xml-msdata">
+    <xsd:import namespace="http://www.w3.org/XML/1998/namespace" />
+    <xsd:element name="root" msdata:IsDataSet="true">
+      <xsd:complexType>
+        <xsd:choice maxOccurs="unbounded">
+          <xsd:element name="metadata">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" />
+              </xsd:sequence>
+              <xsd:attribute name="name" use="required" type="xsd:string" />
+              <xsd:attribute name="type" type="xsd:string" />
+              <xsd:attribute name="mimetype" type="xsd:string" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="assembly">
+            <xsd:complexType>
+              <xsd:attribute name="alias" type="xsd:string" />
+              <xsd:attribute name="name" type="xsd:string" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="data">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+                <xsd:element name="comment" type="xsd:string" minOccurs="0" msdata:Ordinal="2" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" msdata:Ordinal="1" />
+              <xsd:attribute name="type" type="xsd:string" msdata:Ordinal="3" />
+              <xsd:attribute name="mimetype" type="xsd:string" msdata:Ordinal="4" />
+              <xsd:attribute ref="xml:space" />
+            </xsd:complexType>
+          </xsd:element>
+          <xsd:element name="resheader">
+            <xsd:complexType>
+              <xsd:sequence>
+                <xsd:element name="value" type="xsd:string" minOccurs="0" msdata:Ordinal="1" />
+              </xsd:sequence>
+              <xsd:attribute name="name" type="xsd:string" use="required" />
+            </xsd:complexType>
+          </xsd:element>
+        </xsd:choice>
+      </xsd:complexType>
+    </xsd:element>
+  </xsd:schema>
+  <resheader name="resmimetype">
+    <value>text/microsoft-resx</value>
+  </resheader>
+  <resheader name="version">
+    <value>2.0</value>
+  </resheader>
+  <resheader name="reader">
+    <value>System.Resources.ResXResourceReader, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <resheader name="writer">
+    <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
+  </resheader>
+  <data name="AppTitle" xml:space="preserve">
+    <value>无缝循环音乐播放器</value>
+  </data>
+  <data name="MyPlaylist" xml:space="preserve">
+    <value>我的歌单</value>
+  </data>
+  <data name="TrackList" xml:space="preserve">
+    <value>歌曲列表</value>
+  </data>
+  <data name="SwitchLang" xml:space="preserve">
+    <value>English</value>
+  </data>
+  <data name="FilePathTitle" xml:space="preserve">
+    <value>音频路径：</value>
+  </data>
+  <data name="NoFileSelected" xml:space="preserve">
+    <value>未选择文件</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="StatusPlaying" xml:space="preserve">
+    <value>播放中</value>
+  </data>
+  <data name="StatusPaused" xml:space="preserve">
+    <value>已暂停</value>
+  </data>
+  <data name="StatusStopped" xml:space="preserve">
+    <value>已停止</value>
+  </data>
+  <data name="AudioInfoInit" xml:space="preserve">
+    <value>音频信息：尚未加载</value>
+  </data>
+  <data name="LoopStartLabel" xml:space="preserve">
+    <value>循环起始采样数：</value>
+  </data>
+  <data name="LoopEndLabel" xml:space="preserve">
+    <value>循环结束采样数：</value>
+  </data>
+  <data name="Play" xml:space="preserve">
+    <value>播放</value>
+  </data>
+  <data name="Replay" xml:space="preserve">
+    <value>重新播放</value>
+  </data>
+  <data name="ApplyAndTest" xml:space="preserve">
+    <value>确认应用并试听</value>
+  </data>
+  <data name="SmartMatch" xml:space="preserve">
+    <value>智能匹配</value>
+  </data>
+  <data name="Volume" xml:space="preserve">
+    <value>音量</value>
+  </data>
+  <data name="MenuRename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="MenuDelete" xml:space="preserve">
+    <value>删除歌单</value>
+  </data>
+  <data name="MsgRestart" xml:space="preserve">
+    <value>语言已切换！请重启应用程序以完全生效。</value>
+  </data>
+  <data name="MsgDeleteConfirm" xml:space="preserve">
+    <value>确定要删除这个歌单吗？</value>
+  </data>
+  <data name="TitleDelete" xml:space="preserve">
+    <value>确认删除</value>
+  </data>
+</root>

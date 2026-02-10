@@ -43,19 +43,24 @@
         <!-- Playlist -->
         <Grid Grid.Column="0" Margin="0,0,10,0">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Header & Add -->
-                <RowDefinition Height="200"/>  <!-- My Playlists (Folders) -->
-                <RowDefinition Height="Auto"/> <!-- Spacer Text -->
-                <RowDefinition Height="*"/>    <!-- Current Track List -->
-                <RowDefinition Height="Auto"/> <!-- Lang Switch -->
+                <RowDefinition Height="Auto"/>
+                <!-- Header & Add -->
+                <RowDefinition Height="200"/>
+                <!-- My Playlists (Folders) -->
+                <RowDefinition Height="Auto"/>
+                <!-- Spacer Text -->
+                <RowDefinition Height="*"/>
+                <!-- Current Track List -->
+                <RowDefinition Height="Auto"/>
+                <!-- Lang Switch -->
             </Grid.RowDefinitions>
 
             <!-- Playlists Header -->
             <Grid Grid.Row="0" Margin="0,0,0,5">
-                <TextBlock x:Name="lblMyPlaylists" Text="我的歌单" VerticalAlignment="Center" FontWeight="Bold" Foreground="#89B4FA"/>
-                <Button x:Name="btnAddPlaylist" Content="+" Style="{StaticResource SideButtonStyle}" Width="30" HorizontalAlignment="Right" Click="btnAddPlaylist_Click" ToolTip="添加新文件夹到歌单"/>
+                <TextBlock x:Name="lblMyPlaylists" Text="My Playlists" VerticalAlignment="Center" FontWeight="Bold" Foreground="#89B4FA"/>
+                <Button x:Name="btnAddPlaylist" Content="+" Style="{StaticResource SideButtonStyle}" Width="30" HorizontalAlignment="Right" Click="btnAddPlaylist_Click" ToolTip="Add New Playlist Folder"/>
             </Grid>
-            
+
             <!-- Playlists ListBox -->
             <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
                      Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged">
@@ -66,19 +71,19 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="重命名" Click="miRenamePlaylist_Click"/>
-                        <MenuItem Header="删除歌单" Click="miDeletePlaylist_Click"/>
+                        <MenuItem Header="Rename" Click="miRenamePlaylist_Click"/>
+                        <MenuItem Header="Delete" Click="miDeletePlaylist_Click"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
 
-            <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="歌曲列表" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
+            <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="Tracks" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
                      Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick"/>
 
             <StackPanel Grid.Row="4">
-                <Button x:Name="btnSwitchLang" Content="English" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click"/>
+                <Button x:Name="btnSwitchLang" Content="中文" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click"/>
             </StackPanel>
         </Grid>
 
@@ -92,13 +97,13 @@
             </Grid.RowDefinitions>
 
             <StackPanel Grid.Row="0">
-                <TextBlock x:Name="lblFilePath" Text="音频路径：" FontSize="12" Foreground="#A6ADC8"/>
-                <TextBlock x:Name="txtFilePath" Text="未选择文件" FontSize="14" FontWeight="Bold" Margin="0,2,0,10" TextTrimming="CharacterEllipsis"/>
-                
+                <TextBlock x:Name="lblFilePath" Text="File Path:" FontSize="12" Foreground="#A6ADC8"/>
+                <TextBlock x:Name="txtFilePath" Text="No file selected" FontSize="14" FontWeight="Bold" Margin="0,2,0,10" TextTrimming="CharacterEllipsis"/>
+
                 <Border Background="#313244" CornerRadius="5" Padding="10">
                     <StackPanel>
-                        <TextBlock x:Name="lblStatus" Text="就绪" Foreground="#89B4FA" FontWeight="Bold"/>
-                        <TextBlock x:Name="lblAudioInfo" Text="音频信息：尚未加载" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
+                        <TextBlock x:Name="lblStatus" Text="Ready" Foreground="#89B4FA" FontWeight="Bold"/>
+                        <TextBlock x:Name="lblAudioInfo" Text="Details: Not loaded" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -111,17 +116,17 @@
                         Thumb.DragCompleted="trkProgress_DragCompleted"/>
             </StackPanel>
 
-            <Grid Grid.Row="2" Margin="0,10">
+            <Grid Grid.Row="1" Margin="0,349,0,10" Grid.RowSpan="2">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                    <TextBlock x:Name="lblLoopStart" Text="循环起始采样数：" FontSize="12" Margin="0,0,0,5"/>
+                    <TextBlock x:Name="lblLoopStart" Text="Loop Start (Samples):" FontSize="12" Margin="0,0,0,5"/>
                     <TextBox x:Name="txtLoopSample" Text="0" TextChanged="txtLoopSample_TextChanged"/>
                     <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.7" TextChanged="txtLoopStartSec_TextChanged"/>
-                    
+
                     <UniformGrid Columns="4" Margin="0,5">
                         <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1.0"/>
                         <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1"/>
@@ -131,7 +136,7 @@
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                    <TextBlock x:Name="lblLoopEnd" Text="循环结束采样数：" FontSize="12" Margin="0,0,0,5"/>
+                    <TextBlock x:Name="lblLoopEnd" Text="Loop End (Samples):" FontSize="12" Margin="0,0,0,5"/>
                     <TextBox x:Name="txtLoopEndSample" Text="0" TextChanged="txtLoopEndSample_TextChanged"/>
                     <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.7" TextChanged="txtLoopEndSec_TextChanged"/>
 
@@ -146,31 +151,35 @@
 
             <Grid Grid.Row="3" Margin="0,15,0,0">
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/> <!-- Play Controls -->
-                    <ColumnDefinition Width="*"/>    <!-- Spacer -->
-                    <ColumnDefinition Width="Auto"/> <!-- Right Actions -->
-                    <ColumnDefinition Width="Auto"/> <!-- Volume -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Play Controls -->
+                    <ColumnDefinition Width="*"/>
+                    <!-- Spacer -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Right Actions -->
+                    <ColumnDefinition Width="Auto"/>
+                    <!-- Volume -->
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Grid.Column="0" Orientation="Horizontal">
                     <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPrev_Click"/>
-                    <Button x:Name="btnPlay" Content="播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
+                    <Button x:Name="btnPlay" Content="Play" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
                     <!-- Pause button merged into Play -->
-                    <Button x:Name="btnStop" Content="重新播放" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnReplay_Click"/>
+                    <Button x:Name="btnStop" Content="Replay" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnReplay_Click"/>
                     <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnNext_Click"/>
                 </StackPanel>
 
                 <!-- Put functional buttons in a group on the right -->
                 <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0">
-                    <Button x:Name="btnApplyLoop" Content="确认应用并试听" Width="150" Margin="0,0,10,0"
+                    <Button x:Name="btnApplyLoop" Content="Apply &amp; Test Loop" Width="150" Margin="0,0,10,0"
                             Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnApplyLoop_Click"/>
-                    
-                    <Button x:Name="btnSmartMatch" Content="智能匹配" Width="80"
-                            Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnSmartMatch_Click" ToolTip="自动微调循环点以匹配波形"/>
+
+                    <Button x:Name="btnSmartMatch" Content="Smart Match" Width="80"
+                            Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnSmartMatch_Click" ToolTip="Auto adjust loop points"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="音量" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
+                    <TextBlock Text="Volume" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
                     <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
                 </StackPanel>
             </Grid>

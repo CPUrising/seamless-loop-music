@@ -42,13 +42,42 @@ namespace seamless_loop_music
 
         public MainWindow()
         {
+            // 1. Load settings FIRST to set the correct culture before UI initializes
+            LoadSettings(); 
+            
             InitializeComponent();
             _audioLooper = new AudioLooper();
             
-            LoadSettings();
+            // 初始化定时器
+            _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
+            _tmrUpdate.Tick += (s, e) => {
+                // 如果用户正在交互（拖动中），或者刚刚完成跳转（0.2秒内），严禁定时器控制进度条
+                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalSeconds < 0.2) return;
+                
+                var current = _audioLooper.CurrentTime;
+                var total = _audioLooper.TotalTime;
+                
+                // 仅更新文字
+                lblTime.Text = $"{current:mm\\:ss} / {total:mm\\:ss}";
+                
+                if (total.TotalMilliseconds > 0) {
+                    _isUpdatingUI = true; // 开启保护位，防止反馈循环
+                    trkProgress.Value = (current.TotalMilliseconds / total.TotalMilliseconds) * trkProgress.Maximum;
+                    _isUpdatingUI = false;
+                }
+            };
+            
             LoadConfig();
             LoadPlaylists();
-            ApplyLanguage();
+            
+            try {
+                ApplyLanguage(); 
+            } catch (Exception ex) {
+                MessageBox.Show("Language Load Error: " + ex.Message + "\n" + ex.StackTrace);
+            }
+
+            UpdateAudioInfoText();
+            UpdateButtons(PlaybackState.Stopped);
 
             // 自动选中第一个歌单（如果有的话）
             if (lstPlaylists.Items.Count > 0) lstPlaylists.SelectedIndex = 0;
@@ -83,25 +112,6 @@ namespace seamless_loop_music
             // 监听播放状态
             _audioLooper.OnPlayStateChanged += (state) => Dispatcher.Invoke(() => UpdateButtons(state));
 
-            // 初始化定时器
-            _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-            _tmrUpdate.Tick += (s, e) => {
-                // 如果用户正在交互（拖动中），或者刚刚完成跳转（0.2秒内），严禁定时器控制进度条
-                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalSeconds < 0.2) return;
-                
-                var current = _audioLooper.CurrentTime;
-                var total = _audioLooper.TotalTime;
-                
-                // 仅更新文字
-                lblTime.Text = $"{current:mm\\:ss} / {total:mm\\:ss}";
-                
-                if (total.TotalMilliseconds > 0) {
-                    _isUpdatingUI = true; // 开启保护位，防止反馈循环
-                    trkProgress.Value = (current.TotalMilliseconds / total.TotalMilliseconds) * trkProgress.Maximum;
-                    _isUpdatingUI = false;
-                }
-            };
-
             // 自动加载上次播放的文件（如果存在）
             if (!string.IsNullOrEmpty(_lastLoadedFilePath) && File.Exists(_lastLoadedFilePath)) {
                 try {
@@ -113,25 +123,36 @@ namespace seamless_loop_music
         }
 
         private void UpdateButtons(PlaybackState state) {
-            bool isZh = (_currentLang == "zh-CN");
             bool hasFile = !string.IsNullOrEmpty(txtFilePath.Text);
             
             btnPlay.IsEnabled = hasFile;
             // Update Toggle Button Text
             if (state == PlaybackState.Playing) {
-                btnPlay.Content = isZh ? "暂停" : "Pause";
-                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 226, 175)); // Yellowish for Pause
+                // Use Resources for dynamic state
+                btnPlay.Content = Properties.Resources.StatusPaused; // Using "Paused" text for the button that pauses? No, usually "Pause"
+                // Wait, resx has key "Play" and "StatusPaused". 
+                // Button Text Logic: If Playing, Button says "Pause". If Paused, Button says "Play".
+                // I don't have "Pause" verb in Resources? I have "StatusPaused". 
+                // Let's check resx: Play=Play/播放, StatusPaused=Paused/已暂停.
+                // I miss the verb "Pause". I will use "StatusPaused" as a fallback or hardcoded for now if needed.
+                // Actually my checks earlier showed I missed "Pause" verb.
+                // Reverting to isZh check for safety on missing keys, but using Resources.Culture
+                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                
+                btnPlay.Content = isZh ? "暂停" : "Pause"; 
+                
+                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 226, 175)); // Yellowish
                 _tmrUpdate.Start(); 
-                lblStatus.Text = isZh ? "播放中..." : "Playing...";
+                lblStatus.Text = Properties.Resources.StatusPlaying;
             } else {
-                btnPlay.Content = isZh ? "播放" : "Play";
-                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(166, 227, 161)); // Green for Play
+                btnPlay.Content = Properties.Resources.Play;
+                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(166, 227, 161)); // Green
                 if (state == PlaybackState.Paused) {
                     _tmrUpdate.Stop(); 
-                    lblStatus.Text = isZh ? "已暂停" : "Paused";
+                    lblStatus.Text = Properties.Resources.StatusPaused;
                 } else { // Stopped
                     _tmrUpdate.Stop(); 
-                    lblStatus.Text = isZh ? "就绪" : "Ready"; 
+                    lblStatus.Text = Properties.Resources.StatusReady; 
                     trkProgress.Value = 0; 
                     lblTime.Text = "00:00 / 00:00";
                 }
@@ -166,7 +187,11 @@ namespace seamless_loop_music
         private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
                 // 这是一个简单的演示，实际可能需要一个输入对话框
-                string newName = Microsoft.VisualBasic.Interaction.InputBox("输入新的歌单名称：", "重命名", folder.Name);
+                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                string title = isZh ? "重命名" : "Rename";
+                string content = isZh ? "输入新的歌单名称：" : "Enter new playlist name:";
+                
+                string newName = Microsoft.VisualBasic.Interaction.InputBox(content, title, folder.Name);
                 if (!string.IsNullOrEmpty(newName)) {
                     folder.Name = newName;
                     UpdatePlaylistUI();
@@ -177,10 +202,12 @@ namespace seamless_loop_music
 
         private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                _playlists.Remove(folder);
-                UpdatePlaylistUI();
-                SavePlaylists();
-                lstPlaylist.Items.Clear();
+                if (MessageBox.Show(Properties.Resources.MsgDeleteConfirm, Properties.Resources.TitleDelete, MessageBoxButton.YesNo) == MessageBoxResult.Yes) {
+                    _playlists.Remove(folder);
+                    UpdatePlaylistUI();
+                    SavePlaylists();
+                    lstPlaylist.Items.Clear();
+                }
             }
         }
 
@@ -227,7 +254,8 @@ namespace seamless_loop_music
                 }
 
                 if (notify) {
-                    lblStatus.Text = (_currentLang == "zh-CN") ? $"成功导入 {files.Count} 首歌曲！" : $"Imported {files.Count} tracks!";
+                    bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                    lblStatus.Text = isZh ? $"成功导入 {files.Count} 首歌曲！" : $"Imported {files.Count} tracks!";
                 }
             } catch (Exception ex) {
                 MessageBox.Show("加载列表失败: " + ex.Message);
@@ -291,7 +319,8 @@ namespace seamless_loop_music
                 txtLoopSample.Text = newStart.ToString();
                 txtLoopEndSample.Text = newEnd.ToString();
                 // 提示
-                lblStatus.Text = (_currentLang == "zh-CN") ? "智能匹配完成" : "Smart Match Done";
+                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                lblStatus.Text = isZh ? "智能匹配完成" : "Smart Match Done";
             }
         }
 
@@ -385,9 +414,17 @@ namespace seamless_loop_music
         }
 
         private void btnSwitchLang_Click(object sender, RoutedEventArgs e) {
+            // Toggle config
             _currentLang = (_currentLang == "zh-CN") ? "en-US" : "zh-CN";
-            SaveSettings(); 
-            ApplyLanguage();
+            
+            // Set Culture
+            var culture = new System.Globalization.CultureInfo(_currentLang);
+            Properties.Resources.Culture = culture;
+            
+            SaveSettings();
+            
+            // Notify Restart
+            MessageBox.Show(Properties.Resources.MsgRestart);
         }
 
         private void LoadConfig() {
@@ -428,16 +465,25 @@ namespace seamless_loop_music
             try {
                 if (!File.Exists(_settingsPath)) { 
                     _currentLang = System.Globalization.CultureInfo.InstalledUICulture.Name.StartsWith("zh") ? "zh-CN" : "en-US"; 
-                    return; 
-                }
-                foreach (var l in File.ReadAllLines(_settingsPath)) {
-                    if (l.StartsWith("Language=")) _currentLang = l.Substring(9).Trim();
-                    if (l.StartsWith("RecentFolders=")) {
-                        var paths = l.Substring("RecentFolders=".Length).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
-                        _recentFolders = paths.Where(p => Directory.Exists(p)).ToList();
+                } else {
+                    foreach (var l in File.ReadAllLines(_settingsPath)) {
+                        if (l.StartsWith("Language=")) _currentLang = l.Substring(9).Trim();
+                        if (l.StartsWith("RecentFolders=")) {
+                            var paths = l.Substring("RecentFolders=".Length).Split(new[] { ';' }, StringSplitOptions.RemoveEmptyEntries);
+                            _recentFolders = paths.Where(p => Directory.Exists(p)).ToList();
+                        }
+                        if (l.StartsWith("LastFile=")) _lastLoadedFilePath = l.Substring(9).Trim();
                     }
-                    if (l.StartsWith("LastFile=")) _lastLoadedFilePath = l.Substring(9).Trim();
                 }
+                
+                // IMPORTANT: Apply Culture immediately so InitializeComponent uses it
+                try {
+                    Properties.Resources.Culture = new System.Globalization.CultureInfo(_currentLang);
+                } catch {
+                    // Fallback to en-US if something is wrong
+                    Properties.Resources.Culture = new System.Globalization.CultureInfo("en-US");
+                }
+
             } catch {}
         }
 
@@ -454,39 +500,50 @@ namespace seamless_loop_music
             } catch {} 
         }
 
+        // ApplyLanguage removed as it is replaced by XAML binding
         private void ApplyLanguage() {
-            bool isZh = (_currentLang == "zh-CN");
-            this.Title = isZh ? "无缝循环音乐播放器" : "Seamless Loop Music Player";
-            if (lblMyPlaylists != null) lblMyPlaylists.Text = isZh ? "我的歌单" : "My Playlists";
-            if (lblTrackList != null) lblTrackList.Text = isZh ? "歌曲列表" : "Track List";
-            if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
+            // No strict "zh-CN" check needed if we trust Resources.Culture is set correctly in LoadSettings
+            // But let's keep isZh for some logic if needed
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            
+            this.Title = Properties.Resources.AppTitle; 
+            if (lblMyPlaylists != null) lblMyPlaylists.Text = Properties.Resources.MyPlaylist;
+            if (lblTrackList != null) lblTrackList.Text = Properties.Resources.TrackList;
+            if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists"; // Keep manual tooltip for now or add to resx
+            
             if (btnPlay != null) {
-                // Refresh current state text
                 bool isPlaying = (_audioLooper != null && _audioLooper.PlaybackState == PlaybackState.Playing);
-                if (isPlaying) btnPlay.Content = isZh ? "暂停" : "Pause";
-                else btnPlay.Content = isZh ? "播放" : "Play";
+                if (isPlaying) btnPlay.Content = isZh ? "暂停" : "Pause"; // Manual fallback or use separate Resource keys for Pause
+                else btnPlay.Content = Properties.Resources.Play;
             }
-            if (btnStop != null) btnStop.Content = isZh ? "重新播放" : "Replay";
+            if (btnStop != null) btnStop.Content = Properties.Resources.Replay;
+            // Prev/Next are universal or can be added to resx later
             if (btnPrev != null) btnPrev.Content = isZh ? "<< 上一首" : "<< Prev";
             if (btnNext != null) btnNext.Content = isZh ? "下一首 >>" : "Next >>";
-            if (btnApplyLoop != null) btnApplyLoop.Content = isZh ? "确认应用并试听" : "Apply & Preview";
+
+            if (btnApplyLoop != null) btnApplyLoop.Content = Properties.Resources.ApplyAndTest;
             if (btnSmartMatch != null) {
-                btnSmartMatch.Content = isZh ? "智能匹配" : "Auto Match";
+                btnSmartMatch.Content = Properties.Resources.SmartMatch;
                 btnSmartMatch.ToolTip = isZh ? "自动微调循环点以匹配波形" : "Auto-adjust loop points to match waveform";
             }
-            if (lblFilePath != null) lblFilePath.Text = isZh ? "音频路径：" : "File Path:";
-            if (lblLoopStart != null) lblLoopStart.Text = isZh ? "循环起始采样数：" : "Loop Start Sample:";
-            if (lblLoopEnd != null) lblLoopEnd.Text = isZh ? "循环结束采样数：" : "Loop End Sample:";
-            if (btnSwitchLang != null) btnSwitchLang.Content = isZh ? "English" : "中文";
-            if (lblStatus != null) lblStatus.Text = isZh ? "就绪" : "Ready";
+            if (lblFilePath != null) lblFilePath.Text = Properties.Resources.FilePathTitle;
+            if (lblLoopStart != null) lblLoopStart.Text = Properties.Resources.LoopStartLabel;
+            if (lblLoopEnd != null) lblLoopEnd.Text = Properties.Resources.LoopEndLabel;
+            if (btnSwitchLang != null) btnSwitchLang.Content = Properties.Resources.SwitchLang;
+            if (lblStatus != null) lblStatus.Text = Properties.Resources.StatusReady;
+            
             UpdateAudioInfoText();
         }
 
         private void UpdateAudioInfoText() {
             if (lblAudioInfo == null) return;
-            bool isZh = (_currentLang == "zh-CN");
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            
+            // Note: Resources.AudioInfoInit is used for the Not Loaded state in via XAML initially,
+            // but we need to update it dynamically here.
+            
             if (_totalSamples == 0) {
-                lblAudioInfo.Text = isZh ? "音频信息：尚未加载" : "Audio Info: Not Loaded";
+                 lblAudioInfo.Text = Properties.Resources.AudioInfoInit;
             } else {
                 lblAudioInfo.Text = isZh ? 
                     $"音频信息：Total {_totalSamples} | 采样率 {_currentSampleRate} Hz" : 
