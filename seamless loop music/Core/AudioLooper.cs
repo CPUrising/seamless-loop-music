@@ -16,7 +16,7 @@ namespace seamless_loop_music
         private long _loopStartSample;
         private long _loopEndSample = 0; // 新增: 循环结束采样数
         private long _totalSamples;
-        private bool _isPlaying;
+
 
         // 状态回调事件
         public event Action<string> OnStatusChanged;
