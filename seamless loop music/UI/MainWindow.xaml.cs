@@ -33,6 +33,7 @@ namespace seamless_loop_music
         private string _currentLang = "zh-CN";
         private string _lastLoadedFilePath = "";
         private string _lastPlaylistPath = ""; // 新增：记录最后选中的歌单
+        private double _globalVolume = 80; // 新增：全局音量 (0-100)
 
         private string _currentConfigKey = null;
         private int _currentSampleRate = 44100;
@@ -82,6 +83,10 @@ namespace seamless_loop_music
 
             UpdateAudioInfoText();
             UpdateButtons(PlaybackState.Stopped);
+            
+            // 应用加载的全局音量
+            trkVolume.Value = _globalVolume;
+            _audioLooper.Volume = (float)(_globalVolume / 100.0);
 
             // 自动选中第一个歌单（如果有的话）
             if (lstPlaylists.Items.Count > 0) lstPlaylists.SelectedIndex = 0;
@@ -543,6 +548,7 @@ namespace seamless_loop_music
                         }
                         if (l.StartsWith("LastFile=")) _lastLoadedFilePath = l.Substring(9).Trim();
                         if (l.StartsWith("LastPlaylist=")) _lastPlaylistPath = l.Substring(13).Trim();
+                        if (l.StartsWith("Volume=") && double.TryParse(l.Substring(7), out double vol)) _globalVolume = vol;
                     }
                 }
                 
@@ -573,6 +579,9 @@ namespace seamless_loop_music
                 } else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
                     lines.Add($"LastPlaylist={_lastPlaylistPath}"); // 保留原有的
                 }
+
+                // 新增：保存当前音量
+                lines.Add($"Volume={trkVolume.Value}");
 
                 File.WriteAllLines(_settingsPath, lines); 
             } catch {} 

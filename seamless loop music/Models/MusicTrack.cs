@@ -34,15 +34,8 @@ namespace seamless_loop_music.Models
         /// </summary>
         public long LoopEnd { get; set; }
 
-        /// <summary>
-        /// 音量倍数 (0.0 - 1.0)
-        /// </summary>
-        public double Volume { get; set; } = 1.0;
-
-        /// <summary>
-        /// 总采样数（用于校验配置是否匹配）
-        /// </summary>
         public long TotalSamples { get; set; }
+
 
         public DateTime LastModified { get; set; } = DateTime.Now;
 

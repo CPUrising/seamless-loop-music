@@ -39,7 +39,6 @@ namespace seamless_loop_music.Data
                         DisplayName TEXT,
                         LoopStart INTEGER NOT NULL,
                         LoopEnd INTEGER NOT NULL,
-                        Volume REAL DEFAULT 1.0,
                         LastModified DATETIME DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(FileName, TotalSamples)
                     );";
@@ -86,9 +85,9 @@ namespace seamless_loop_music.Data
             {
                 string sql = @"
                     INSERT OR REPLACE INTO LoopPoints 
-                    (FileName, DisplayName, LoopStart, LoopEnd, Volume, TotalSamples, LastModified)
+                    (FileName, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
                     VALUES 
-                    (@FileName, @DisplayName, @LoopStart, @LoopEnd, @Volume, @TotalSamples, @LastModified);";
+                    (@FileName, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);";
                 db.Execute(sql, track);
             }
         }
@@ -105,9 +104,9 @@ namespace seamless_loop_music.Data
                 {
                     string sql = @"
                         INSERT OR REPLACE INTO LoopPoints 
-                        (FileName, DisplayName, LoopStart, LoopEnd, Volume, TotalSamples, LastModified)
+                        (FileName, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
                         VALUES 
-                        (@FileName, @DisplayName, @LoopStart, @LoopEnd, @Volume, @TotalSamples, @LastModified);";
+                        (@FileName, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);";
                     db.Execute(sql, tracks, transaction: trans);
                     trans.Commit();
                 }
