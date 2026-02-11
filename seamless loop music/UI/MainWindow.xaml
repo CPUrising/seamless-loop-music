@@ -72,6 +72,8 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu>
+                        <MenuItem x:Name="miAddPlaylist" Header="Add Folder" Click="miAddFolderToPlaylist_Click"/>
+                        <Separator/>
                         <MenuItem Header="Rename" Click="miRenamePlaylist_Click"/>
                         <MenuItem Header="Delete" Click="miDeletePlaylist_Click"/>
                     </ContextMenu>

@@ -9,6 +9,7 @@ using Microsoft.Win32;
 using NAudio.Wave; // 为了识别 PlaybackState
 using seamless_loop_music.Models;
 using seamless_loop_music.Services; // 引入新晋音乐总监
+using System.Collections.ObjectModel;
 
 namespace seamless_loop_music
 {
@@ -23,14 +24,14 @@ namespace seamless_loop_music
         private List<string> _playlist = new List<string>();
         private int _currentTrackIndex = -1;
 
-        private class PlaylistFolder { public string Name { get; set; } public string Path { get; set; } }
 
         private List<string> _recentFolders = new List<string>(); 
-        private List<PlaylistFolder> _playlists = new List<PlaylistFolder>();
+        private ObservableCollection<PlaylistFolder> _playlists = new ObservableCollection<PlaylistFolder>();
 
-        private string _configPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "loop_config.csv");
-        private string _settingsPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "settings.conf");
-        private string _playlistPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "playlists.conf");
+        private string _dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
+        private string _configPath;
+        private string _settingsPath;
+        // private string _playlistPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "playlists.conf"); // 永久退役！
         
         private string _currentLang = "zh-CN";
         private string _lastLoadedFilePath = "";
@@ -44,6 +45,12 @@ namespace seamless_loop_music
 
         public MainWindow()
         {
+            // 0. 初始化数据目录与路径
+            if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
+            
+            _configPath = Path.Combine(_dataDir, "loop_config.csv");
+            _settingsPath = Path.Combine(_dataDir, "settings.conf");
+
             // 1. Load settings FIRST
             LoadSettings(); 
             
@@ -98,7 +105,9 @@ namespace seamless_loop_music
             UpdateAudioInfoText();
             UpdateButtons(PlaybackState.Stopped);
             
-            // 应用音量
+            lstPlaylists.ItemsSource = _playlists;
+
+            // 加载设置
             trkVolume.Value = _globalVolume;
             _playerService.SetVolume((float)(_globalVolume / 100.0));
 
@@ -108,11 +117,14 @@ namespace seamless_loop_music
             if (lstPlaylists.Items.Count > 0) lstPlaylists.SelectedIndex = 0;
 
             // 自动加载上次使用的歌单
-            if (!string.IsNullOrEmpty(_lastPlaylistPath) && Directory.Exists(_lastPlaylistPath)) {
-                var folder = _playlists.FirstOrDefault(p => p.Path == _lastPlaylistPath);
+            if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
+                // 尝试按 ID 匹配，如果失败（比如旧配置文件存的是路径），再按路径/名称匹配
+                var folder = _playlists.FirstOrDefault(p => p.Id.ToString() == _lastPlaylistPath) 
+                          ?? _playlists.FirstOrDefault(p => p.Path == _lastPlaylistPath || p.Name == _lastPlaylistPath);
+                
                 if (folder != null) {
                     lstPlaylists.SelectedItem = folder;
-                    LoadPlaylist(folder.Path, false); 
+                    // LoadPlaylistFromDb 将在 SelectionChanged 中被触发
                 }
             }
 
@@ -192,27 +204,81 @@ namespace seamless_loop_music
             btnStop.IsEnabled = btnPrev.IsEnabled = btnNext.IsEnabled = hasFile;
         }
 
-        private void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
-            var picker = new FolderPicker();
-            if (picker.ShowDialog(this)) {
-                string folderPath = picker.ResultPath;
-                string folderName = Path.GetFileName(folderPath);
-                if (string.IsNullOrEmpty(folderName)) folderName = folderPath; 
+        private async void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            
+            // 1. 询问是“新建空歌单”还是“导入文件夹”
+            var choice = MessageBox.Show(
+                isZh ? "点击'是'新建一个空的逻辑歌单，点击'否'通过导入文件夹创建歌单。" : "Click 'Yes' to create an empty virtual playlist, 'No' to create from folder.",
+                isZh ? "新建歌单" : "New Playlist",
+                MessageBoxButton.YesNoCancel,
+                MessageBoxImage.Question);
 
-                _playlists.Add(new PlaylistFolder { Name = folderName, Path = folderPath });
-                UpdatePlaylistUI();
-                SavePlaylists();
+            if (choice == MessageBoxResult.Cancel) return;
 
-                // 同步到数据库
-                _playerService.CreatePlaylist(folderName, folderPath, isLinked: true);
+            string folderName = "";
+            string folderPath = null;
+            bool isFolder = (choice == MessageBoxResult.No);
 
-                lstPlaylists.SelectedIndex = _playlists.Count - 1;
+            if (isFolder) {
+                var picker = new FolderPicker();
+                if (picker.ShowDialog(this)) {
+                    folderPath = picker.ResultPath;
+                    folderName = Path.GetFileName(folderPath);
+                    if (string.IsNullOrEmpty(folderName)) folderName = folderPath;
+                } else return;
+            } else {
+                folderName = Microsoft.VisualBasic.Interaction.InputBox(
+                    isZh ? "请输入歌单名称：" : "Enter playlist name:",
+                    isZh ? "新建空歌单" : "New Virtual Playlist",
+                    isZh ? "新建歌单" : "New Playlist");
+                if (string.IsNullOrEmpty(folderName)) return;
+            }
+
+            // 2. 数据库建档
+            int newId = _playerService.CreatePlaylist(folderName, folderPath, isLinked: isFolder);
+            
+            // 3. 刷新 UI
+            LoadPlaylists();
+            
+            // 选中新歌单
+            var newItem = _playlists.FirstOrDefault(p => p.Id == newId);
+            if (newItem != null) lstPlaylists.SelectedItem = newItem;
+
+            // 4. 如果是文件夹，启动后台扫描同步
+            if (isFolder && !string.IsNullOrEmpty(folderPath)) {
+                lblStatus.Text = isZh ? "正在扫描文件夹..." : "Scanning folder...";
+                await _playerService.ScanAndAddFolderToPlaylist(newId, folderPath);
+                // 扫描完刷新一下当前显示的歌曲列表
+                if (lstPlaylists.SelectedItem == newItem) {
+                    LoadPlaylistFromDb(newId);
+                }
             }
         }
 
         private void lstPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                LoadPlaylist(folder.Path);
+                LoadPlaylistFromDb(folder.Id);
+            }
+        }
+
+        private async void miAddFolderToPlaylist_Click(object sender, RoutedEventArgs e) {
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
+                var picker = new FolderPicker();
+                if (picker.ShowDialog(this)) {
+                    string folderPath = picker.ResultPath;
+                    lblStatus.Text = isZh ? $"正在向 '{folder.Name}' 追加曲目..." : $"Appending tracks to '{folder.Name}'...";
+                    
+                    await _playerService.ScanAndAddFolderToPlaylist(folder.Id, folderPath);
+                    
+                    // 重新加载当前显示的曲目列表
+                    LoadPlaylistFromDb(folder.Id);
+                }
+            } else {
+                // 如果没选中，就 fallback 到新建逻辑
+                btnAddPlaylist_Click(sender, e);
             }
         }
 
@@ -225,8 +291,8 @@ namespace seamless_loop_music
                     folder.Name);
                 if (!string.IsNullOrEmpty(newName)) {
                     folder.Name = newName;
-                    UpdatePlaylistUI();
-                    SavePlaylists();
+                    _playerService.RenamePlaylist(folder.Id, newName);
+                    lstPlaylists.Items.Refresh();
                 }
             }
         }
@@ -234,38 +300,59 @@ namespace seamless_loop_music
         private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
                 if (MessageBox.Show(Properties.Resources.MsgDeleteConfirm, Properties.Resources.TitleDelete, MessageBoxButton.YesNo) == MessageBoxResult.Yes) {
+                    _playerService.DeletePlaylist(folder.Id);
                     _playlists.Remove(folder);
-                    UpdatePlaylistUI();
-                    SavePlaylists();
                     lstPlaylist.Items.Clear();
                 }
             }
         }
 
-        private void UpdatePlaylistUI() {
-            lstPlaylists.ItemsSource = null;
-            lstPlaylists.ItemsSource = _playlists;
-        }
 
         private void LoadPlaylists() {
             try {
-                if (!File.Exists(_playlistPath)) return;
                 _playlists.Clear();
-                foreach (var line in File.ReadAllLines(_playlistPath)) {
-                    var parts = line.Split('|');
-                    if (parts.Length >= 2 && Directory.Exists(parts[1])) {
-                        _playlists.Add(new PlaylistFolder { Name = parts[0], Path = parts[1] });
-                    }
+                var list = _playerService.GetAllPlaylists();
+                foreach (var p in list) {
+                    _playlists.Add(p);
                 }
-                UpdatePlaylistUI();
             } catch {}
         }
 
         private void SavePlaylists() {
+            // 已交给数据库实时保存，这里保持空壳或废弃
+        }
+
+        public void LoadPlaylistFromDb(int playlistId) {
             try {
-                var lines = _playlists.Select(p => $"{p.Name}|{p.Path}");
-                File.WriteAllLines(_playlistPath, lines);
-            } catch {}
+                var tracks = _playerService.LoadPlaylistFromDb(playlistId);
+                
+                _playlist.Clear();
+                lstPlaylist.Items.Clear();
+                
+                int missingCount = 0;
+                foreach (var track in tracks) {
+                    bool exists = File.Exists(track.FilePath);
+                    if (!exists) {
+                        missingCount++;
+                        // 如果文件丢了，在显示名上打个标记，但不影响数据库数据
+                        track.DisplayName = (Properties.Resources.Culture?.Name.StartsWith("zh") ?? false ? "[文件丢失] " : "[Missing] ") + (track.DisplayName ?? track.FileName);
+                    }
+                    
+                    _playlist.Add(track.FilePath);
+                    lstPlaylist.Items.Add(track);
+                }
+                
+                _playerService.Playlist = tracks;
+                
+                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                if (missingCount > 0) {
+                    lblStatus.Text = isZh ? $"加载了 {tracks.Count} 首歌曲，其中 {missingCount} 首文件路径无效。" : $"Loaded {tracks.Count} tracks ({missingCount} files missing).";
+                } else {
+                    lblStatus.Text = isZh ? $"成功加载 {tracks.Count} 首歌曲" : $"Successfully loaded {tracks.Count} tracks";
+                }
+            } catch (Exception ex) {
+                MessageBox.Show("加载歌单失败: " + ex.Message);
+            }
         }
 
         public void LoadPlaylist(string path, bool notify = true) {
@@ -371,7 +458,10 @@ namespace seamless_loop_music
         {
             if (lstPlaylist.SelectedItem is MusicTrack track)
             {
-                // 目前是简单的 UI 移除，未来会在这里加入数据库 PlaylistItems 的删除逻辑
+                if (lstPlaylists.SelectedItem is PlaylistFolder folder)
+                {
+                    _playerService.RemoveTrackFromPlaylist(folder.Id, track.Id);
+                }
                 lstPlaylist.Items.Remove(track);
                 _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
             }
@@ -664,8 +754,9 @@ namespace seamless_loop_music
                 }
                 
                 if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                    lines.Add($"LastPlaylist={folder.Path}");
-                } else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
+                    lines.Add($"LastPlaylist={folder.Id}");
+                }
+ else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
                     lines.Add($"LastPlaylist={_lastPlaylistPath}");
                 }
 
@@ -684,6 +775,10 @@ namespace seamless_loop_music
             if (lblMyPlaylists != null) lblMyPlaylists.Text = Properties.Resources.MyPlaylist;
             if (lblTrackList != null) lblTrackList.Text = Properties.Resources.TrackList;
             if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
+            if (miAddPlaylist != null) miAddPlaylist.Header = isZh ? "添加文件夹" : "Add Folder";
+            if (miRenameTrack != null) miRenameTrack.Header = isZh ? "修改别名" : "Rename Alias";
+            if (miOpenFolder != null) miOpenFolder.Header = isZh ? "打开所在文件夹" : "Open Folder";
+            if (miRemoveFromList != null) miRemoveFromList.Header = isZh ? "从歌单移除" : "Remove from List";
             
             if (btnPlay != null) {
                 bool isPlaying = (_playerService != null && _playerService.PlaybackState == PlaybackState.Playing);
@@ -729,7 +824,7 @@ namespace seamless_loop_music
 
         protected override void OnClosed(EventArgs e) {
             // SaveConfig(); // 循环点实时存，这里不需要了
-            SavePlaylists();
+            // SavePlaylists(); // 数据库驱动，不需要文件保存了
             SaveSettings(); 
             _playerService?.Dispose();
             base.OnClosed(e);

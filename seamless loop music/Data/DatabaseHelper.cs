@@ -16,7 +16,16 @@ namespace seamless_loop_music.Data
 
         public DatabaseHelper()
         {
-            _dbPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "LoopData.db");
+            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+            string dataDir = Path.Combine(baseDir, "Data");
+            
+            // 确保 Data 目录存在
+            if (!Directory.Exists(dataDir))
+            {
+                Directory.CreateDirectory(dataDir);
+            }
+
+            _dbPath = Path.Combine(dataDir, "LoopData.db");
             _connectionString = $"Data Source={_dbPath};Version=3;";
             InitializeDatabase();
         }
@@ -38,6 +47,7 @@ namespace seamless_loop_music.Data
                     CREATE TABLE IF NOT EXISTS LoopPoints (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         FileName TEXT NOT NULL,
+                        FilePath TEXT, -- 存储最后一次被扫描到的物理路径
                         TotalSamples INTEGER NOT NULL,
                         DisplayName TEXT,
                         LoopStart INTEGER NOT NULL,
@@ -69,6 +79,26 @@ namespace seamless_loop_music.Data
                         FOREIGN KEY(SongId) REFERENCES LoopPoints(Id) ON DELETE CASCADE
                     );";
                 db.Execute(sqlPlaylistItems);
+
+                // --- 自动升级：检查并添加 FilePath 字段 ---
+                // 不使用 dynamic，改用强类型或直接尝试查询
+                var hasFilePath = false;
+                using (var reader = ((SQLiteConnection)db).ExecuteReader("PRAGMA table_info(LoopPoints)"))
+                {
+                    while (reader.Read())
+                    {
+                        if (reader["name"].ToString() == "FilePath")
+                        {
+                            hasFilePath = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!hasFilePath)
+                {
+                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN FilePath TEXT;");
+                }
             }
         }
 
@@ -92,14 +122,16 @@ namespace seamless_loop_music.Data
 
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
-                // 1. 尝试寻找精准匹配（文件名 + 采样数）
+                // 确保包含 FilePath 字段
                 var track = db.QueryFirstOrDefault<MusicTrack>(
-                    "SELECT * FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
+                    "SELECT Id, FileName, FilePath, TotalSamples, DisplayName, LoopStart, LoopEnd, LastModified FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
                     new { FileName = fileName, Total = totalSamples });
 
-                // 2. 如果没找到，则只寻找此文件关联的别名
-                if (track == null)
-                {
+                if (track != null) {
+                    // 如果数据库里存了路径，就用数据库的（除非当前路径更准）
+                    if (string.IsNullOrEmpty(track.FilePath)) track.FilePath = fullPath;
+                } else {
+                    // 只找别名逻辑
                     var alias = db.ExecuteScalar<string>(
                         "SELECT DisplayName FROM LoopPoints WHERE FileName = @FileName AND DisplayName IS NOT NULL LIMIT 1",
                         new { FileName = fileName });
@@ -127,6 +159,7 @@ namespace seamless_loop_music.Data
                     string sql = @"
                         UPDATE LoopPoints 
                         SET DisplayName = @DisplayName, 
+                            FilePath = @FilePath,
                             LoopStart = @LoopStart, 
                             LoopEnd = @LoopEnd, 
                             LastModified = @LastModified
@@ -141,9 +174,9 @@ namespace seamless_loop_music.Data
                     // 鉴于我们现在的逻辑是 Update-First，这里用 INSERT 即可。
                     string sql = @"
                         INSERT INTO LoopPoints 
-                        (FileName, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
+                        (FileName, FilePath, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
                         VALUES 
-                        (@FileName, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);
+                        (@FileName, @FilePath, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);
                         SELECT last_insert_rowid();";
                     
                     try {
@@ -176,9 +209,9 @@ namespace seamless_loop_music.Data
                 {
                     string sql = @"
                         INSERT OR REPLACE INTO LoopPoints 
-                        (FileName, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
+                        (FileName, FilePath, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified)
                         VALUES 
-                        (@FileName, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);";
+                        (@FileName, @FilePath, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified);";
                     db.Execute(sql, tracks, transaction: trans);
                     trans.Commit();
                 }
@@ -186,11 +219,23 @@ namespace seamless_loop_music.Data
         }
         // --- 歌单管理新方法 ---
 
-        public void AddPlaylist(string name, string folderPath = null, bool isLinked = false)
+        public IEnumerable<PlaylistFolder> GetAllPlaylists()
         {
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
-                db.Execute("INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) VALUES (@Name, @Path, @Linked)", 
+                // 使用 SQL 别名将数据库的 FolderPath 映射到模型的 Path
+                return db.Query<PlaylistFolder>("SELECT Id, Name, FolderPath AS Path, IsFolderLinked, CreatedAt FROM Playlists ORDER BY CreatedAt DESC");
+            }
+        }
+
+        public int AddPlaylist(string name, string folderPath = null, bool isLinked = false)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                return db.ExecuteScalar<int>(@"
+                    INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) 
+                    VALUES (@Name, @Path, @Linked);
+                    SELECT last_insert_rowid();", 
                     new { Name = name, Path = folderPath, Linked = isLinked ? 1 : 0 });
             }
         }
@@ -229,13 +274,33 @@ namespace seamless_loop_music.Data
         {
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
+                // 明确选取 s.FilePath
                 string sql = @"
-                    SELECT s.*, pi.SortOrder 
+                    SELECT s.Id, s.FileName, s.FilePath, s.TotalSamples, s.DisplayName, s.LoopStart, s.LoopEnd, s.LastModified, pi.SortOrder 
                     FROM LoopPoints s
                     JOIN PlaylistItems pi ON s.Id = pi.SongId
                     WHERE pi.PlaylistId = @Pid
                     ORDER BY pi.SortOrder ASC";
                 return db.Query<MusicTrack>(sql, new { Pid = playlistId });
+            }
+        }
+        public void RenamePlaylist(int playlistId, string newName)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Execute("UPDATE Playlists SET Name = @Name WHERE Id = @Id", new { Name = newName, Id = playlistId });
+            }
+        }
+
+        /// <summary>
+        /// 检查歌单内是否已存在某首歌
+        /// </summary>
+        public bool IsSongInPlaylist(int playlistId, int songId)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                return db.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId = @Pid AND SongId = @Sid", 
+                    new { Pid = playlistId, Sid = songId }) > 0;
             }
         }
     }

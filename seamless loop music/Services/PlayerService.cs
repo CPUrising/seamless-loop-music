@@ -260,10 +260,28 @@ namespace seamless_loop_music.Services
         }
 
         // --- 新增：歌单操作透传 ---
-
-        public void CreatePlaylist(string name, string folderPath = null, bool isLinked = false)
+        
+        /// <summary>
+        /// 获取所有歌单（数据库驱动）
+        /// </summary>
+        public List<PlaylistFolder> GetAllPlaylists()
         {
-            _dbHelper.AddPlaylist(name, folderPath, isLinked);
+            return _dbHelper.GetAllPlaylists().ToList();
+        }
+
+        public int CreatePlaylist(string name, string folderPath = null, bool isLinked = false)
+        {
+            return _dbHelper.AddPlaylist(name, folderPath, isLinked);
+        }
+
+        public void RenamePlaylist(int playlistId, string newName)
+        {
+            _dbHelper.RenamePlaylist(playlistId, newName);
+        }
+
+        public void DeletePlaylist(int playlistId)
+        {
+            _dbHelper.DeletePlaylist(playlistId);
         }
 
         public void AddTrackToPlaylist(int playlistId, MusicTrack track)
@@ -276,12 +294,67 @@ namespace seamless_loop_music.Services
             _dbHelper.AddSongToPlaylist(playlistId, track.Id);
         }
 
-        public void RemoveTrackFromPlaylist(int playlistId, MusicTrack track)
+        public void RemoveTrackFromPlaylist(int playlistId, int songId)
         {
-            if (track.Id > 0)
+            if (songId > 0)
             {
-                _dbHelper.RemoveSongFromPlaylist(playlistId, track.Id);
+                _dbHelper.RemoveSongFromPlaylist(playlistId, songId);
             }
+        }
+        
+        /// <summary>
+        /// 扫描文件夹并同步到歌单（数据库逻辑）
+        /// </summary>
+        public System.Threading.Tasks.Task ScanAndAddFolderToPlaylist(int playlistId, string folderPath)
+        {
+            return System.Threading.Tasks.Task.Run(() => {
+                if (!Directory.Exists(folderPath)) return;
+
+                var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
+                    .Where(s => s.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || 
+                                s.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || 
+                                s.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)).ToList();
+                
+                OnStatusMessage?.Invoke($"Scanning {files.Count} files for playlist {playlistId}...");
+
+                foreach (var f in files)
+                {
+                    // 1. 获取基础采样数（指纹的核心部分）
+                    long samples = GetTotalSamples(f);
+                    if (samples <= 0) continue;
+
+                    // 2. 查户口：看看数据库里是不是已经认识这首歌了
+                    var track = _dbHelper.GetTrack(f, samples);
+
+                    if (track == null)
+                    {
+                        // 没见过的新朋友：初始化并保存
+                        track = new MusicTrack { 
+                            FilePath = f, 
+                            FileName = Path.GetFileName(f), 
+                            TotalSamples = samples,
+                            LoopEnd = samples,
+                            DisplayName = Path.GetFileNameWithoutExtension(f)
+                        };
+                        _dbHelper.SaveTrack(track);
+                    }
+                    else
+                    {
+                        // 老朋友：把路径更新一下
+                        track.FilePath = f;
+                        // 关键修复：既然更新了路径，必须存回数据库！否则下次查还是空的！
+                        _dbHelper.SaveTrack(track);
+                    }
+
+                    // 4. 关联到歌单
+                    if (!_dbHelper.IsSongInPlaylist(playlistId, track.Id))
+                    {
+                        _dbHelper.AddSongToPlaylist(playlistId, track.Id);
+                    }
+                }
+
+                OnStatusMessage?.Invoke($"Scan complete. {files.Count} songs synced.");
+            });
         }
         
         public List<MusicTrack> LoadPlaylistFromDb(int playlistId)
