@@ -544,6 +544,9 @@ namespace seamless_loop_music
         }
 
         private void btnSmartMatch_Click(object sender, RoutedEventArgs e) {
+            // 先应用界面上输入的数值，否则匹配会基于旧值
+            ApplyLoopSettings();
+            
             _playerService.SmartMatchLoop();
             
             // 更新UI
