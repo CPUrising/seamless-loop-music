@@ -26,6 +26,9 @@
 - **初始化防护**：修复了 `InitializeComponent` 阶段因文本框事件触发过早导致的 `NullReferenceException`。
 - **并发同步修复**：修正了 `OnTrackLoaded` 回调中依赖索引（Index）更新列表的错误逻辑，改为基于文件路径（FilePath）的精确匹配，防止了快速切歌时的 UI 数据错位。
 - **资源锁定处理**：识别并解决了文件被占用（MSBuild 锁定）导致的编译失败问题。
+- **离线指纹一致性修复 (New)**：
+  - 统一了 `PlayerService` 中的 `GetTotalSamples` 逻辑，使其与 `AudioLooper` 使用完全一致的解码策略（MP3 FileReader / VorbisWaveReader）。
+  - 修复了因解码器不同导致的采样数微小误差，彻底解决了离线改名无法正确匹配数据库记录的 Bug。
 
 ## 2. 关键代码变更点
 - `UI/MainWindow.xaml.cs`:
@@ -34,6 +37,7 @@
 - `Services/PlayerService.cs`:
   - 新增 `ImportTracks` 用于 CSV 到 SQLite 的遗留数据迁移。
   - 新增 `GetStoredTrackInfo` 提供快速的轻量级元数据查询。
+  - **Update**: 统一了音频时长计算逻辑，修复离线保存 Bug。
 - `Core/AudioLooper.cs`:
   - 公开了 `SampleRate` 属性，移除了外部对音频格式的猜测逻辑。
 
@@ -47,5 +51,4 @@
 **状态：** 已提交至版本控制系统。
 **下一步建议：** 
 1. 进行全量回归测试，特别是针对边缘情况（空文件、只读文件、网络路径）的验证。
-2. **[关键]** 程序员需亲自深入了解重构后的代码架构，特别是 PlayerService 与 DatabaseHelper 的交互流程。
-3. **[关键]** 彻底排查并解决“改名（重命名）后 DB 文件可能未能正确更新”的潜在残留问题，确保每一次用户改名操作都能 100% 持久化到数据库。
+2. **[关键, 已解决]** 彻底排查并解决“改名（重命名）后 DB 文件可能未能正确更新”的潜在残留问题，确保每一次用户改名操作都能 100% 持久化到数据库。
