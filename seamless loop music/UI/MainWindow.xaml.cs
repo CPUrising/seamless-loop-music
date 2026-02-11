@@ -97,8 +97,6 @@ namespace seamless_loop_music
 
             UpdateAudioInfoText();
             UpdateButtons(PlaybackState.Stopped);
-
-            lstPlaylist.DisplayMemberPath = "Title";
             
             // 应用音量
             trkVolume.Value = _globalVolume;
@@ -204,6 +202,10 @@ namespace seamless_loop_music
                 _playlists.Add(new PlaylistFolder { Name = folderName, Path = folderPath });
                 UpdatePlaylistUI();
                 SavePlaylists();
+
+                // 同步到数据库
+                _playerService.CreatePlaylist(folderName, folderPath, isLinked: true);
+
                 lstPlaylists.SelectedIndex = _playlists.Count - 1;
             }
         }
@@ -280,8 +282,25 @@ namespace seamless_loop_music
                 foreach (var f in files) { 
                     _playlist.Add(f); 
                     var fileName = Path.GetFileName(f);
-                    // 委托 Service 快速查别名
-                    var track = _playerService.GetStoredTrackInfo(f) ?? new MusicTrack { FilePath = f, FileName = fileName };
+                    
+                    // 委托 Service 快速查别名/配置
+                    var track = _playerService.GetStoredTrackInfo(f);
+                    
+                    if (track == null) {
+                        // 如果是全新的歌曲，创建一个占位符
+                        track = new MusicTrack { FilePath = f, FileName = fileName };
+                        
+                        // 启动一个后台任务去预扫描采样数并入库，这样右键操作才有 ID 支撑
+                        System.Threading.Tasks.Task.Run(() => {
+                            long samples = _playerService.GetTotalSamples(f);
+                            if (samples > 0) {
+                                track.TotalSamples = samples;
+                                track.LoopEnd = samples;
+                                _playerService.UpdateOfflineTrack(track);
+                            }
+                        });
+                    }
+
                     lstPlaylist.Items.Add(track); 
                 }
 
@@ -337,6 +356,24 @@ namespace seamless_loop_music
                     
                     lstPlaylist.Items.Refresh();
                 }
+            }
+        }
+
+        private void miOpenFolder_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstPlaylist.SelectedItem is MusicTrack track && File.Exists(track.FilePath))
+            {
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{track.FilePath}\"");
+            }
+        }
+
+        private void miRemoveFromList_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstPlaylist.SelectedItem is MusicTrack track)
+            {
+                // 目前是简单的 UI 移除，未来会在这里加入数据库 PlaylistItems 的删除逻辑
+                lstPlaylist.Items.Remove(track);
+                _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
             }
         }
 

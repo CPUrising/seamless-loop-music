@@ -30,8 +30,11 @@ namespace seamless_loop_music.Data
 
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
-                // 使用 (FileName, TotalSamples) 作为唯一标识，彻底抛弃死板的路径
-                string sql = @"
+                db.Open();
+                db.Execute("PRAGMA foreign_keys = ON;"); // 强制开启外键支持
+                
+                // 1. 核心资源库 (原 LoopPoints)
+                string sqlSongs = @"
                     CREATE TABLE IF NOT EXISTS LoopPoints (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         FileName TEXT NOT NULL,
@@ -42,7 +45,30 @@ namespace seamless_loop_music.Data
                         LastModified DATETIME DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(FileName, TotalSamples)
                     );";
-                db.Execute(sql);
+                db.Execute(sqlSongs);
+
+                // 2. 歌单定义表
+                string sqlPlaylists = @"
+                    CREATE TABLE IF NOT EXISTS Playlists (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Name TEXT NOT NULL,
+                        FolderPath TEXT, -- 关联的物理路径 (可选)
+                        IsFolderLinked INTEGER DEFAULT 0,
+                        CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                    );";
+                db.Execute(sqlPlaylists);
+
+                // 3. 歌单项表 (关联歌曲与歌单)
+                string sqlPlaylistItems = @"
+                    CREATE TABLE IF NOT EXISTS PlaylistItems (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PlaylistId INTEGER NOT NULL,
+                        SongId INTEGER NOT NULL,
+                        SortOrder INTEGER DEFAULT 0,
+                        FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
+                        FOREIGN KEY(SongId) REFERENCES LoopPoints(Id) ON DELETE CASCADE
+                    );";
+                db.Execute(sqlPlaylistItems);
             }
         }
 
@@ -156,6 +182,60 @@ namespace seamless_loop_music.Data
                     db.Execute(sql, tracks, transaction: trans);
                     trans.Commit();
                 }
+            }
+        }
+        // --- 歌单管理新方法 ---
+
+        public void AddPlaylist(string name, string folderPath = null, bool isLinked = false)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Execute("INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) VALUES (@Name, @Path, @Linked)", 
+                    new { Name = name, Path = folderPath, Linked = isLinked ? 1 : 0 });
+            }
+        }
+
+        public void DeletePlaylist(int playlistId)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Execute("DELETE FROM Playlists WHERE Id = @Id", new { Id = playlistId });
+            }
+        }
+
+        public void AddSongToPlaylist(int playlistId, int songId)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                // 获取当前最大排序值
+                int maxOrder = db.ExecuteScalar<int>("SELECT IFNULL(MAX(SortOrder), 0) FROM PlaylistItems WHERE PlaylistId = @Pid", new { Pid = playlistId });
+                db.Execute("INSERT INTO PlaylistItems (PlaylistId, SongId, SortOrder) VALUES (@Pid, @Sid, @Order)", 
+                    new { Pid = playlistId, Sid = songId, Order = maxOrder + 1 });
+            }
+        }
+
+        public void RemoveSongFromPlaylist(int playlistId, int songId)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Execute("DELETE FROM PlaylistItems WHERE PlaylistId = @Pid AND SongId = @Sid", new { Pid = playlistId, Sid = songId });
+            }
+        }
+
+        /// <summary>
+        /// 获取歌单内的所有曲目
+        /// </summary>
+        public IEnumerable<MusicTrack> GetPlaylistTracks(int playlistId)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                string sql = @"
+                    SELECT s.*, pi.SortOrder 
+                    FROM LoopPoints s
+                    JOIN PlaylistItems pi ON s.Id = pi.SongId
+                    WHERE pi.PlaylistId = @Pid
+                    ORDER BY pi.SortOrder ASC";
+                return db.Query<MusicTrack>(sql, new { Pid = playlistId });
             }
         }
     }

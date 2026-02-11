@@ -259,6 +259,36 @@ namespace seamless_loop_music.Services
             _dbHelper.BulkInsert(tracks);
         }
 
+        // --- 新增：歌单操作透传 ---
+
+        public void CreatePlaylist(string name, string folderPath = null, bool isLinked = false)
+        {
+            _dbHelper.AddPlaylist(name, folderPath, isLinked);
+        }
+
+        public void AddTrackToPlaylist(int playlistId, MusicTrack track)
+        {
+            if (track.Id <= 0)
+            {
+                 // 如果这首歌还没进资源库，先存一下拿到 ID
+                 _dbHelper.SaveTrack(track);
+            }
+            _dbHelper.AddSongToPlaylist(playlistId, track.Id);
+        }
+
+        public void RemoveTrackFromPlaylist(int playlistId, MusicTrack track)
+        {
+            if (track.Id > 0)
+            {
+                _dbHelper.RemoveSongFromPlaylist(playlistId, track.Id);
+            }
+        }
+        
+        public List<MusicTrack> LoadPlaylistFromDb(int playlistId)
+        {
+            return _dbHelper.GetPlaylistTracks(playlistId).ToList();
+        }
+
         public MusicTrack GetStoredTrackInfo(string filePath)
         {
             return _dbHelper.GetTrack(filePath, 0);

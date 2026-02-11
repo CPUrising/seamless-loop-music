@@ -82,9 +82,17 @@
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
                      Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick">
+                <ListBox.ItemTemplate>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding Title}" Padding="2" />
+                    </DataTemplate>
+                </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu>
-                        <MenuItem Header="Rename Alias" Click="miRenameTrack_Click"/>
+                        <MenuItem x:Name="miRenameTrack" Header="Rename Alias" Click="miRenameTrack_Click"/>
+                        <MenuItem x:Name="miOpenFolder" Header="Open Containing Folder" Click="miOpenFolder_Click"/>
+                        <Separator/>
+                        <MenuItem x:Name="miRemoveFromList" Header="Remove from List" Click="miRemoveFromList_Click" Foreground="#F38BA8"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
