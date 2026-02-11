@@ -129,7 +129,20 @@ namespace seamless_loop_music.Services
         /// </summary>
         public void LoadTrack(string filePath)
         {
-            if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
+            if (string.IsNullOrEmpty(filePath)) return;
+
+            // 1. 文件丢失检查
+            if (!File.Exists(filePath))
+            {
+                OnStatusMessage?.Invoke($"❌ 文件丢失: {Path.GetFileName(filePath)}");
+                
+                // 如果是自动播放模式，尝试跳过（延迟一下避免狂刷）
+                if (CurrentMode != PlayMode.SingleLoop)
+                {
+                    System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => NextTrack());
+                }
+                return;
+            }
             
             // 关键修复：每次加载新歌，都试图同步索引。这样手动点选和列表播放就能合拍了
             if (Playlist != null)
