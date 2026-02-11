@@ -1,6 +1,0 @@
-MSBUILD : error MSB1008: 只能指定一个项目。
-    完整命令行:“C:\Program Files\dotnet\sdk\9.0.309\MSBuild.dll -maxcpucount -verbosity:m -tlp:default=auto -nologo -restore -consoleloggerparameters:Summary " D:\seamless loop music\seamless loop music\seamless loop music.sln\  -distributedlogger:Microsoft.DotNet.Tools.MSBuild.MSBuildLogger,C:\Program Files\dotnet\sdk\9.0.309\dotnet.dll*Microsoft.DotNet.Tools.MSBuild.MSBuildForwardingLogger,C:\Program Files\dotnet\sdk\9.0.309\dotnet.dll”
-  响应文件追加的开关: 
-开关:loop
-
-若要显示开关的语法，请键入“MSBuild -help”
