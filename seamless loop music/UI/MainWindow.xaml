@@ -174,6 +174,11 @@
                     <!-- Pause button merged into Play -->
                     <Button x:Name="btnStop" Content="Replay" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnReplay_Click"/>
                     <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnNext_Click"/>
+                    <Button x:Name="btnPlayMode" Content="Mode: Single" Style="{StaticResource SideButtonStyle}" Width="100" Margin="10,0" Click="btnPlayMode_Click" ToolTip="Switch Play Mode"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="Loop:" VerticalAlignment="Center" FontSize="12" Margin="5,0"/>
+                        <TextBox x:Name="txtLoopLimit" Width="30" Text="1" TextAlignment="Center" TextChanged="txtLoopLimit_TextChanged" ToolTip="How many times to loop before next track"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <!-- Put functional buttons in a group on the right -->

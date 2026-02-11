@@ -86,6 +86,8 @@ namespace seamless_loop_music
             _sourceStream.Position = 0;
         }
 
+        public event Action OnLoopCompleted;
+
         /// <summary>
         /// 读取音频数据(实现无缝循环的核心)
         /// </summary>
@@ -108,8 +110,9 @@ namespace seamless_loop_music
                     if (currentPos >= LoopEndPosition)
                     {
                         // 已经超过结束点了，立即跳回
-                         _sourceStream.Position = LoopStartPosition;
-                         currentPos = LoopStartPosition;
+                        _sourceStream.Position = LoopStartPosition;
+                        currentPos = LoopStartPosition;
+                        OnLoopCompleted?.Invoke(); // 触发事件
                     }
 
                     long remainingBytes = LoopEndPosition - currentPos;
@@ -124,6 +127,7 @@ namespace seamless_loop_music
                         {
                             // 读不到数据了，跳回 LoopStart
                             _sourceStream.Position = LoopStartPosition;
+                            OnLoopCompleted?.Invoke(); // 触发事件
                         }
                         else 
                         {
@@ -134,6 +138,7 @@ namespace seamless_loop_music
                     {
                         // 已到 LoopEnd，跳回 LoopStart
                         _sourceStream.Position = LoopStartPosition;
+                        OnLoopCompleted?.Invoke(); // 触发事件
                     }
                 }
 

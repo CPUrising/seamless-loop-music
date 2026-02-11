@@ -60,6 +60,14 @@ namespace seamless_loop_music
                 // 如果是 Error 开头，可能稍微醒目一点？暂且都显示在状态栏
                 // lblStatus.Text = msg; // 暂时不覆盖播放状态
             });
+            _playerService.OnIndexChanged += (index) => Dispatcher.Invoke(() => {
+                if (lstPlaylist.SelectedIndex != index) {
+                    _isUpdatingUI = true;
+                    lstPlaylist.SelectedIndex = index;
+                    lstPlaylist.ScrollIntoView(lstPlaylist.SelectedItem);
+                    _isUpdatingUI = false;
+                }
+            });
             
             // 初始化定时器
             _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
@@ -95,6 +103,8 @@ namespace seamless_loop_music
             // 应用音量
             trkVolume.Value = _globalVolume;
             _playerService.SetVolume((float)(_globalVolume / 100.0));
+
+            UpdateModeUI(); // 初始化模式按钮文字
 
             // 自动选中第一个歌单
             if (lstPlaylists.Items.Count > 0) lstPlaylists.SelectedIndex = 0;
@@ -275,6 +285,9 @@ namespace seamless_loop_music
                     lstPlaylist.Items.Add(track); 
                 }
 
+                // 同步歌单给 Service
+                _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+
                 if (notify) {
                     bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
                     lblStatus.Text = isZh ? $"成功导入 {files.Count} 首歌曲！" : $"Imported {files.Count} tracks!";
@@ -352,8 +365,38 @@ namespace seamless_loop_music
                 _playerService.SeekToSample(0); 
             } 
         }
-        private void btnPrev_Click(object sender, RoutedEventArgs e) => PlayTrack(Math.Max(0, _currentTrackIndex - 1));
-        private void btnNext_Click(object sender, RoutedEventArgs e) => PlayTrack(Math.Min(_playlist.Count - 1, _currentTrackIndex + 1));
+        private void btnPrev_Click(object sender, RoutedEventArgs e) => _playerService.PreviousTrack();
+        private void btnNext_Click(object sender, RoutedEventArgs e) => _playerService.NextTrack();
+
+        private void btnPlayMode_Click(object sender, RoutedEventArgs e)
+        {
+            // 切换模式：SingleLoop -> ListLoop -> Shuffle -> SingleLoop
+            var nextMode = (PlayMode)(((int)_playerService.CurrentMode + 1) % 3);
+            _playerService.CurrentMode = nextMode;
+            UpdateModeUI();
+        }
+
+        private void UpdateModeUI()
+        {
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            string modeText = "";
+            switch (_playerService.CurrentMode)
+            {
+                case PlayMode.SingleLoop: modeText = isZh ? "模式：单曲" : "Mode: Single"; break;
+                case PlayMode.ListLoop: modeText = isZh ? "模式：列表" : "Mode: List"; break;
+                case PlayMode.Shuffle: modeText = isZh ? "模式：随机" : "Mode: Shuffle"; break;
+            }
+            btnPlayMode.Content = modeText;
+        }
+
+        private void txtLoopLimit_TextChanged(object sender, TextChangedEventArgs e)
+        {
+            if (_playerService == null) return;
+            if (int.TryParse(txtLoopLimit.Text, out int limit))
+            {
+                _playerService.LoopLimit = Math.Max(1, limit);
+            }
+        }
 
         private void ApplyLoopSettings() {
             if (_isUpdatingUI) return;
@@ -623,6 +666,9 @@ namespace seamless_loop_music
             if (lblLoopStart != null) lblLoopStart.Text = Properties.Resources.LoopStartLabel;
             if (lblLoopEnd != null) lblLoopEnd.Text = Properties.Resources.LoopEndLabel;
             if (btnSwitchLang != null) btnSwitchLang.Content = Properties.Resources.SwitchLang;
+            
+            UpdateModeUI(); // 更新模式按钮语言
+
             if (lblStatus != null) lblStatus.Text = Properties.Resources.StatusReady;
             
             UpdateAudioInfoText();

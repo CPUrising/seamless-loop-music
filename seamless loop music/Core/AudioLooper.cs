@@ -28,6 +28,8 @@ namespace seamless_loop_music
         public event Action<PlaybackState> OnPlayStateChanged; // 升级: 传递详细状态
         // 新增: 音频加载完成事件 (总采样数, 采样率)
         public event Action<long, int> OnAudioLoaded;
+        // 新增: 循环完成一次事件
+        public event Action OnLoopCycleCompleted;
 
         /// <summary>
         /// 加载音频文件
@@ -179,6 +181,7 @@ namespace seamless_loop_music
             {
                 // 全新开始：创建循环流
                 _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
+                _loopStream.OnLoopCompleted += () => OnLoopCycleCompleted?.Invoke();
 
                 // 创建播放器
                 _wavePlayer = new WaveOutEvent

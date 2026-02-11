@@ -1,13 +1,24 @@
 using System;
 using System.IO;
+using System.Collections.Generic;
+using System.Linq;
 using NAudio.Wave;
-using seamless_loop_music; // AudioLooper 在这里
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
 using NAudio.Vorbis;
 
 namespace seamless_loop_music.Services
 {
+    /// <summary>
+    /// 播放模式
+    /// </summary>
+    public enum PlayMode
+    {
+        SingleLoop,   // 单曲无缝循环 (默认)
+        ListLoop,     // 列表循环 (设定循环次数后切换)
+        Shuffle       // 随机播放
+    }
+
     /// <summary>
     /// 核心播放业务逻辑服务
     /// 把 MainWindow 从繁重的 Audio+DB 协调工作中解放出来
@@ -16,13 +27,22 @@ namespace seamless_loop_music.Services
     {
         private readonly AudioLooper _audioLooper;
         private readonly DatabaseHelper _dbHelper;
+        private readonly Random _random = new Random();
         
+        // 播放相关
+        public List<MusicTrack> Playlist { get; set; } = new List<MusicTrack>();
+        public int CurrentIndex { get; set; } = -1;
+        public PlayMode CurrentMode { get; set; } = PlayMode.SingleLoop;
+        public int LoopLimit { get; set; } = 1; // 列表模式下，每首歌循环几次后切换？
+        private int _currentLoopCount = 0;
+
         // 当前正在操作的音乐对象（包含 ID、路径、元数据）
         public MusicTrack CurrentTrack { get; private set; }
 
         public event Action<MusicTrack> OnTrackLoaded;
         public event Action<PlaybackState> OnPlayStateChanged;
         public event Action<string> OnStatusMessage; // 统一的消息通知
+        public event Action<int> OnIndexChanged;   // 通知 UI 更新选中项
 
         public PlayerService()
         {
@@ -35,17 +55,95 @@ namespace seamless_loop_music.Services
             
             // 核心加载回调：当音频加载完成，立即进行数据库匹配和数据组装
             _audioLooper.OnAudioLoaded += HandleAudioLoaded;
+            
+            // 循环完成回调
+            _audioLooper.OnLoopCycleCompleted += HandleLoopCycleCompleted;
+        }
+
+        private void HandleLoopCycleCompleted()
+        {
+            _currentLoopCount++;
+            
+            // 如果不是单曲循环模式，且达到了循环次数限制，就切歌
+            if (CurrentMode != PlayMode.SingleLoop && _currentLoopCount >= LoopLimit)
+            {
+                // 关键修复：使用 Task.Run 异步切换，避免在音频读取线程中直接调用 Stop/Dispose 导致死锁
+                System.Threading.Tasks.Task.Run(() => {
+                    OnStatusMessage?.Invoke($"Loop limit reached ({LoopLimit}), switching to next...");
+                    NextTrack();
+                });
+            }
         }
 
         // --- 核心业务逻辑 ---
 
         /// <summary>
+        /// 切换到下一首
+        /// </summary>
+        public void NextTrack()
+        {
+            if (Playlist == null || Playlist.Count == 0) return;
+
+            int nextIndex;
+            if (CurrentMode == PlayMode.Shuffle)
+            {
+                // 使用类级别的随机逻辑
+                nextIndex = _random.Next(0, Playlist.Count);
+            }
+            else
+            {
+                nextIndex = (CurrentIndex + 1) % Playlist.Count;
+            }
+
+            PlayAtIndex(nextIndex);
+        }
+
+        /// <summary>
+        /// 切换到上一首
+        /// </summary>
+        public void PreviousTrack()
+        {
+            if (Playlist == null || Playlist.Count == 0) return;
+
+            int prevIndex = (CurrentIndex - 1 + Playlist.Count) % Playlist.Count;
+            PlayAtIndex(prevIndex);
+        }
+
+        /// <summary>
+        /// 播放指定索引的曲目
+        /// </summary>
+        public void PlayAtIndex(int index)
+        {
+            if (Playlist == null || index < 0 || index >= Playlist.Count) return;
+
+            _currentLoopCount = 0; // 重置循环计数
+            CurrentIndex = index;
+            OnIndexChanged?.Invoke(index);
+            LoadTrack(Playlist[index].FilePath);
+            Play();
+        }
+
+        /// <summary>
         /// 加载并初始化一首曲目 (整合了文件加载 + 数据库查询)
+        /// 现在会自动同步歌单索引
         /// </summary>
         public void LoadTrack(string filePath)
         {
             if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return;
             
+            // 关键修复：每次加载新歌，都试图同步索引。这样手动点选和列表播放就能合拍了
+            if (Playlist != null)
+            {
+                int newIndex = Playlist.FindIndex(t => t.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
+                if (newIndex != -1)
+                {
+                    CurrentIndex = newIndex;
+                    OnIndexChanged?.Invoke(newIndex); // 让 UI 跟着亮起来
+                }
+            }
+            
+            _currentLoopCount = 0; // 只要换了歌，循环计数就归零
+
             // 1. 让 Looper 加载音频 (它成功后会触发 OnAudioLoaded -> HandleAudioLoaded)
             CurrentTrack = new MusicTrack { FilePath = filePath, FileName = Path.GetFileName(filePath) }; // 临时占位
             _audioLooper.LoadAudio(filePath); 
@@ -76,8 +174,6 @@ namespace seamless_loop_music.Services
                 // 新朋友：初始化默认循环点
                 CurrentTrack.LoopStart = 0;
                 CurrentTrack.LoopEnd = totalSamples;
-                // 注意：新朋友暂时不入库，等改名或调整循环点时再入库，或者为了ID稳定现在就入库也可以
-                // 但为了保持原有的“无操作不打扰”逻辑，这里暂不强制 SaveTrack
             }
 
             // 3. 将配置应用到播放器
@@ -135,8 +231,6 @@ namespace seamless_loop_music.Services
             _audioLooper.SetLoopEndSample(newEnd);
             
             OnStatusMessage?.Invoke("Smart Match applied.");
-            // 可选：匹配完自动保存? 
-            // SaveCurrentTrack(); 
         }
 
         // --- 播放控制透传 ---
@@ -160,41 +254,26 @@ namespace seamless_loop_music.Services
         public void SetLoopStart(long sample) => _audioLooper.SetLoopStartSample(sample);
         public void SetLoopEnd(long sample) => _audioLooper.SetLoopEndSample(sample);
 
-        public void ImportTracks(System.Collections.Generic.IEnumerable<MusicTrack> tracks)
+        public void ImportTracks(IEnumerable<MusicTrack> tracks)
         {
             _dbHelper.BulkInsert(tracks);
         }
 
-        /// <summary>
-        /// 仅用于列表显示：快速查询数据库中是否有该文件的记录（主要为了获取别名）
-        /// 不需要加载音频
-        /// </summary>
         public MusicTrack GetStoredTrackInfo(string filePath)
         {
             return _dbHelper.GetTrack(filePath, 0);
         }
 
-
-        /// <summary>
-        /// 离线获取音频文件的总采样数 (不播放)
-        /// 关键修复：必须使用和 AudioLooper 完全一致的 Reader 创建逻辑
-        /// 否则 Mp3FileReader 和 AudioFileReader 计算出的 TotalSamples 可能有微小差异，导致数据库指纹匹配失败
-        /// </summary>
         public long GetTotalSamples(string filePath)
         {
             try {
                 using (var reader = CreateReader(filePath)) {
                     if (reader == null) return 0;
-                    // BlockAlign = Channels * (BitsPerSample / 8)
-                    // Length is bytes. TotalSamples = Length / BlockAlign.
                     return reader.Length / reader.WaveFormat.BlockAlign; 
                 }
             } catch { return 0; }
         }
 
-        /// <summary>
-        /// 辅助方法：创建对应格式的音频流 (复刻 AudioLooper 的逻辑)
-        /// </summary>
         private WaveStream CreateReader(string filePath)
         {
             string ext = Path.GetExtension(filePath).ToLower();
@@ -204,14 +283,10 @@ namespace seamless_loop_music.Services
                 case ".ogg": return new VorbisWaveReader(filePath);
                 case ".mp3": return new Mp3FileReader(filePath);
                 default: 
-                    // 对于其他格式，尝试用通用读取器
                     try { return new AudioFileReader(filePath); } catch { return null; }
             }
         }
 
-        /// <summary>
-        /// 强制保存一个不在当前播放状态的音轨 (离线更新)
-        /// </summary>
         public void UpdateOfflineTrack(MusicTrack track)
         {
             if (track == null || track.TotalSamples <= 0) return;
