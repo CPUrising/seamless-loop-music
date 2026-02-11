@@ -317,43 +317,46 @@ namespace seamless_loop_music.Services
                 
                 OnStatusMessage?.Invoke($"Scanning {files.Count} files for playlist {playlistId}...");
 
+                var tracksToAdd = new List<MusicTrack>();
+                int processed = 0;
+
                 foreach (var f in files)
                 {
-                    // 1. 获取基础采样数（指纹的核心部分）
-                    long samples = GetTotalSamples(f);
-                    if (samples <= 0) continue;
-
-                    // 2. 查户口：看看数据库里是不是已经认识这首歌了
-                    var track = _dbHelper.GetTrack(f, samples);
-
-                    if (track == null)
+                    try 
                     {
-                        // 没见过的新朋友：初始化并保存
-                        track = new MusicTrack { 
+                        // 1. 获取基础采样数
+                        long samples = GetTotalSamples(f);
+                        if (samples <= 0) continue;
+
+                        var track = new MusicTrack 
+                        { 
                             FilePath = f, 
                             FileName = Path.GetFileName(f), 
                             TotalSamples = samples,
                             LoopEnd = samples,
-                            DisplayName = Path.GetFileNameWithoutExtension(f)
+                            LoopStart = 0,
+                            DisplayName = Path.GetFileNameWithoutExtension(f), // 默认别名
+                            LastModified = DateTime.Now
                         };
-                        _dbHelper.SaveTrack(track);
+                        tracksToAdd.Add(track);
+                        
+                        processed++;
+                        if (processed % 10 == 0) // 每处理10个更新一次 UI，避免看上去卡死
+                        {
+                             // 注意：频繁 Invoke 可能会反向拖慢速度，但在后台线程还好
+                             // OnStatusMessage?.Invoke($"Scanning... ({processed}/{files.Count})"); 
+                        }
                     }
-                    else
-                    {
-                        // 老朋友：把路径更新一下
-                        track.FilePath = f;
-                        // 关键修复：既然更新了路径，必须存回数据库！否则下次查还是空的！
-                        _dbHelper.SaveTrack(track);
-                    }
-
-                    // 4. 关联到歌单
-                    if (!_dbHelper.IsSongInPlaylist(playlistId, track.Id))
-                    {
-                        _dbHelper.AddSongToPlaylist(playlistId, track.Id);
-                    }
+                    catch { /* 忽略损坏文件 */ }
                 }
 
-                OnStatusMessage?.Invoke($"Scan complete. {files.Count} songs synced.");
+                // 2. 批量入库
+                if (tracksToAdd.Count > 0)
+                {
+                    _dbHelper.BulkSaveTracksAndAddToPlaylist(tracksToAdd, playlistId);
+                }
+
+                OnStatusMessage?.Invoke($"Scan complete. {tracksToAdd.Count} songs synced.");
             });
         }
         

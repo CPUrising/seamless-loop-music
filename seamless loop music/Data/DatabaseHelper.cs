@@ -41,7 +41,8 @@ namespace seamless_loop_music.Data
             {
                 db.Open();
                 db.Execute("PRAGMA foreign_keys = ON;"); // 强制开启外键支持
-                
+                db.Execute("PRAGMA journal_mode = WAL;"); // 开启 WAL 模式以提升并发性能
+
                 // 1. 核心资源库 (原 LoopPoints)
                 string sqlSongs = @"
                     CREATE TABLE IF NOT EXISTS LoopPoints (
@@ -245,6 +246,65 @@ namespace seamless_loop_music.Data
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
                 db.Execute("DELETE FROM Playlists WHERE Id = @Id", new { Id = playlistId });
+            }
+        }
+
+        public void BulkSaveTracksAndAddToPlaylist(IEnumerable<MusicTrack> tracks, int playlistId)
+        {
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        foreach (var track in tracks)
+                        {
+                            // 1. Save Track (Upsert)
+                            var existing = connection.QueryFirstOrDefault<MusicTrack>(
+                                "SELECT * FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @TotalSamples", 
+                                new { track.FileName, track.TotalSamples }, transaction);
+
+                            long trackId;
+                            if (existing == null)
+                            {
+                                track.Id = (int)connection.QuerySingle<long>(
+                                    @"INSERT INTO LoopPoints (FileName, FilePath, TotalSamples, DisplayName, LoopStart, LoopEnd, LastModified) 
+                                      VALUES (@FileName, @FilePath, @TotalSamples, @DisplayName, @LoopStart, @LoopEnd, @LastModified);
+                                      SELECT last_insert_rowid();", track, transaction);
+                                trackId = track.Id;
+                            }
+                            else
+                            {
+                                trackId = existing.Id;
+                                // Update FilePath if changed
+                                if (existing.FilePath != track.FilePath)
+                                {
+                                    connection.Execute("UPDATE LoopPoints SET FilePath = @FilePath WHERE Id = @Id", 
+                                        new { track.FilePath, Id = trackId }, transaction);
+                                }
+                            }
+
+                            // 2. Add to Playlist if not exists
+                            var count = connection.ExecuteScalar<int>(
+                                "SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId = @PlaylistId AND SongId = @MusicTrackId", 
+                                new { PlaylistId = playlistId, MusicTrackId = trackId }, transaction);
+
+                            if (count == 0)
+                            {
+                                connection.Execute(
+                                    "INSERT INTO PlaylistItems (PlaylistId, SongId, SortOrder) VALUES (@PlaylistId, @MusicTrackId, 0)", 
+                                    new { PlaylistId = playlistId, MusicTrackId = trackId }, transaction);
+                            }
+                        }
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
 

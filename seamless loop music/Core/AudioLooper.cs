@@ -267,7 +267,7 @@ namespace seamless_loop_music
         {
             get
             {
-                if (_loopStream != null)
+                if (_loopStream != null && _audioStream != null)
                 {
                     return TimeSpan.FromSeconds((double)_loopStream.Position / _audioStream.WaveFormat.AverageBytesPerSecond);
                 }
@@ -278,17 +278,7 @@ namespace seamless_loop_music
         /// <summary>
         /// 获取音频总时长
         /// </summary>
-        public TimeSpan TotalTime
-        {
-            get
-            {
-                if (_audioStream != null)
-                {
-                    return _audioStream.TotalTime;
-                }
-                return TimeSpan.Zero;
-            }
-        }
+        public TimeSpan TotalTime => _audioStream?.TotalTime ?? TimeSpan.Zero;
 
         /// <summary>
         /// 跳转进度 (0.0 ~ 1.0)
