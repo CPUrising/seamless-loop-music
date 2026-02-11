@@ -4,6 +4,7 @@ using NAudio.Wave;
 using seamless_loop_music; // AudioLooper 在这里
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
+using NAudio.Vorbis;
 
 namespace seamless_loop_music.Services
 {
@@ -173,24 +174,39 @@ namespace seamless_loop_music.Services
             return _dbHelper.GetTrack(filePath, 0);
         }
 
+
         /// <summary>
         /// 离线获取音频文件的总采样数 (不播放)
+        /// 关键修复：必须使用和 AudioLooper 完全一致的 Reader 创建逻辑
+        /// 否则 Mp3FileReader 和 AudioFileReader 计算出的 TotalSamples 可能有微小差异，导致数据库指纹匹配失败
         /// </summary>
         public long GetTotalSamples(string filePath)
         {
             try {
-                using (var reader = new AudioFileReader(filePath)) {
-                    // AudioFileReader 自动处理 MP3/WAV/AIFF 等
-                    // Sample = Length / (BitsPerSample / 8 * Channels) ?? No, it's easier:
-                    // Position is in bytes. TotalSamples = Length / BlockAlign?
-                    // Wait, AudioFileReader.Length is bytes.
-                    // TotalSamples usually means "Sample Frames" (independent of channels)?
-                    // Or total samples across all channels?
-                    // In AudioLooper logic: _totalSamples = _audioStream.Length / bytesPerSample; (BlockAlign)
-                    // So it is "Sample Frames".
+                using (var reader = CreateReader(filePath)) {
+                    if (reader == null) return 0;
+                    // BlockAlign = Channels * (BitsPerSample / 8)
+                    // Length is bytes. TotalSamples = Length / BlockAlign.
                     return reader.Length / reader.WaveFormat.BlockAlign; 
                 }
             } catch { return 0; }
+        }
+
+        /// <summary>
+        /// 辅助方法：创建对应格式的音频流 (复刻 AudioLooper 的逻辑)
+        /// </summary>
+        private WaveStream CreateReader(string filePath)
+        {
+            string ext = Path.GetExtension(filePath).ToLower();
+            switch (ext)
+            {
+                case ".wav": return new WaveFileReader(filePath);
+                case ".ogg": return new VorbisWaveReader(filePath);
+                case ".mp3": return new Mp3FileReader(filePath);
+                default: 
+                    // 对于其他格式，尝试用通用读取器
+                    try { return new AudioFileReader(filePath); } catch { return null; }
+            }
         }
 
         /// <summary>
