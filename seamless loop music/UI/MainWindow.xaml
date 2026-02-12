@@ -65,8 +65,8 @@
             </Grid>
 
             <!-- Playlists ListBox -->
-            <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
-                     Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged"
+            <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,10,10"
+                     Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged" SelectionMode="Extended"
                      VirtualizingStackPanel.IsVirtualizing="True"
                      VirtualizingStackPanel.VirtualizationMode="Recycling"
                      ScrollViewer.CanContentScroll="True">
@@ -84,8 +84,8 @@
                         <MenuItem x:Name="miRefreshPlaylist" Header="Refresh Playlist" Click="miRefreshPlaylist_Click"/>
                         <MenuItem x:Name="miAddSong" Header="Add Files" Click="miAddSong_Click"/>
                         <Separator/>
-                        <MenuItem Header="Rename" Click="miRenamePlaylist_Click"/>
-                        <MenuItem Header="Delete" Click="miDeletePlaylist_Click"/>
+                        <MenuItem x:Name="miRenamePlaylist" Header="Rename" Click="miRenamePlaylist_Click"/>
+                        <MenuItem x:Name="miDeletePlaylist" Header="Delete" Click="miDeletePlaylist_Click"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>

@@ -300,26 +300,51 @@ namespace seamless_loop_music
         }
 
         private async void miRefreshPlaylist_Click(object sender, RoutedEventArgs e) {
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                 bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-                 lblStatus.Text = isZh ? $"正在刷新 '{folder.Name}'..." : $"Refreshing '{folder.Name}'...";
-                 
-                 await _playerService.RefreshPlaylist(folder.Id);
-                 
-                 // 重新加载播放列表以更新数量
-                 LoadPlaylists();
-                 // 重新加载显示
-                 if (lstPlaylists.SelectedItem == folder) LoadPlaylistFromDb(folder.Id);
+            var selectedFolders = lstPlaylists.SelectedItems.Cast<PlaylistFolder>()
+                                    .Where(f => f.IsFolderLinked).ToList();
+            if (selectedFolders.Count == 0) return;
+
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            int count = 0;
+
+            foreach (var folder in selectedFolders)
+            {
+                count++;
+                lblStatus.Text = isZh ? $"正在批量刷新 ({count}/{selectedFolders.Count}): {folder.Name}..." 
+                                     : $"Batch Refreshing ({count}/{selectedFolders.Count}): {folder.Name}...";
+                
+                await _playerService.RefreshPlaylist(folder.Id);
             }
+            
+            // 全部完成后更新 UI
+            LoadPlaylists();
+            
+            // 如果当前选中的文件夹中有正在显示的，重载它
+            if (lstPlaylists.SelectedItem is PlaylistFolder current)
+            {
+                LoadPlaylistFromDb(current.Id);
+            }
+            
+            lblStatus.Text = isZh ? $"已完成 {selectedFolders.Count} 个歌单的批量刷新。" : $"Batch refresh of {selectedFolders.Count} playlists completed.";
         }
 
         private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                if (MessageBox.Show(Properties.Resources.MsgDeleteConfirm, Properties.Resources.TitleDelete, MessageBoxButton.YesNo) == MessageBoxResult.Yes) {
+            var selectedFolders = lstPlaylists.SelectedItems.Cast<PlaylistFolder>().ToList();
+            if (selectedFolders.Count == 0) return;
+
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            string msg = isZh ? $"确定要从库中移除这 {selectedFolders.Count} 个歌单吗？(磁盘文件不会被删除)" 
+                              : $"Are you sure to remove {selectedFolders.Count} playlists? (Source files won't be deleted)";
+            
+            if (MessageBox.Show(msg, Properties.Resources.TitleDelete, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes) {
+                foreach (var folder in selectedFolders)
+                {
                     _playerService.DeletePlaylist(folder.Id);
                     _playlists.Remove(folder);
-                    lstPlaylist.Items.Clear();
                 }
+                lstPlaylist.Items.Clear();
+                txtFilePath.Text = isZh ? "未选择歌单" : "No playlist selected";
+                lblStatus.Text = isZh ? $"已批量删除 {selectedFolders.Count} 个歌单。" : $"Deleted {selectedFolders.Count} playlists.";
             }
         }
 
@@ -328,24 +353,30 @@ namespace seamless_loop_music
             var cm = sender as ContextMenu;
             if (cm == null) return;
             
-            bool hasSelection = lstPlaylists.SelectedItem is PlaylistFolder;
-            var folder = lstPlaylists.SelectedItem as PlaylistFolder;
-            bool isFolderBased = folder != null && folder.IsFolderLinked; // 核心判别
-            bool isVirtual = folder != null && !folder.IsFolderLinked;
+            var selectedItems = lstPlaylists.SelectedItems.Cast<PlaylistFolder>().ToList();
+            bool hasSelection = selectedItems.Count > 0;
+            bool singleSelection = selectedItems.Count == 1;
+
+            bool anyFolderBased = selectedItems.Any(f => f.IsFolderLinked);
+            bool anyVirtual = selectedItems.Any(f => !f.IsFolderLinked);
 
             // 设置可见性
-            miAddPlaylist.Visibility = (hasSelection && isFolderBased) ? Visibility.Visible : Visibility.Collapsed;
-            miRefreshPlaylist.Visibility = (hasSelection && isFolderBased) ? Visibility.Visible : Visibility.Collapsed;
-            miAddSong.Visibility = (hasSelection && isVirtual) ? Visibility.Visible : Visibility.Collapsed;
+            miAddPlaylist.Visibility = (singleSelection && anyFolderBased) ? Visibility.Visible : Visibility.Collapsed;
+            miRefreshPlaylist.Visibility = anyFolderBased ? Visibility.Visible : Visibility.Collapsed;
+            miAddSong.Visibility = (singleSelection && anyVirtual) ? Visibility.Visible : Visibility.Collapsed;
             
-            // 如果没选中任何项，显示默认新建入口
+            // 重命名只支持单选
+            miRenamePlaylist.Visibility = singleSelection ? Visibility.Visible : Visibility.Collapsed;
+            miDeletePlaylist.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+
+            // 如果没选中任何项，全部崩坏
             if (!hasSelection)
             {
-                // 其实右键空白处通常也期望能新建，但当前逻辑绑定在 ListBoxItem 上比较方便
-                // 这里简单处理：如果没选中，禁用所有针对特定歌单的操作
                 miAddPlaylist.Visibility = Visibility.Collapsed;
                 miRefreshPlaylist.Visibility = Visibility.Collapsed;
                 miAddSong.Visibility = Visibility.Collapsed; 
+                miRenamePlaylist.Visibility = Visibility.Collapsed;
+                miDeletePlaylist.Visibility = Visibility.Collapsed;
             }
         }
 
