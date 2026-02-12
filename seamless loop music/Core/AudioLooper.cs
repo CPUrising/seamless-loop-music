@@ -31,52 +31,97 @@ namespace seamless_loop_music
         // 新增: 循环完成一次事件
         public event Action OnLoopCycleCompleted;
 
-        private string _currentFilePath; // 新增: 记录当前文件路径，用于异步分析
-        private bool _isLoading = false; // 新增: 防止自动切歌时 Stopped 事件干扰 UI
+        private string _currentFilePath; // 第一部分 (Part A)
+        private string _partBFilePath;   // 第二部分 (Part B)
+        private bool _isLoading = false; 
 
 
         /// <summary>
-        /// 加载音频文件
+        /// 加载单音频文件
         /// </summary>
         public void LoadAudio(string filePath)
         {
+            LoadAudio(filePath, null);
+        }
+
+        /// <summary>
+        /// 加载音频。如果提供了 secondFilePath，则执行“物理预合并”方案 (A+B)
+        /// </summary>
+        public void LoadAudio(string firstFilePath, string secondFilePath)
+        {
             try
             {
-                _isLoading = true; // 标记开始加载，屏蔽旧的停止事件
+                _isLoading = true;
                 Stop();
                 DisposeAudioResources();
-                
-                
-                _currentFilePath = filePath; // 记录路径
 
-                // 根据格式创建音频流
-                _audioStream = CreateAudioStream(filePath);
-                if (_audioStream == null)
+                _currentFilePath = firstFilePath;
+                _partBFilePath = secondFilePath;
+
+                if (string.IsNullOrEmpty(secondFilePath))
                 {
-                    OnStatusChanged?.Invoke("Unsupported audio format! Only WAV/OGG/MP3 are supported.");
-                    return;
+                    // 普通单文件加载模式
+                    _audioStream = CreateAudioStream(firstFilePath);
+                    if (_audioStream == null)
+                    {
+                        OnStatusChanged?.Invoke("Unsupported audio format!");
+                        return;
+                    }
+                    _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
+                    _loopStartSample = 0;
+                    _loopEndSample = _totalSamples;
+                }
+                else
+                {
+                    // 暴力方案：物理预合并 A + B
+                    OnStatusChanged?.Invoke("Merging A/B parts in memory for perfect seamlessness...");
+                    
+                    using (var readerA = CreateAudioStream(firstFilePath))
+                    using (var readerB = CreateAudioStream(secondFilePath))
+                    {
+                        if (readerA == null || readerB == null)
+                        {
+                            OnStatusChanged?.Invoke("Failed to load one of the A/B parts.");
+                            return;
+                        }
+
+                        if (readerA.WaveFormat.SampleRate != readerB.WaveFormat.SampleRate || 
+                            readerA.WaveFormat.Channels != readerB.WaveFormat.Channels)
+                        {
+                            OnStatusChanged?.Invoke("A/B parts format mismatch! Falling back to Part A.");
+                            LoadAudio(firstFilePath);
+                            return;
+                        }
+
+                        // 创建内存流并拼接
+                        var memStream = new MemoryStream();
+                        readerA.CopyTo(memStream);
+                        long lengthA = memStream.Position; // 记录接缝点
+                        readerB.CopyTo(memStream);
+                        memStream.Position = 0;
+
+                        // 包装成原始波形流。这样对于系统来说，这就是一首完整的、物理上连续的长歌。
+                        _audioStream = new RawSourceWaveStream(memStream, readerA.WaveFormat);
+                        
+                        _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
+                        _loopStartSample = lengthA / _audioStream.WaveFormat.BlockAlign; // 自动瞄准 B 开头
+                        _loopEndSample = _totalSamples;
+                    }
                 }
 
-                // 计算音频核心参数
                 var waveFormat = _audioStream.WaveFormat;
-                int bytesPerSample = waveFormat.BlockAlign;
-                _totalSamples = _audioStream.Length / bytesPerSample;
-
-                // 修复: 加载新音频时，强制重置循环点为默认值 (0 ~ Total)
-                _loopStartSample = 0;
-                _loopEndSample = _totalSamples; // 默认循环全曲
-
-                // 触发加载完成事件
                 OnAudioLoaded?.Invoke(_totalSamples, waveFormat.SampleRate);
-                OnStatusChanged?.Invoke("Audio loaded. Set loop points and play!");
+                OnStatusChanged?.Invoke(string.IsNullOrEmpty(secondFilePath) 
+                    ? "Audio loaded. Set loop points and play!"
+                    : "A/B Seamless Fusion Complete. Enjoy the perfect transition!");
             }
             catch (Exception ex)
             {
-                OnStatusChanged?.Invoke($"Load failed: {ex.Message}");
+                OnStatusChanged?.Invoke($"Load operation failed: {ex.Message}");
             }
             finally
             {
-                _isLoading = false; 
+                _isLoading = false;
             }
         }
 
@@ -344,20 +389,45 @@ namespace seamless_loop_music
             if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
             {
                 OnStatusChanged?.Invoke("Error: File path not available for analysis.");
+                onResult?.Invoke(currentStart, currentEnd);
                 return;
             }
 
-            // 保存路径，避免闭包问题
-            string targetPath = _currentFilePath;
+            string pathA = _currentFilePath;
+            string pathB = _partBFilePath;
             
             await System.Threading.Tasks.Task.Run(() =>
             {
                 WaveStream tempStream = null;
                 try
                 {
-                    // 1. 创建独立的临时流，避免干扰播放
-                    tempStream = CreateAudioStream(targetPath);
-                    if (tempStream == null) return;
+                    // 1. 创建独立的临时流
+                    if (string.IsNullOrEmpty(pathB))
+                    {
+                        tempStream = CreateAudioStream(pathA);
+                    }
+                    else
+                    {
+                        // A/B 模式：重新加载 A 和 B 分散分析任务压力
+                        using (var rA = CreateAudioStream(pathA))
+                        using (var rB = CreateAudioStream(pathB))
+                        {
+                            if (rA != null && rB != null)
+                            {
+                                var ms = new MemoryStream();
+                                rA.CopyTo(ms);
+                                rB.CopyTo(ms);
+                                ms.Position = 0;
+                                tempStream = new RawSourceWaveStream(ms, rA.WaveFormat);
+                            }
+                        }
+                    }
+
+                    if (tempStream == null)
+                    {
+                        onResult?.Invoke(currentStart, currentEnd);
+                        return;
+                    }
 
                     var fmt = tempStream.WaveFormat;
                     int sampleRate = fmt.SampleRate;
@@ -366,30 +436,31 @@ namespace seamless_loop_music
                     // --- 参数准备 ---
                     int windowSize = sampleRate; 
                     
-                    // 动态限制指纹长度
-                    if (adjustStart) { // 逆向
+                    if (adjustStart) {
                          if (currentEnd < windowSize) windowSize = (int)currentEnd;
-                    } else { // 正向
+                    } else {
                          if (currentStart + windowSize > totalSamples) windowSize = (int)(totalSamples - currentStart);
                     }
-                    if (windowSize < sampleRate / 20) return; 
+                    
+                    if (windowSize < 1024) 
+                    {
+                         OnStatusChanged?.Invoke("Match Error: Sample region too small.");
+                         onResult?.Invoke(currentStart, currentEnd);
+                         return;
+                    }
 
                     long searchRadius = sampleRate * 5; 
-                    
-                    // --- 提取波形 & 确定搜索区 ---
                     long templateStartPos, templateEndPos;
                     long searchRegionCenter;
 
                     if (adjustStart)
                     {
-                        // 逆向 (Reverse): 指纹 = [End - 1s, End]
                         templateEndPos = currentEnd;
                         templateStartPos = templateEndPos - windowSize;
                         searchRegionCenter = currentStart;
                     }
                     else
                     {
-                        // 正向 (Forward): 指纹 = [Start, Start + 1s]
                         templateStartPos = currentStart;
                         templateEndPos = templateStartPos + windowSize;
                         searchRegionCenter = currentEnd;
@@ -405,15 +476,25 @@ namespace seamless_loop_music
                     if (searchRegionEnd > totalSamples) searchRegionEnd = totalSamples;
 
                     long searchLen = searchRegionEnd - searchRegionBegin;
-                    if (searchLen < templateLen) return;
+                    if (searchLen < templateLen) 
+                    {
+                         OnStatusChanged?.Invoke("Match Error: Search region smaller than template.");
+                         onResult?.Invoke(currentStart, currentEnd);
+                         return;
+                    }
 
-                    // 从临时流读取数据
+                    // 从临时流读取数据 (批量读取)
                     float[] templateFull = ReadSamplesFromStream(tempStream, templateStartPos, (int)templateLen);
                     float[] searchBufferFull = ReadSamplesFromStream(tempStream, searchRegionBegin, (int)searchLen);
 
-                    if (templateFull.Length < 100 || searchBufferFull.Length < templateFull.Length) return;
+                    if (templateFull.Length < 100 || searchBufferFull.Length < templateFull.Length)
+                    {
+                         OnStatusChanged?.Invoke("Match Error: Data insufficient.");
+                         onResult?.Invoke(currentStart, currentEnd);
+                         return;
+                    }
 
-                    // --- 第一层：金字塔粗搜 ---
+                    // --- 第一层：粗搜 ---
                     int downsampleFactor = 8;
                     float[] templateSmall = Downsample(templateFull, downsampleFactor);
                     float[] searchSmall = Downsample(searchBufferFull, downsampleFactor);
@@ -436,9 +517,14 @@ namespace seamless_loop_music
                         }
                     }
 
-                    if (bestCoarseOffset == -1) return;
+                    if (bestCoarseOffset == -1)
+                    {
+                         OnStatusChanged?.Invoke("Match Error: No clear pattern found.");
+                         onResult?.Invoke(currentStart, currentEnd);
+                         return;
+                    }
 
-                    // --- 第二层：局部精搜 ---
+                    // --- 第二层：精搜 ---
                     int fineSearchRadius = downsampleFactor * 4;
                     int fineStart = bestCoarseOffset * downsampleFactor - fineSearchRadius;
                     int fineEnd = bestCoarseOffset * downsampleFactor + fineSearchRadius;
@@ -465,7 +551,6 @@ namespace seamless_loop_music
                         }
                     }
 
-                    // --- 应用结果 ---
                     if (bestFineOffset != -1)
                     {
                         long matchPosStart = searchRegionBegin + bestFineOffset;
@@ -474,31 +559,25 @@ namespace seamless_loop_music
                         long finalResultStart = currentStart;
                         long finalResultEnd = currentEnd;
 
-                        if (adjustStart)
-                        {
-                            // 逆向：找到 Pre-End 的孪生兄弟，它的终点就是 Start 应该在的地方
-                            finalResultStart = matchPosEnd;
-                        }
-                        else
-                        {
-                             // 正向：找到 Post-Start 的孪生兄弟，它的起点就是 End 应该在的地方
-                             finalResultEnd = matchPosStart;
-                        }
+                        if (adjustStart) finalResultStart = matchPosEnd;
+                        else finalResultEnd = matchPosStart;
 
-                        // 通过回调返回结果
                         onResult?.Invoke(finalResultStart, finalResultEnd);
-                        
-                        string modeStr = adjustStart ? "Reverse" : "Forward";
-                        OnStatusChanged?.Invoke($"Smart Match {modeStr}: Diff={minFineDiff:F4}, New range: {finalResultStart}-{finalResultEnd}");
+                        OnStatusChanged?.Invoke($"Match OK! Diff: {minFineDiff:F3}");
+                    }
+                    else
+                    {
+                        onResult?.Invoke(currentStart, currentEnd);
                     }
                 }
                 catch (Exception ex)
                 {
                     OnStatusChanged?.Invoke($"Smart Match Error: {ex.Message}");
+                    onResult?.Invoke(currentStart, currentEnd);
                 }
                 finally
                 {
-                    tempStream?.Dispose(); // 务必销毁临时流
+                    tempStream?.Dispose();
                 }
             });
         }

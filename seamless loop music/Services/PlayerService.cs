@@ -37,6 +37,7 @@ namespace seamless_loop_music.Services
         public PlayMode CurrentMode { get; set; } = PlayMode.SingleLoop;
         public int LoopLimit { get; set; } = 1; // 列表模式下，每首歌循环几次后切换？
         private int _currentLoopCount = 0;
+        private bool _isConcatenatedLoad = false; // 标记当前加载是否为 A+B 物理合体模式
 
         // 当前正在操作的音乐对象（包含 ID、路径、元数据）
         public MusicTrack CurrentTrack { get; private set; }
@@ -147,22 +148,63 @@ namespace seamless_loop_music.Services
                 return;
             }
             
-            // 每次加载新歌，都试图同步索引。这样手动点选和列表播放就能合拍了
+            // 1. 获取现有对象或创建占位符
+            MusicTrack existingInPlaylist = null;
             if (Playlist != null)
             {
                 int newIndex = Playlist.FindIndex(t => t.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
                 if (newIndex != -1)
                 {
                     CurrentIndex = newIndex;
-                    OnIndexChanged?.Invoke(newIndex); // 让 UI 跟着亮起来
+                    existingInPlaylist = Playlist[newIndex];
+                    OnIndexChanged?.Invoke(newIndex);
                 }
             }
+
+            // 使用现有对象或创建新的
+            CurrentTrack = existingInPlaylist ?? new MusicTrack { FilePath = filePath, FileName = Path.GetFileName(filePath) };
             
             _currentLoopCount = 0; // 只要换了歌，循环计数就归零
 
-            // 1. 让 Looper 加载音频 (它成功后会触发 OnAudioLoaded -> HandleAudioLoaded)
-            CurrentTrack = new MusicTrack { FilePath = filePath, FileName = Path.GetFileName(filePath) }; // 临时占位
-            _audioLooper.LoadAudio(filePath); 
+            // --- A/B 循环逻辑探测 ---
+            string partB = FindPartB(filePath);
+            _isConcatenatedLoad = !string.IsNullOrEmpty(partB);
+
+            if (_isConcatenatedLoad)
+            {
+                OnStatusMessage?.Invoke($"[A/B Mode] Fusing Intro and Loop segments...");
+                _audioLooper.LoadAudio(filePath, partB);
+            }
+            else
+            {
+                _audioLooper.LoadAudio(filePath); 
+            }
+        }
+
+        private string FindPartB(string filePath)
+        {
+            try
+            {
+                string dir = Path.GetDirectoryName(filePath);
+                string fileName = Path.GetFileNameWithoutExtension(filePath);
+                string ext = Path.GetExtension(filePath);
+
+                string[] aSuffixes = { "_A", "_a", "_intro", "_Intro" };
+                string[] bSuffixes = { "_B", "_b", "_loop", "_Loop" };
+
+                for (int i = 0; i < aSuffixes.Length; i++)
+                {
+                    if (fileName.EndsWith(aSuffixes[i]))
+                    {
+                        string baseName = fileName.Substring(0, fileName.Length - aSuffixes[i].Length);
+                        string bName = baseName + bSuffixes[i];
+                        string bPath = Path.Combine(dir, bName + ext);
+                        if (File.Exists(bPath)) return bPath;
+                    }
+                }
+            }
+            catch { }
+            return null;
         }
 
         /// <summary>
@@ -174,29 +216,69 @@ namespace seamless_loop_music.Services
 
             CurrentTrack.TotalSamples = totalSamples;
             
-            // 2. 去数据库查户口 (通过 文件名+采样数 指纹)
+            // 2. 去数据库查户口 (指纹匹配)
             var dbTrack = _dbHelper.GetTrack(CurrentTrack.FilePath, totalSamples);
             
+            // 模糊匹配：如果采样数变了，尝试通过文件名找回之前的 ID
+            if (dbTrack == null)
+            {
+                dbTrack = _dbHelper.GetAllTracks().FirstOrDefault(t => 
+                    Path.GetFileName(t.FilePath).Equals(Path.GetFileName(CurrentTrack.FilePath), StringComparison.OrdinalIgnoreCase));
+            }
+
             if (dbTrack != null)
             {
-                // 老朋友：完全接管 ID 和配置
                 CurrentTrack.Id = dbTrack.Id;
                 CurrentTrack.DisplayName = dbTrack.DisplayName;
-                CurrentTrack.LoopStart = dbTrack.LoopStart;
-                CurrentTrack.LoopEnd = (dbTrack.LoopEnd <= 0) ? totalSamples : dbTrack.LoopEnd;
+                
+                // --- A/B 自动修正 ---
+                // 如果当前是 A+B 模式，但存档还停留在“单曲模式”（LoopStart 为 0）
+                // 或者是采样数发生了巨大变化（说明刚合并了 B）
+                if (_isConcatenatedLoad && (dbTrack.LoopStart == 0 || Math.Abs(dbTrack.TotalSamples - totalSamples) > 1000))
+                {
+                    CurrentTrack.LoopStart = _audioLooper.LoopStartSample; 
+                    CurrentTrack.LoopEnd = totalSamples;
+                    CurrentTrack.TotalSamples = totalSamples;
+                    SaveCurrentTrack(); // 升级存档
+                }
+                else
+                {
+                    CurrentTrack.LoopStart = dbTrack.LoopStart;
+                    CurrentTrack.LoopEnd = (dbTrack.LoopEnd <= 0) ? totalSamples : dbTrack.LoopEnd;
+                }
             }
             else
             {
-                // 新朋友：初始化默认循环点
-                CurrentTrack.LoopStart = 0;
+                // 纯新人
+                CurrentTrack.LoopStart = _isConcatenatedLoad ? _audioLooper.LoopStartSample : 0;
                 CurrentTrack.LoopEnd = totalSamples;
+                SaveCurrentTrack(); // 新歌落户
             }
 
+            // 同步回 Playlist 中的对象（如果存在的话）
+            if (Playlist != null && CurrentIndex >= 0 && CurrentIndex < Playlist.Count)
+            {
+                var pTrack = Playlist[CurrentIndex];
+                if (pTrack.FilePath == CurrentTrack.FilePath)
+                {
+                    pTrack.Id = CurrentTrack.Id;
+                    pTrack.LoopStart = CurrentTrack.LoopStart;
+                    pTrack.LoopEnd = CurrentTrack.LoopEnd;
+                    pTrack.TotalSamples = CurrentTrack.TotalSamples;
+                    pTrack.DisplayName = CurrentTrack.DisplayName;
+                }
+            }
             // 3. 将配置应用到播放器
             _audioLooper.SetLoopStartSample(CurrentTrack.LoopStart);
             _audioLooper.SetLoopEndSample(CurrentTrack.LoopEnd);
 
-            // 4. 通知 UI
+            // 4. 如果是新发现的歌（或者是 A+B 模式下时长变化的歌），自动存入数据库
+            if (dbTrack == null)
+            {
+                SaveCurrentTrack();
+            }
+
+            // 5. 通知 UI
             OnTrackLoaded?.Invoke(CurrentTrack);
         }
 
@@ -531,69 +613,123 @@ namespace seamless_loop_music.Services
                 var currentTracks = _dbHelper.GetPlaylistTracks(playlistId).ToList();
                 var currentTrackPaths = new HashSet<string>(currentTracks.Select(t => t.FilePath), StringComparer.OrdinalIgnoreCase);
 
-                // 4. 找出新增的文件
-                var newFiles = disksFilesMap.Keys.Where(f => !currentTrackPaths.Contains(f)).ToList();
+                // 4. 找出候选新增（或需要更新的）文件
+                // 现在的逻辑：只要是磁盘上的音频文件，我们都重新扫一遍，确保 A/B 状态同步
+                var allDiskFiles = disksFilesMap.Keys.ToList();
                 
-                // 5. 找出移除的文件 (只移除那些路径在 monitored folders 范围内但不复存在的文件？
-                // 或者更简单：如果歌单是 "Linked Folder" 模式，则完全同步？
-                // 鉴于用户需求是 "根据文件夹变化决定歌单变化"，我们假设这是同步模式。
-                // 但为了安全，我们只移除那些 "原本属于这些文件夹但现在不见了" 的歌曲，
-                // 避免误删用户手动添加的额外歌曲（如果支持混合模式）。
-                // 简化起见：我们只移除那些 路径以任何一个 folder 开头 但不在 diskFilesMap 中的歌曲。
-                
-                var tracksToRemove = new List<int>();
-                foreach (var track in currentTracks)
+                // --- 过滤 B 文件 ---
+                var aPartFiles = new List<string>();
+                var bFilesToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+
+                foreach (var f in allDiskFiles)
                 {
-                    // 如果歌曲路径属于某个受控文件夹
-                    bool belongsToMonitored = folders.Any(folder => track.FilePath.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
-                    
-                    if (belongsToMonitored)
+                    string dir = Path.GetDirectoryName(f);
+                    string fileName = Path.GetFileNameWithoutExtension(f);
+                    string ext = Path.GetExtension(f);
+                    string[] bSuffixes = { "_B", "_b", "_loop", "_Loop" };
+                    string[] aSuffixes = { "_A", "_a", "_intro", "_Intro" };
+
+                    for (int i = 0; i < bSuffixes.Length; i++)
                     {
-                        // 且现在磁盘上找不到了
-                        if (!disksFilesMap.ContainsKey(track.FilePath))
+                        if (fileName.EndsWith(bSuffixes[i]))
                         {
-                            tracksToRemove.Add(track.Id);
+                            string baseName = fileName.Substring(0, fileName.Length - bSuffixes[i].Length);
+                            string aName = baseName + aSuffixes[i];
+                            string aPath = Path.Combine(dir, aName + ext);
+                            // 如果对应的 A 文件存在，那么这个 B 就不作为独立曲目入库
+                            if (disksFilesMap.ContainsKey(aPath))
+                            {
+                                bFilesToIgnore.Add(f);
+                                break;
+                            }
                         }
                     }
                 }
 
+                foreach (var f in allDiskFiles)
+                {
+                    if (!bFilesToIgnore.Contains(f)) aPartFiles.Add(f);
+                }
+
+                // 5. 准备移除列表
+                var tracksToRemove = new List<int>();
+                foreach (var track in currentTracks)
+                {
+                    if (!disksFilesMap.ContainsKey(track.FilePath))
+                    {
+                        tracksToRemove.Add(track.Id);
+                    }
+                    else 
+                    {
+                        // 逻辑隐藏：已经是 B 文件但其 A 存在的，也要移除（清理旧历史）
+                        string f = track.FilePath;
+                        if (bFilesToIgnore.Contains(f))
+                        {
+                            tracksToRemove.Add(track.Id);
+                            goto nextTrack;
+                        }
+                    }
+                    nextTrack:;
+                }
+
                 // --- 执行数据库更新 ---
 
-                // A. 添加新歌
-                if (newFiles.Count > 0)
+                // A. 核心：分析并添加/更新曲目
+                if (aPartFiles.Count > 0)
                 {
-                    OnStatusMessage?.Invoke($"Found {newFiles.Count} new files. analyzing...");
-                    var tracksToAdd = new List<MusicTrack>();
+                    OnStatusMessage?.Invoke($"Analyzing {aPartFiles.Count} tracks for changes...");
+                    var tracksToSave = new List<MusicTrack>();
                     int processed = 0;
 
-                    foreach (var f in newFiles)
+                    foreach (var f in aPartFiles)
                     {
                         try 
                         {
-                            long samples = GetTotalSamples(f);
-                            if (samples <= 0) continue;
+                            long samplesA = GetTotalSamples(f);
+                            if (samplesA <= 0) continue;
 
-                            var track = new MusicTrack 
-                            { 
-                                FilePath = f, 
-                                FileName = Path.GetFileName(f), 
-                                TotalSamples = samples,
-                                LoopEnd = samples,
-                                LoopStart = 0,
-                                DisplayName = Path.GetFileNameWithoutExtension(f),
-                                LastModified = DateTime.Now
-                            };
-                            tracksToAdd.Add(track);
+                            long totalSamples = samplesA;
+                            long loopStart = 0;
+
+                            string partB = FindPartB(f);
+                            if (!string.IsNullOrEmpty(partB))
+                            {
+                                long samplesB = GetTotalSamples(partB);
+                                if (samplesB > 0)
+                                {
+                                    totalSamples += samplesB;
+                                    loopStart = samplesA; // A/B 模式默认起点
+                                }
+                            }
+
+                            // 检查数据库里是否已经有了
+                            var existingTrack = currentTracks.FirstOrDefault(t => t.FilePath.Equals(f, StringComparison.OrdinalIgnoreCase));
+                            
+                            // 只有没入库过的，或者是物理状态（长度）发生改变的，才重新入库
+                            if (existingTrack == null || existingTrack.TotalSamples != totalSamples)
+                            {
+                                tracksToSave.Add(new MusicTrack 
+                                { 
+                                    Id = existingTrack?.Id ?? 0, // 保留原 ID 方便更新
+                                    FilePath = f, 
+                                    FileName = Path.GetFileName(f), 
+                                    TotalSamples = totalSamples,
+                                    LoopEnd = totalSamples,
+                                    LoopStart = loopStart,
+                                    DisplayName = existingTrack?.DisplayName ?? Path.GetFileNameWithoutExtension(f),
+                                    LastModified = DateTime.Now
+                                });
+                            }
                         } 
                         catch { }
                         
                         processed++;
-                        if (processed % 10 == 0) OnStatusMessage?.Invoke($"Analyzing... ({processed}/{newFiles.Count})");
+                        if (processed % 10 == 0) OnStatusMessage?.Invoke($"Analyzing... ({processed}/{aPartFiles.Count})");
                     }
 
-                    if (tracksToAdd.Count > 0)
+                    if (tracksToSave.Count > 0)
                     {
-                        _dbHelper.BulkSaveTracksAndAddToPlaylist(tracksToAdd, playlistId);
+                        _dbHelper.BulkSaveTracksAndAddToPlaylist(tracksToSave, playlistId);
                     }
                 }
 
@@ -606,7 +742,7 @@ namespace seamless_loop_music.Services
                     }
                 }
 
-                OnStatusMessage?.Invoke($"Refresh complete. +{newFiles.Count} / -{tracksToRemove.Count} songs.");
+                OnStatusMessage?.Invoke($"Refresh complete. Analyzed {aPartFiles.Count} files, removed {tracksToRemove.Count} stale records.");
             });
         }
         
