@@ -334,6 +334,12 @@ namespace seamless_loop_music.Data
         {
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
+                // 防止重复添加
+                int existing = db.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId = @Pid AND SongId = @Sid", 
+                    new { Pid = playlistId, Sid = songId });
+                
+                if (existing > 0) return;
+
                 // 获取当前最大排序值
                 int maxOrder = db.ExecuteScalar<int>("SELECT IFNULL(MAX(SortOrder), 0) FROM PlaylistItems WHERE PlaylistId = @Pid", new { Pid = playlistId });
                 db.Execute("INSERT INTO PlaylistItems (PlaylistId, SongId, SortOrder) VALUES (@Pid, @Sid, @Order)", 

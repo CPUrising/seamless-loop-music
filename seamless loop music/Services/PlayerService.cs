@@ -144,7 +144,7 @@ namespace seamless_loop_music.Services
                 return;
             }
             
-            // 关键修复：每次加载新歌，都试图同步索引。这样手动点选和列表播放就能合拍了
+            // 每次加载新歌，都试图同步索引。这样手动点选和列表播放就能合拍了
             if (Playlist != null)
             {
                 int newIndex = Playlist.FindIndex(t => t.FilePath.Equals(filePath, StringComparison.OrdinalIgnoreCase));
