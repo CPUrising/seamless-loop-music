@@ -66,7 +66,10 @@
 
             <!-- Playlists ListBox -->
             <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
-                     Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged">
+                     Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged"
+                     VirtualizingStackPanel.IsVirtualizing="True"
+                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.CanContentScroll="True">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
@@ -90,7 +93,10 @@
             <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="Tracks" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
-                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick" SelectionMode="Extended">
+                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick" SelectionMode="Extended"
+                     VirtualizingStackPanel.IsVirtualizing="True"
+                     VirtualizingStackPanel.VirtualizationMode="Recycling"
+                     ScrollViewer.CanContentScroll="True">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Title}" Padding="2" />
