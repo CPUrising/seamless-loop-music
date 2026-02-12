@@ -106,6 +106,7 @@
                     <ContextMenu Opened="lstTrackList_ContextMenuOpened">
                         <MenuItem x:Name="miAddToPlaylist" Header="Add to Playlist"/>
                         <Separator/>
+                        <MenuItem x:Name="miBatchPyLoop" Header="Batch Optimize (PyLoop)" Click="miBatchPyLoop_Click"/>
                         <MenuItem x:Name="miRenameTrack" Header="Rename Alias" Click="miRenameTrack_Click"/>
                         <MenuItem x:Name="miOpenFolder" Header="Open Containing Folder" Click="miOpenFolder_Click"/>
                         <Separator/>

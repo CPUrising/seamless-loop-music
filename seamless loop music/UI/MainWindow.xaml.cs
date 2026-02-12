@@ -624,6 +624,41 @@ namespace seamless_loop_music
             }
         }
 
+        private async void miBatchPyLoop_Click(object sender, RoutedEventArgs e)
+        {
+            var tracks = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
+            if (tracks.Count == 0) return;
+
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            var confirm = MessageBox.Show(
+                isZh ? $"确定要对选中的 {tracks.Count} 首歌曲进行深度循环分析吗？\n由于调用外部工具，这可能需要较长时间。" 
+                     : $"Are you sure you want to perform deep loop analysis on the selected {tracks.Count} tracks?\nThis may take a long time.",
+                isZh ? "批量极致匹配" : "Batch PyLoop Match",
+                MessageBoxButton.YesNo, MessageBoxImage.Question);
+
+            if (confirm != MessageBoxResult.Yes) return;
+
+            // 禁用界面上相关的按钮防止冲突（可选，但安全）
+            btnPyLoop.IsEnabled = false;
+
+            await _playerService.BatchSmartMatchLoopExternalAsync(tracks, 
+                (current, total, fileName) => {
+                    Dispatcher.Invoke(() => {
+                        lblStatus.Text = isZh ? $"[批量进度 {current}/{total}] 正在分析: {fileName}..." 
+                                             : $"[Batch {current}/{total}] Analyzing: {fileName}...";
+                    });
+                },
+                () => {
+                    Dispatcher.Invoke(() => {
+                        lblStatus.Text = isZh ? "批量极致匹配任务完成！" : "Batch PyLoop tasks completed!";
+                        btnPyLoop.IsEnabled = true;
+                        // 刷新一下列表显示，防止数据变了 UI 没动
+                        lstPlaylist.Items.Refresh();
+                        UpdateLoopUI(); // 如果当前播放的正是在批量列表里，更新 UI
+                    });
+                });
+        }
+
         private void PlayTrack(int index) {
             if (index < 0 || index >= _playlist.Count) return;
             _currentTrackIndex = index;
@@ -976,6 +1011,7 @@ namespace seamless_loop_music
             if (miRenameTrack != null) miRenameTrack.Header = isZh ? "修改别名" : "Rename Alias";
             if (miOpenFolder != null) miOpenFolder.Header = isZh ? "打开所在文件夹" : "Open Folder";
             if (miRemoveFromList != null) miRemoveFromList.Header = isZh ? "从歌单移除" : "Remove from List";
+            if (miBatchPyLoop != null) miBatchPyLoop.Header = isZh ? "批量极致匹配 (PyLoop)" : "Batch Optimize (PyLoop)";
             
             if (btnPlay != null) {
                 bool isPlaying = (_playerService != null && _playerService.PlaybackState == PlaybackState.Playing);

@@ -6,6 +6,7 @@ using NAudio.Wave;
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
 using NAudio.Vorbis;
+using System.Threading.Tasks;
 
 namespace seamless_loop_music.Services
 {
@@ -295,11 +296,56 @@ namespace seamless_loop_music.Services
                     SaveCurrentTrack();
                     
                     OnStatusMessage?.Invoke($"[PyMusicLooper] Found! Score: {score:P2}. Range: {start}-{end}");
-                    onComplete?.Invoke();
                 }
                 else
                 {
                     OnStatusMessage?.Invoke("[PyMusicLooper] Analysis failed. Please check uv/source path.");
+                }
+                onComplete?.Invoke();
+            });
+        }
+
+        /// <summary>
+        /// 批量对指定的歌曲列表进行 PyMusicLooper 极致优化
+        /// </summary>
+        public async Task BatchSmartMatchLoopExternalAsync(List<MusicTrack> tracks, Action<int, int, string> onProgress, Action onComplete)
+        {
+            if (tracks == null || tracks.Count == 0) {
+                onComplete?.Invoke();
+                return;
+            }
+
+            await System.Threading.Tasks.Task.Run(async () =>
+            {
+                int total = tracks.Count;
+                int current = 0;
+
+                foreach (var track in tracks)
+                {
+                    current++;
+                    onProgress?.Invoke(current, total, track.FileName);
+
+                    try 
+                    {
+                        var result = await _pyMusicLooperWrapper.FindBestLoopAsync(track.FilePath);
+                        if (result.HasValue)
+                        {
+                            track.LoopStart = result.Value.Start;
+                            track.LoopEnd = result.Value.End;
+                            _dbHelper.SaveTrack(track); // 批量模式下直接入库
+
+                            // 如果当前正好在播放这首歌，顺便更新播放器状态
+                            if (CurrentTrack != null && CurrentTrack.FilePath == track.FilePath)
+                            {
+                                _audioLooper.SetLoopStartSample(track.LoopStart);
+                                _audioLooper.SetLoopEndSample(track.LoopEnd);
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                         OnStatusMessage?.Invoke($"[Batch] Error on {track.FileName}: {ex.Message}");
+                    }
                 }
                 onComplete?.Invoke();
             });
