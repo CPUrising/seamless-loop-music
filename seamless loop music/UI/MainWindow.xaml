@@ -207,11 +207,15 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button x:Name="btnSmartMatch" Content="Smart Match" Width="100" Height="40"
+                        <Button x:Name="btnSmartMatch" Content="寻找起点" Width="100" Height="40"
                                 Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
-                                Click="btnSmartMatch_Click" ToolTip="Auto adjust loop points"/>
+                                Click="btnSmartMatch_Click" ToolTip="根据终点寻找循环起点 (逆向)"/>
                         
-                        <Button x:Name="btnApplyLoop" Content="Apply &amp; Test Loop" Width="180" Height="40"
+                        <Button x:Name="btnSmartMatchForward" Content="寻找终点" Width="100" Height="40"
+                                Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
+                                Click="btnSmartMatchForward_Click" ToolTip="根据起点寻找循环终点 (正向)"/>
+                        
+                        <Button x:Name="btnApplyLoop" Content="Test Loop" Width="120" Height="40"
                                 Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"
                                 Click="btnApplyLoop_Click"/>
                     </StackPanel>

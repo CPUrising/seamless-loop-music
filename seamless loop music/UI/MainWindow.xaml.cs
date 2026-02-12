@@ -285,7 +285,7 @@ namespace seamless_loop_music
             }
         }
 
-        private async void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
+        private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
                 bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
                 string newName = Microsoft.VisualBasic.Interaction.InputBox(
@@ -703,12 +703,34 @@ namespace seamless_loop_music
         }
 
         private void btnSmartMatch_Click(object sender, RoutedEventArgs e) {
-            // 先应用界面上输入的数值，否则匹配会基于旧值
+            // Match Start (Reverse): Fix End, Find Start
             ApplyLoopSettings();
-            
-            _playerService.SmartMatchLoop();
-            
-            // 更新UI
+            btnSmartMatch.IsEnabled = false;
+
+            // 保持兼容，调用的是 Reverse 逻辑
+            _playerService.SmartMatchLoopReverseAsync(() => {
+                Dispatcher.Invoke(() => {
+                    UpdateLoopUI();
+                    btnSmartMatch.IsEnabled = true; 
+                });
+            });
+        }
+
+        private void btnSmartMatchForward_Click(object sender, RoutedEventArgs e) {
+            // Match End (Forward): Fix Start, Find End
+            ApplyLoopSettings();
+            btnSmartMatchForward.IsEnabled = false;
+
+            _playerService.SmartMatchLoopForwardAsync(() => {
+                Dispatcher.Invoke(() => {
+                    UpdateLoopUI();
+                    btnSmartMatchForward.IsEnabled = true; 
+                });
+            });
+        }
+
+        private void UpdateLoopUI()
+        {
             txtLoopSample.Text = _playerService.LoopStartSample.ToString();
             txtLoopEndSample.Text = _playerService.LoopEndSample.ToString();
             
@@ -954,10 +976,17 @@ namespace seamless_loop_music
             if (btnNext != null) btnNext.Content = isZh ? "下一首 >>" : "Next >>";
  
             if (btnApplyLoop != null) btnApplyLoop.Content = Properties.Resources.ApplyAndTest;
-            if (btnSmartMatch != null) {
-                btnSmartMatch.Content = Properties.Resources.SmartMatch;
-                btnSmartMatch.ToolTip = isZh ? "自动微调循环点以匹配波形" : "Auto-adjust loop points to match waveform";
-            }
+    
+    if (btnSmartMatch != null) {
+        // 显式设置双语文本，不再依赖资源文件可能缺失的键
+        btnSmartMatch.Content = isZh ? "寻找起点" : "Match Start";
+        btnSmartMatch.ToolTip = isZh ? "根据终点寻找循环起点 (逆向)" : "Find loop start based on loop end (Reverse)";
+    }
+    
+    if (btnSmartMatchForward != null) {
+        btnSmartMatchForward.Content = isZh ? "寻找终点" : "Match End";
+        btnSmartMatchForward.ToolTip = isZh ? "根据起点寻找循环终点 (正向)" : "Find loop end based on loop start (Forward)";
+    }        
             if (lblFilePath != null) lblFilePath.Text = Properties.Resources.FilePathTitle;
             if (lblLoopStart != null) lblLoopStart.Text = Properties.Resources.LoopStartLabel;
             if (lblLoopEnd != null) lblLoopEnd.Text = Properties.Resources.LoopEndLabel;

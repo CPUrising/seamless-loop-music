@@ -228,22 +228,43 @@ namespace seamless_loop_music.Services
         }
 
         /// <summary>
-        /// 智能匹配循环点
+        /// 智能匹配循环点 (逆向：固定 End，找 Start)
         /// </summary>
-        public void SmartMatchLoop()
+        public void SmartMatchLoopReverseAsync(Action onComplete = null) => SmartMatchLoopInternal(true, onComplete);
+
+        /// <summary>
+        /// 智能匹配循环点 (正向：固定 Start，找 End)
+        /// </summary>
+        public void SmartMatchLoopForwardAsync(Action onComplete = null) => SmartMatchLoopInternal(false, onComplete);
+
+        private void SmartMatchLoopInternal(bool adjustStart, Action onComplete)
         {
             if (CurrentTrack == null) return;
             
             long start = _audioLooper.LoopStartSample;
             long end = _audioLooper.LoopEndSample;
             
-            _audioLooper.FindBestLoopPoints(start, end, out long newStart, out long newEnd);
-            
-            // 应用结果
-            _audioLooper.SetLoopStartSample(newStart);
-            _audioLooper.SetLoopEndSample(newEnd);
-            
-            OnStatusMessage?.Invoke("Smart Match applied.");
+            string modeStr = adjustStart ? "Reverse (Fix End)" : "Forward (Fix Start)";
+            OnStatusMessage?.Invoke($"Smart Matching {modeStr} Async...");
+
+            _audioLooper.FindBestLoopPointsAsync(start, end, adjustStart, (newStart, newEnd) => 
+            {
+                // 1. 应用新配置
+                _audioLooper.SetLoopStartSample(newStart);
+                _audioLooper.SetLoopEndSample(newEnd);
+                
+                // 2. 更新当前 Track 对象
+                CurrentTrack.LoopStart = newStart;
+                CurrentTrack.LoopEnd = newEnd;
+                
+                // 3. 立即保存
+                SaveCurrentTrack();
+                
+                OnStatusMessage?.Invoke($"Smart Match Applied: Start={newStart}, End={newEnd}");
+                
+                // 4. 通知调用者 (UI) 刷新
+                onComplete?.Invoke();
+            });
         }
 
         // --- 播放控制透传 ---

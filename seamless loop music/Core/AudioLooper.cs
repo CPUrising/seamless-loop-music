@@ -31,6 +31,10 @@ namespace seamless_loop_music
         // 新增: 循环完成一次事件
         public event Action OnLoopCycleCompleted;
 
+        private string _currentFilePath; // 新增: 记录当前文件路径，用于异步分析
+        private bool _isLoading = false; // 新增: 防止自动切歌时 Stopped 事件干扰 UI
+
+
         /// <summary>
         /// 加载音频文件
         /// </summary>
@@ -38,8 +42,12 @@ namespace seamless_loop_music
         {
             try
             {
+                _isLoading = true; // 标记开始加载，屏蔽旧的停止事件
                 Stop();
                 DisposeAudioResources();
+                
+                
+                _currentFilePath = filePath; // 记录路径
 
                 // 根据格式创建音频流
                 _audioStream = CreateAudioStream(filePath);
@@ -65,6 +73,10 @@ namespace seamless_loop_music
             catch (Exception ex)
             {
                 OnStatusChanged?.Invoke($"Load failed: {ex.Message}");
+            }
+            finally
+            {
+                _isLoading = false; 
             }
         }
 
@@ -193,6 +205,9 @@ namespace seamless_loop_music
                 _wavePlayer.Init(_loopStream);
                 _wavePlayer.PlaybackStopped += (s, e) =>
                 {
+                    // 如果正在加载新歌，忽略旧播放器的停止事件
+                    if (_isLoading) return;
+
                     // 只有非手动暂停导致的停止才触发完全停止逻辑
                     if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
                     {
@@ -315,97 +330,200 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 智能寻找最佳循环点 (基于回溯匹配算法 - 逆向模式)
-        /// 原理：提取 END 点之前的 1 秒音频作为“指纹”，在 START 点附近寻找完全一致的“指纹”。
-        /// 锚定 End 点不动，调整 Start 点以匹配 End 的前导波形。
+        /// 智能寻找最佳循环点 (基于金字塔搜索 Pyramid Search)
+        /// 优化后：先降采样粗搜，再局部精搜，速度大幅提升。
         /// </summary>
-        public void FindBestLoopPoints(long currentStart, long currentEnd, out long bestStart, out long bestEnd)
+
+        /// <summary>
+        /// 智能寻找最佳循环点 (异步版 - 基于金字塔搜索 Pyramid Search)
+        /// 使用独立文件流，避免与播放线程冲突。
+        /// </summary>
+        /// <param name="adjustStart">True: 固定 End 找 Start (逆向); False: 固定 Start 找 End (正向)</param>
+        public async void FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart, Action<long, long> onResult)
         {
-            bestStart = currentStart; // 默认如果不匹配则不改动
-            bestEnd = currentEnd;     // End 是锚点，绝对不动
+            if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
+            {
+                OnStatusChanged?.Invoke("Error: File path not available for analysis.");
+                return;
+            }
 
-            if (_audioStream == null) return;
-
-            var fmt = _audioStream.WaveFormat;
-            int sampleRate = fmt.SampleRate;
-
-            // 1. 定义匹配窗口 (1秒)
-            int windowSize = sampleRate; 
-
-            // 2. 提取 END 点的“前世指纹” (Template)
-            // End 点是确定的，我们看看 End 之前听到了什么。
-            long templateEndPos = currentEnd;
-            long templateStartPos = currentEnd - windowSize;
-
-            // 边界检查
-            if (templateStartPos < 0) templateStartPos = 0;
+            // 保存路径，避免闭包问题
+            string targetPath = _currentFilePath;
             
-            long templateLen = templateEndPos - templateStartPos;
-            if (templateLen < sampleRate / 10) return; // 指纹太短
-
-            // 读取 End 前面的波形数据 -> Template
-            float[] template = ReadSamples(templateStartPos, (int)templateLen);
-
-            // 3. 定义 START 点的搜索区域 (Search Area)
-            // 我们在 Start 点附近 (比如前后 2 秒) 寻找谁也发出了这个声音
-            long searchRadius = sampleRate * 2; 
-            long searchRegionBegin = currentStart - searchRadius;
-            long searchRegionEnd = currentStart + searchRadius;
-
-            // 边界检查
-            if (searchRegionBegin < 0) searchRegionBegin = 0;
-            if (searchRegionEnd > _totalSamples) searchRegionEnd = _totalSamples;
-
-            long searchLen = searchRegionEnd - searchRegionBegin;
-            if (searchLen < templateLen) return;
-
-            // 读取搜索区波形
-            float[] searchBuffer = ReadSamples(searchRegionBegin, (int)searchLen);
-
-            if (template.Length == 0 || searchBuffer.Length == 0) return;
-
-            // 4. 核心匹配逻辑 (SAD)
-            // 拿着 End 的指纹，在 Start 附近滑动
-            double minDiff = double.MaxValue;
-            int bestMatchOffset = -1;
-
-            for (int i = 0; i <= searchBuffer.Length - template.Length; i++)
+            await System.Threading.Tasks.Task.Run(() =>
             {
-                double diff = 0;
-                // 优化步长 4
-                for (int t = 0; t < template.Length; t += 4)
+                WaveStream tempStream = null;
+                try
                 {
-                    float valA = template[t];        // End 指纹
-                    float valB = searchBuffer[i + t]; // Start 附近的波形
-                    diff += Math.Abs(valA - valB);
-                    if (diff > minDiff) break; 
-                }
+                    // 1. 创建独立的临时流，避免干扰播放
+                    tempStream = CreateAudioStream(targetPath);
+                    if (tempStream == null) return;
 
-                if (diff < minDiff)
+                    var fmt = tempStream.WaveFormat;
+                    int sampleRate = fmt.SampleRate;
+                    long totalSamples = tempStream.Length / fmt.BlockAlign;
+
+                    // --- 参数准备 ---
+                    int windowSize = sampleRate; 
+                    
+                    // 动态限制指纹长度
+                    if (adjustStart) { // 逆向
+                         if (currentEnd < windowSize) windowSize = (int)currentEnd;
+                    } else { // 正向
+                         if (currentStart + windowSize > totalSamples) windowSize = (int)(totalSamples - currentStart);
+                    }
+                    if (windowSize < sampleRate / 20) return; 
+
+                    long searchRadius = sampleRate * 5; 
+                    
+                    // --- 提取波形 & 确定搜索区 ---
+                    long templateStartPos, templateEndPos;
+                    long searchRegionCenter;
+
+                    if (adjustStart)
+                    {
+                        // 逆向 (Reverse): 指纹 = [End - 1s, End]
+                        templateEndPos = currentEnd;
+                        templateStartPos = templateEndPos - windowSize;
+                        searchRegionCenter = currentStart;
+                    }
+                    else
+                    {
+                        // 正向 (Forward): 指纹 = [Start, Start + 1s]
+                        templateStartPos = currentStart;
+                        templateEndPos = templateStartPos + windowSize;
+                        searchRegionCenter = currentEnd;
+                    }
+
+                    if (templateStartPos < 0) templateStartPos = 0;
+                    long templateLen = templateEndPos - templateStartPos;
+
+                    long searchRegionBegin = searchRegionCenter - searchRadius;
+                    long searchRegionEnd = searchRegionCenter + searchRadius;
+                    
+                    if (searchRegionBegin < 0) searchRegionBegin = 0;
+                    if (searchRegionEnd > totalSamples) searchRegionEnd = totalSamples;
+
+                    long searchLen = searchRegionEnd - searchRegionBegin;
+                    if (searchLen < templateLen) return;
+
+                    // 从临时流读取数据
+                    float[] templateFull = ReadSamplesFromStream(tempStream, templateStartPos, (int)templateLen);
+                    float[] searchBufferFull = ReadSamplesFromStream(tempStream, searchRegionBegin, (int)searchLen);
+
+                    if (templateFull.Length < 100 || searchBufferFull.Length < templateFull.Length) return;
+
+                    // --- 第一层：金字塔粗搜 ---
+                    int downsampleFactor = 8;
+                    float[] templateSmall = Downsample(templateFull, downsampleFactor);
+                    float[] searchSmall = Downsample(searchBufferFull, downsampleFactor);
+
+                    int bestCoarseOffset = -1;
+                    double minCoarseDiff = double.MaxValue;
+
+                    for (int i = 0; i <= searchSmall.Length - templateSmall.Length; i++)
+                    {
+                        double diff = 0;
+                        for (int t = 0; t < templateSmall.Length; t++)
+                        {
+                            diff += Math.Abs(templateSmall[t] - searchSmall[i + t]);
+                            if (diff > minCoarseDiff) break;
+                        }
+                        if (diff < minCoarseDiff)
+                        {
+                            minCoarseDiff = diff;
+                            bestCoarseOffset = i;
+                        }
+                    }
+
+                    if (bestCoarseOffset == -1) return;
+
+                    // --- 第二层：局部精搜 ---
+                    int fineSearchRadius = downsampleFactor * 4;
+                    int fineStart = bestCoarseOffset * downsampleFactor - fineSearchRadius;
+                    int fineEnd = bestCoarseOffset * downsampleFactor + fineSearchRadius;
+
+                    if (fineStart < 0) fineStart = 0;
+                    if (fineEnd > searchBufferFull.Length - templateFull.Length) 
+                        fineEnd = searchBufferFull.Length - templateFull.Length;
+
+                    double minFineDiff = double.MaxValue;
+                    int bestFineOffset = -1;
+
+                    for (int i = fineStart; i <= fineEnd; i++)
+                    {
+                        double diff = 0;
+                        for (int t = 0; t < templateFull.Length; t += 2) 
+                        {
+                            diff += Math.Abs(templateFull[t] - searchBufferFull[i + t]);
+                            if (diff > minFineDiff) break;
+                        }
+                        if (diff < minFineDiff)
+                        {
+                            minFineDiff = diff;
+                            bestFineOffset = i;
+                        }
+                    }
+
+                    // --- 应用结果 ---
+                    if (bestFineOffset != -1)
+                    {
+                        long matchPosStart = searchRegionBegin + bestFineOffset;
+                        long matchPosEnd = matchPosStart + templateLen;
+
+                        long finalResultStart = currentStart;
+                        long finalResultEnd = currentEnd;
+
+                        if (adjustStart)
+                        {
+                            // 逆向：找到 Pre-End 的孪生兄弟，它的终点就是 Start 应该在的地方
+                            finalResultStart = matchPosEnd;
+                        }
+                        else
+                        {
+                             // 正向：找到 Post-Start 的孪生兄弟，它的起点就是 End 应该在的地方
+                             finalResultEnd = matchPosStart;
+                        }
+
+                        // 通过回调返回结果
+                        onResult?.Invoke(finalResultStart, finalResultEnd);
+                        
+                        string modeStr = adjustStart ? "Reverse" : "Forward";
+                        OnStatusChanged?.Invoke($"Smart Match {modeStr}: Diff={minFineDiff:F4}, New range: {finalResultStart}-{finalResultEnd}");
+                    }
+                }
+                catch (Exception ex)
                 {
-                    minDiff = diff;
-                    bestMatchOffset = i;
+                    OnStatusChanged?.Invoke($"Smart Match Error: {ex.Message}");
                 }
-            }
-
-            // 5. 应用结果
-            // bestMatchOffset 是指纹在 searchBuffer 中的起始位置。
-            // 也就是说 searchBuffer[bestMatchOffset] 开始的这段声音，和 End 前面声音一模一样。
-            // 那么这段声音结束的地方，对应的就是 Start 点。
-            // 也就是 Start 应该设在：片段的结束位置。
-            // 片段起始绝对位置 = searchRegionBegin + bestMatchOffset
-            // 片段结束绝对位置 = searchRegionBegin + bestMatchOffset + templateLen
-            if (bestMatchOffset != -1)
-            {
-                long matchPosStart = searchRegionBegin + bestMatchOffset;
-                long matchPosEnd = matchPosStart + templateLen;
-
-                // 我们将 Start 调整为匹配片段的结束点
-                bestStart = matchPosEnd;
-                
-                OnStatusChanged?.Invoke($"Smart Match (Reverse): Diff={minDiff:F4}, Shifted Start by {(bestStart - currentStart)} samples.");
-            }
+                finally
+                {
+                    tempStream?.Dispose(); // 务必销毁临时流
+                }
+            });
         }
+
+        /// <summary>
+        /// 简单的降采样助手：每 N 个点取平均
+        /// </summary>
+        private float[] Downsample(float[] input, int factor)
+        {
+            if (factor <= 1) return input;
+            int newSize = input.Length / factor;
+            float[] output = new float[newSize];
+            for (int i = 0; i < newSize; i++)
+            {
+                float sum = 0;
+                // 简单的均值池化
+                for (int j = 0; j < factor; j++)
+                {
+                    sum += input[i * factor + j];
+                }
+                output[i] = sum / factor;
+            }
+            return output;
+        }
+
 
         private float[] ReadSamples(long startSample, int count)
         {
@@ -442,6 +560,36 @@ namespace seamless_loop_music
                 // 暂不处理8bit或24bit，通常够用
             }
 
+            return samples;
+        }
+
+        private float[] ReadSamplesFromStream(WaveStream stream, long startSample, int count)
+        {
+            if (stream == null) return new float[0];
+
+            int bytesPerSample = stream.WaveFormat.BlockAlign;
+            int bitsPerSample = stream.WaveFormat.BitsPerSample;
+            byte[] raw = new byte[count * bytesPerSample];
+
+            // 这里的 seek 是安全的，因为它是独立的临时流
+            stream.Position = startSample * bytesPerSample;
+            int bytesRead = stream.Read(raw, 0, raw.Length);
+            
+            int samplesRead = bytesRead / bytesPerSample;
+            float[] samples = new float[samplesRead];
+
+            for (int i = 0; i < samplesRead; i++)
+            {
+                if (bitsPerSample == 16)
+                {
+                    short s = BitConverter.ToInt16(raw, i * bytesPerSample);
+                    samples[i] = s / 32768f;
+                }
+                else if (bitsPerSample == 32)
+                {
+                    samples[i] = BitConverter.ToSingle(raw, i * bytesPerSample);
+                }
+            }
             return samples;
         }
 
