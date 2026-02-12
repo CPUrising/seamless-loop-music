@@ -29,8 +29,10 @@
         <Style TargetType="TextBox">
             <Setter Property="Background" Value="#181825"/>
             <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
             <Setter Property="Padding" Value="5"/>
+            <Setter Property="CaretBrush" Value="#89B4FA"/>
             <Setter Property="VerticalContentAlignment" Value="Center"/>
         </Style>
     </Window.Resources>
@@ -114,13 +116,14 @@
         <!-- Main Area -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/> <!-- Header: Info -->
+                <RowDefinition Height="*"/>    <!-- Center: Loop Workspace -->
+                <RowDefinition Height="Auto"/> <!-- Progress Slider -->
+                <RowDefinition Height="Auto"/> <!-- Bottom Bar: Playback Controls -->
             </Grid.RowDefinitions>
 
-            <StackPanel Grid.Row="0">
+            <!-- Header: File Info -->
+            <StackPanel Grid.Row="0" Margin="0,0,0,10">
                 <TextBlock x:Name="lblFilePath" Text="File Path:" FontSize="12" Foreground="#A6ADC8"/>
                 <TextBlock x:Name="txtFilePath" Text="No file selected" FontSize="14" FontWeight="Bold" Margin="0,2,0,10" TextTrimming="CharacterEllipsis"/>
 
@@ -132,84 +135,117 @@
                 </Border>
             </StackPanel>
 
-            <StackPanel Grid.Row="1" VerticalAlignment="Center" Margin="0,20">
-                <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="20" FontWeight="Light" Margin="0,0,0,5"/>
+            <!-- Center: Loop Workspace -->
+            <Grid Grid.Row="1" VerticalAlignment="Center">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+                
+                <Grid Grid.Row="0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+
+                    <!-- Start Point -->
+                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                        <Border Background="#181825" CornerRadius="10" Padding="15">
+                            <StackPanel>
+                                <TextBlock x:Name="lblLoopStart" Text="Loop Start (Samples)" HorizontalAlignment="Center" Foreground="#89B4FA" Margin="0,0,0,10"/>
+                                <TextBox x:Name="txtLoopSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#89B4FA" 
+                                         BorderBrush="#89B4FA" BorderThickness="0,0,0,2" Margin="0,0,0,5"
+                                         TextChanged="txtLoopSample_TextChanged"/>
+                                <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopStartSec_TextChanged"/>
+
+                                <UniformGrid Columns="4" Margin="0,15,0,0">
+                                    <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+1s" Click="Adjust_Click" Tag="Start:1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+
+                    <!-- End Point -->
+                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                        <Border Background="#181825" CornerRadius="10" Padding="15">
+                            <StackPanel>
+                                <TextBlock x:Name="lblLoopEnd" Text="Loop End (Samples)" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
+                                <TextBox x:Name="txtLoopEndSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#F38BA8" 
+                                         BorderBrush="#F38BA8" BorderThickness="0,0,0,2" Margin="0,0,0,5"
+                                         TextChanged="txtLoopEndSample_TextChanged"/>
+                                <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopEndSec_TextChanged"/>
+
+                                <UniformGrid Columns="4" Margin="0,15,0,0">
+                                    <Button Content="-1s" Click="Adjust_Click" Tag="End:-1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+1s" Click="Adjust_Click" Tag="End:1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                </UniformGrid>
+                            </StackPanel>
+                        </Border>
+                    </StackPanel>
+                </Grid>
+
+                <!-- Action Buttons & Settings in Center -->
+                <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="0,20,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                        <!-- Moved Mode & Loop Count here for better visibility -->
+                        <Button x:Name="btnPlayMode" Content="Mode: Single" Style="{StaticResource SideButtonStyle}" Width="100" Click="btnPlayMode_Click" Margin="0,0,15,0"/>
+                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                            <TextBlock Text="Loop:" VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="0,0,5,0"/>
+                            <TextBox x:Name="txtLoopLimit" Width="35" Text="1" Height="25" TextAlignment="Center" TextChanged="txtLoopLimit_TextChanged" Background="#181825"/>
+                        </StackPanel>
+                    </StackPanel>
+
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button x:Name="btnSmartMatch" Content="Smart Match" Width="100" Height="40"
+                                Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
+                                Click="btnSmartMatch_Click" ToolTip="Auto adjust loop points"/>
+                        
+                        <Button x:Name="btnApplyLoop" Content="Apply &amp; Test Loop" Width="180" Height="40"
+                                Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"
+                                Click="btnApplyLoop_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </Grid>
+
+            <!-- Progress Area -->
+            <StackPanel Grid.Row="2" Margin="0,15">
+                <Grid Margin="0,0,0,5">
+                    <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="18" FontWeight="Light"/>
+                </Grid>
                 <Slider x:Name="trkProgress" Maximum="1000" IsMoveToPointEnabled="True"
                         ValueChanged="trkProgress_ValueChanged"
                         Thumb.DragStarted="trkProgress_DragStarted"
                         Thumb.DragCompleted="trkProgress_DragCompleted"/>
             </StackPanel>
 
-            <Grid Grid.Row="1" Margin="0,349,0,10" Grid.RowSpan="2">
+            <!-- Bottom Bar: Playback Controls (Simplified) -->
+            <Grid Grid.Row="3" Margin="0,0,0,10">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel Grid.Column="0" Margin="0,0,5,0">
-                    <TextBlock x:Name="lblLoopStart" Text="Loop Start (Samples):" FontSize="12" Margin="0,0,0,5"/>
-                    <TextBox x:Name="txtLoopSample" Text="0" TextChanged="txtLoopSample_TextChanged"/>
-                    <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.7" TextChanged="txtLoopStartSec_TextChanged"/>
-
-                    <UniformGrid Columns="4" Margin="0,5">
-                        <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1.0"/>
-                        <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1"/>
-                        <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1"/>
-                        <Button Content="+1s" Click="Adjust_Click" Tag="Start:1.0"/>
-                    </UniformGrid>
-                </StackPanel>
-
-                <StackPanel Grid.Column="1" Margin="5,0,0,0">
-                    <TextBlock x:Name="lblLoopEnd" Text="Loop End (Samples):" FontSize="12" Margin="0,0,0,5"/>
-                    <TextBox x:Name="txtLoopEndSample" Text="0" TextChanged="txtLoopEndSample_TextChanged"/>
-                    <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.7" TextChanged="txtLoopEndSec_TextChanged"/>
-
-                    <UniformGrid Columns="4" Margin="0,5">
-                        <Button Content="-1s" Click="Adjust_Click" Tag="End:-1.0"/>
-                        <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1"/>
-                        <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1"/>
-                        <Button Content="+1s" Click="Adjust_Click" Tag="End:1.0"/>
-                    </UniformGrid>
-                </StackPanel>
-            </Grid>
-
-            <Grid Grid.Row="3" Margin="0,15,0,0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <!-- Play Controls -->
-                    <ColumnDefinition Width="*"/>
-                    <!-- Spacer -->
-                    <ColumnDefinition Width="Auto"/>
-                    <!-- Right Actions -->
-                    <ColumnDefinition Width="Auto"/>
-                    <!-- Volume -->
-                </Grid.ColumnDefinitions>
-
-                <StackPanel Grid.Column="0" Orientation="Horizontal">
+                <!-- Center: Playback Controls -->
+                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
                     <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPrev_Click"/>
-                    <Button x:Name="btnPlay" Content="Play" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
-                    <!-- Pause button merged into Play -->
-                    <Button x:Name="btnStop" Content="Replay" Style="{StaticResource SideButtonStyle}" Width="80" Margin="10,0" Click="btnReplay_Click"/>
-                    <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnNext_Click"/>
-                    <Button x:Name="btnPlayMode" Content="Mode: Single" Style="{StaticResource SideButtonStyle}" Width="100" Margin="10,0" Click="btnPlayMode_Click" ToolTip="Switch Play Mode"/>
+                    <Button x:Name="btnPlay" Content="Play/Pause" Style="{StaticResource SideButtonStyle}" Width="110" Height="45" Margin="15,0" 
+                            Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
+                    <Button x:Name="btnStop" Content="Replay" Style="{StaticResource SideButtonStyle}" Width="75" Click="btnReplay_Click"/>
+                    <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Margin="15,0,0,0" Click="btnNext_Click"/>
+                </StackPanel>
+
+                <!-- Right: Volume Only -->
+                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Loop:" VerticalAlignment="Center" FontSize="12" Margin="5,0"/>
-                        <TextBox x:Name="txtLoopLimit" Width="30" Text="1" TextAlignment="Center" TextChanged="txtLoopLimit_TextChanged" ToolTip="How many times to loop before next track"/>
+                        <TextBlock Text="Vol" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="11" Opacity="0.5"/>
+                        <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
                     </StackPanel>
-                </StackPanel>
-
-                <!-- Put functional buttons in a group on the right -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="10,0">
-                    <Button x:Name="btnApplyLoop" Content="Apply &amp; Test Loop" Width="150" Margin="0,0,10,0"
-                            Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnApplyLoop_Click"/>
-
-                    <Button x:Name="btnSmartMatch" Content="Smart Match" Width="80"
-                            Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Click="btnSmartMatch_Click" ToolTip="Auto adjust loop points"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Center">
-                    <TextBlock Text="Volume" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="12"/>
-                    <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
                 </StackPanel>
             </Grid>
         </Grid>

@@ -152,6 +152,7 @@ namespace seamless_loop_music
                 _isUpdatingUI = true;
                 
                 // 更新显示
+                txtFilePath.Text = track.FilePath; // 这里！要把新房子的门牌号挂上去
                 txtLoopSample.Text = track.LoopStart.ToString();
                 txtLoopEndSample.Text = track.LoopEnd.ToString();
                 lblStatus.Text = $"{Properties.Resources.StatusPlaying}: {track.Title}";
