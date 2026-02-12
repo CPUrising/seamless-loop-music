@@ -153,6 +153,7 @@ namespace seamless_loop_music
                 txtFilePath.Text = track.FilePath; // 这里！要把新房子的门牌号挂上去
                 txtLoopSample.Text = track.LoopStart.ToString();
                 txtLoopEndSample.Text = track.LoopEnd.ToString();
+                btnResetAB.IsEnabled = _playerService.IsABMode;
                 lblStatus.Text = $"{Properties.Resources.StatusPlaying}: {track.Title}";
                 
                 // 整理：如果列表里也有这个 Track，更新列表项显示
@@ -775,6 +776,12 @@ namespace seamless_loop_music
             });
         }
 
+        private void btnResetAB_Click(object sender, RoutedEventArgs e)
+        {
+            _playerService.ResetABLoopPoints();
+            UpdateLoopUI();
+        }
+
         private void UpdateLoopUI()
         {
             txtLoopSample.Text = _playerService.LoopStartSample.ToString();
@@ -1035,10 +1042,15 @@ namespace seamless_loop_music
         btnSmartMatchForward.ToolTip = isZh ? "根据起点寻找循环终点 (正向)" : "Find loop end based on loop start (Forward)";
     }
     
-    if (btnPyLoop != null) {
-        btnPyLoop.Content = isZh ? "极致匹配" : "PyLoop Match";
-        btnPyLoop.ToolTip = isZh ? "使用 PyMusicLooper 算法寻找全曲最佳循环 (由于涉及深层分析，可能需要较长时间)" : "Find the best loop points in the entire song using PyMusicLooper (Deep analysis, might take a while)";
-    }
+            if (btnPyLoop != null) {
+                btnPyLoop.Content = isZh ? "极致匹配" : "PyLoop Match";
+                btnPyLoop.ToolTip = isZh ? "使用 PyMusicLooper 算法寻找全曲最佳循环 (由于涉及深层分析，可能需要较长时间)" : "Find the best loop points in the entire song using PyMusicLooper (Deep analysis, might take a while)";
+            }
+
+            if (btnResetAB != null) {
+                btnResetAB.Content = isZh ? "恢复AB接缝" : "Reset A/B";
+                btnResetAB.ToolTip = isZh ? "针对 A/B 分体音乐，恢复到原始的物理接缝位置" : "For A/B split tracks, restore to the original physical boundary.";
+            }
             if (lblFilePath != null) lblFilePath.Text = Properties.Resources.FilePathTitle;
             if (lblLoopStart != null) lblLoopStart.Text = Properties.Resources.LoopStartLabel;
             if (lblLoopEnd != null) lblLoopEnd.Text = Properties.Resources.LoopEndLabel;

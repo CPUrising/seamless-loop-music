@@ -39,8 +39,8 @@ namespace seamless_loop_music.Services
         private int _currentLoopCount = 0;
         private bool _isConcatenatedLoad = false; // 标记当前加载是否为 A+B 物理合体模式
 
-        // 当前正在操作的音乐对象（包含 ID、路径、元数据）
         public MusicTrack CurrentTrack { get; private set; }
+        public bool IsABMode => _isConcatenatedLoad; // 是否处于 A+B 物理合体模式
 
         public event Action<MusicTrack> OnTrackLoaded;
         public event Action<PlaybackState> OnPlayStateChanged;
@@ -321,6 +321,38 @@ namespace seamless_loop_music.Services
         /// 智能匹配循环点 (正向：固定 Start，找 End)
         /// </summary>
         public void SmartMatchLoopForwardAsync(Action onComplete = null) => SmartMatchLoopInternal(false, onComplete);
+
+        /// <summary>
+        /// 恢复 A/B 模式的原始接缝位置 (LoopStart 即 A 段末尾)
+        /// </summary>
+        public void ResetABLoopPoints()
+        {
+            if (CurrentTrack == null) return;
+
+            string partB = FindPartB(CurrentTrack.FilePath);
+            if (string.IsNullOrEmpty(partB))
+            {
+                OnStatusMessage?.Invoke("Current track is not an A/B pair.");
+                return;
+            }
+
+            long samplesA = GetTotalSamples(CurrentTrack.FilePath);
+            if (samplesA <= 0) return;
+
+            long samplesB = GetTotalSamples(partB);
+            long total = samplesA + samplesB;
+
+            CurrentTrack.LoopStart = samplesA;
+            CurrentTrack.LoopEnd = total;
+            CurrentTrack.TotalSamples = total;
+
+            _audioLooper.SetLoopStartSample(CurrentTrack.LoopStart);
+            _audioLooper.SetLoopEndSample(CurrentTrack.LoopEnd);
+
+            SaveCurrentTrack();
+            OnTrackLoaded?.Invoke(CurrentTrack);
+            OnStatusMessage?.Invoke("Restored to original A/B boundary.");
+        }
 
         private void SmartMatchLoopInternal(bool adjustStart, Action onComplete)
         {
