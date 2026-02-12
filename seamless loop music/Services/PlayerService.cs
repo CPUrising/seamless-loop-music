@@ -307,36 +307,48 @@ namespace seamless_loop_music.Services
             _dbHelper.AddSongToPlaylist(playlistId, track.Id);
         }
 
+        public void AddTracksToPlaylist(int playlistId, List<MusicTrack> tracks)
+        {
+             // 批量入库新歌（如果没入库的话）
+             var newTracks = tracks.Where(t => t.Id <= 0).ToList();
+             if (newTracks.Any())
+             {
+                 _dbHelper.BulkSaveTracksAndAddToPlaylist(newTracks, playlistId);
+             }
+
+             // 只有已存在的歌曲才可以通过 AddSongToPlaylist 关联，
+             // 但 BulkSaveTracksAndAddToPlaylist 已经顺便把它们加进去了。
+             // 所以这里只需要处理那些 "Id > 0" (已经在库里) 的歌曲，把它们关联到新歌单。
+             
+             var existingTracks = tracks.Where(t => t.Id > 0).ToList();
+             foreach (var t in existingTracks)
+             {
+                 _dbHelper.AddSongToPlaylist(playlistId, t.Id);
+             }
+        }
+
         public void RemoveTrackFromPlaylist(int playlistId, int songId)
         {
             if (songId > 0)
             {
-                _dbHelper.RemoveSongFromPlaylist(playlistId, songId);
+            _dbHelper.RemoveSongFromPlaylist(playlistId, songId);
             }
         }
         
         /// <summary>
-        /// 扫描文件夹并同步到歌单（数据库逻辑）
+        /// 添加多个文件到手动歌单（手动模式）
         /// </summary>
-        public System.Threading.Tasks.Task ScanAndAddFolderToPlaylist(int playlistId, string folderPath)
+        public System.Threading.Tasks.Task AddFilesToPlaylist(int playlistId, string[] filePaths)
         {
-            return System.Threading.Tasks.Task.Run(() => {
-                if (!Directory.Exists(folderPath)) return;
-
-                var files = Directory.GetFiles(folderPath, "*.*", SearchOption.AllDirectories)
-                    .Where(s => s.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || 
-                                s.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || 
-                                s.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)).ToList();
-                
-                OnStatusMessage?.Invoke($"Scanning {files.Count} files for playlist {playlistId}...");
-
+             return System.Threading.Tasks.Task.Run(() => {
                 var tracksToAdd = new List<MusicTrack>();
-                int processed = 0;
-
-                foreach (var f in files)
+                
+                foreach (var f in filePaths)
                 {
                     try 
                     {
+                        if (!File.Exists(f)) continue;
+                        
                         // 1. 获取基础采样数
                         long samples = GetTotalSamples(f);
                         if (samples <= 0) continue;
@@ -348,28 +360,148 @@ namespace seamless_loop_music.Services
                             TotalSamples = samples,
                             LoopEnd = samples,
                             LoopStart = 0,
-                            DisplayName = Path.GetFileNameWithoutExtension(f), // 默认别名
+                            DisplayName = Path.GetFileNameWithoutExtension(f),
                             LastModified = DateTime.Now
                         };
                         tracksToAdd.Add(track);
-                        
-                        processed++;
-                        if (processed % 10 == 0) // 每处理10个更新一次 UI，避免看上去卡死
-                        {
-                             // 注意：频繁 Invoke 可能会反向拖慢速度，但在后台线程还好
-                             // OnStatusMessage?.Invoke($"Scanning... ({processed}/{files.Count})"); 
-                        }
                     }
                     catch { /* 忽略损坏文件 */ }
                 }
 
-                // 2. 批量入库
                 if (tracksToAdd.Count > 0)
                 {
                     _dbHelper.BulkSaveTracksAndAddToPlaylist(tracksToAdd, playlistId);
                 }
+             });
+        }
 
-                OnStatusMessage?.Invoke($"Scan complete. {tracksToAdd.Count} songs synced.");
+
+        public async System.Threading.Tasks.Task AddFolderToPlaylist(int playlistId, string folderPath)
+        {
+            if (!Directory.Exists(folderPath)) return;
+
+            // 1. 记录文件夹
+            _dbHelper.AddPlaylistFolder(playlistId, folderPath);
+            
+            // 2. 刷新歌单内容
+            await RefreshPlaylist(playlistId);
+        }
+
+        /// <summary>
+        /// 刷新歌单内容：根据记录的文件夹重新扫描，添加新歌，移除消失的歌曲
+        /// </summary>
+        public System.Threading.Tasks.Task RefreshPlaylist(int playlistId)
+        {
+            return System.Threading.Tasks.Task.Run(() => {
+                // 1. 获取所有关联文件夹
+                var folders = _dbHelper.GetPlaylistFolders(playlistId);
+                if (folders == null || folders.Count == 0) return;
+
+                OnStatusMessage?.Invoke($"Refreshing playlist {playlistId} from {folders.Count} folders...");
+
+                // 2. 扫描所有文件夹下的文件
+                var disksFilesMap = new Dictionary<string, long>(StringComparer.OrdinalIgnoreCase); // Path -> Samples
+
+                foreach (var folder in folders)
+                {
+                    if (!Directory.Exists(folder)) continue;
+
+                    var files = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories)
+                        .Where(s => s.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || 
+                                    s.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || 
+                                    s.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase));
+                    
+                    foreach (var f in files)
+                    {
+                        // 简单去重：如果多个文件夹包含同一个文件（不太可能），以后面的为准
+                        if (!disksFilesMap.ContainsKey(f))
+                        {
+                            // 这里不立即读取 Sample，只记录路径，需进一步确认是否是新歌
+                            disksFilesMap[f] = 0; 
+                        }
+                    }
+                }
+
+                // 3. 获取当前歌单内的歌曲
+                var currentTracks = _dbHelper.GetPlaylistTracks(playlistId).ToList();
+                var currentTrackPaths = new HashSet<string>(currentTracks.Select(t => t.FilePath), StringComparer.OrdinalIgnoreCase);
+
+                // 4. 找出新增的文件
+                var newFiles = disksFilesMap.Keys.Where(f => !currentTrackPaths.Contains(f)).ToList();
+                
+                // 5. 找出移除的文件 (只移除那些路径在 monitored folders 范围内但不复存在的文件？
+                // 或者更简单：如果歌单是 "Linked Folder" 模式，则完全同步？
+                // 鉴于用户需求是 "根据文件夹变化决定歌单变化"，我们假设这是同步模式。
+                // 但为了安全，我们只移除那些 "原本属于这些文件夹但现在不见了" 的歌曲，
+                // 避免误删用户手动添加的额外歌曲（如果支持混合模式）。
+                // 简化起见：我们只移除那些 路径以任何一个 folder 开头 但不在 diskFilesMap 中的歌曲。
+                
+                var tracksToRemove = new List<int>();
+                foreach (var track in currentTracks)
+                {
+                    // 如果歌曲路径属于某个受控文件夹
+                    bool belongsToMonitored = folders.Any(folder => track.FilePath.StartsWith(folder, StringComparison.OrdinalIgnoreCase));
+                    
+                    if (belongsToMonitored)
+                    {
+                        // 且现在磁盘上找不到了
+                        if (!disksFilesMap.ContainsKey(track.FilePath))
+                        {
+                            tracksToRemove.Add(track.Id);
+                        }
+                    }
+                }
+
+                // --- 执行数据库更新 ---
+
+                // A. 添加新歌
+                if (newFiles.Count > 0)
+                {
+                    OnStatusMessage?.Invoke($"Found {newFiles.Count} new files. analyzing...");
+                    var tracksToAdd = new List<MusicTrack>();
+                    int processed = 0;
+
+                    foreach (var f in newFiles)
+                    {
+                        try 
+                        {
+                            long samples = GetTotalSamples(f);
+                            if (samples <= 0) continue;
+
+                            var track = new MusicTrack 
+                            { 
+                                FilePath = f, 
+                                FileName = Path.GetFileName(f), 
+                                TotalSamples = samples,
+                                LoopEnd = samples,
+                                LoopStart = 0,
+                                DisplayName = Path.GetFileNameWithoutExtension(f),
+                                LastModified = DateTime.Now
+                            };
+                            tracksToAdd.Add(track);
+                        } 
+                        catch { }
+                        
+                        processed++;
+                        if (processed % 10 == 0) OnStatusMessage?.Invoke($"Analyzing... ({processed}/{newFiles.Count})");
+                    }
+
+                    if (tracksToAdd.Count > 0)
+                    {
+                        _dbHelper.BulkSaveTracksAndAddToPlaylist(tracksToAdd, playlistId);
+                    }
+                }
+
+                // B. 移除消失的歌
+                if (tracksToRemove.Count > 0)
+                {
+                    foreach (var songId in tracksToRemove)
+                    {
+                        _dbHelper.RemoveSongFromPlaylist(playlistId, songId);
+                    }
+                }
+
+                OnStatusMessage?.Invoke($"Refresh complete. +{newFiles.Count} / -{tracksToRemove.Count} songs.");
             });
         }
         

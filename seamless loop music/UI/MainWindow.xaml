@@ -67,12 +67,17 @@
                      Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
-                        <TextBlock Text="{Binding Name}" Padding="5" ToolTip="{Binding Path}"/>
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="{Binding Name}" Padding="5,5,2,5" ToolTip="{Binding Path}" VerticalAlignment="Center"/>
+                            <TextBlock Text="{Binding SongCount, StringFormat='({0})'}" Padding="0,5,5,5" Foreground="#7F849C" FontSize="11" VerticalAlignment="Center"/>
+                        </StackPanel>
                     </DataTemplate>
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Opened="lstPlaylists_ContextMenuOpened">
                         <MenuItem x:Name="miAddPlaylist" Header="Add Folder" Click="miAddFolderToPlaylist_Click"/>
+                        <MenuItem x:Name="miRefreshPlaylist" Header="Refresh Playlist" Click="miRefreshPlaylist_Click"/>
+                        <MenuItem x:Name="miAddSong" Header="Add Files" Click="miAddSong_Click"/>
                         <Separator/>
                         <MenuItem Header="Rename" Click="miRenamePlaylist_Click"/>
                         <MenuItem Header="Delete" Click="miDeletePlaylist_Click"/>
@@ -83,14 +88,16 @@
             <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="Tracks" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
-                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick">
+                     Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick" SelectionMode="Extended">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Title}" Padding="2" />
                     </DataTemplate>
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
-                    <ContextMenu>
+                    <ContextMenu Opened="lstTrackList_ContextMenuOpened">
+                        <MenuItem x:Name="miAddToPlaylist" Header="Add to Playlist"/>
+                        <Separator/>
                         <MenuItem x:Name="miRenameTrack" Header="Rename Alias" Click="miRenameTrack_Click"/>
                         <MenuItem x:Name="miOpenFolder" Header="Open Containing Folder" Click="miOpenFolder_Click"/>
                         <Separator/>

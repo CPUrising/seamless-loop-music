@@ -81,6 +81,18 @@ namespace seamless_loop_music.Data
                     );";
                 db.Execute(sqlPlaylistItems);
 
+                // 4. 歌单源文件夹表 (支持多文件夹关联)
+                string sqlPlaylistFolders = @"
+                    CREATE TABLE IF NOT EXISTS PlaylistFolders (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        PlaylistId INTEGER NOT NULL,
+                        FolderPath TEXT NOT NULL,
+                        AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                        FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
+                        UNIQUE(PlaylistId, FolderPath)
+                    );";
+                db.Execute(sqlPlaylistFolders);
+
                 // --- 自动升级：检查并添加 FilePath 字段 ---
                 // 不使用 dynamic，改用强类型或直接尝试查询
                 var hasFilePath = false;
@@ -225,7 +237,17 @@ namespace seamless_loop_music.Data
             using (IDbConnection db = new SQLiteConnection(_connectionString))
             {
                 // 使用 SQL 别名将数据库的 FolderPath 映射到模型的 Path
-                return db.Query<PlaylistFolder>("SELECT Id, Name, FolderPath AS Path, IsFolderLinked, CreatedAt FROM Playlists ORDER BY CreatedAt DESC");
+                string sql = @"
+                    SELECT 
+                        p.Id, 
+                        p.Name, 
+                        p.FolderPath AS Path, 
+                        p.IsFolderLinked, 
+                        p.CreatedAt,
+                        (SELECT COUNT(1) FROM PlaylistItems pi WHERE pi.PlaylistId = p.Id) AS SongCount
+                    FROM Playlists p
+                    ORDER BY p.CreatedAt DESC";
+                return db.Query<PlaylistFolder>(sql);
             }
         }
 
@@ -361,6 +383,38 @@ namespace seamless_loop_music.Data
             {
                 return db.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId = @Pid AND SongId = @Sid", 
                     new { Pid = playlistId, Sid = songId }) > 0;
+            }
+        }
+
+        // --- 歌单文件夹管理 ---
+
+        public void AddPlaylistFolder(int playlistId, string folderPath)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                // 使用 INSERT OR IGNORE 避免重复添加
+                db.Execute(@"
+                    INSERT OR IGNORE INTO PlaylistFolders (PlaylistId, FolderPath) 
+                    VALUES (@Pid, @Path)", 
+                    new { Pid = playlistId, Path = folderPath });
+            }
+        }
+
+        public void RemovePlaylistFolder(int playlistId, string folderPath)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Execute("DELETE FROM PlaylistFolders WHERE PlaylistId = @Pid AND FolderPath = @Path", 
+                    new { Pid = playlistId, Path = folderPath });
+            }
+        }
+
+        public List<string> GetPlaylistFolders(int playlistId)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                return db.Query<string>("SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Pid ORDER BY AddedAt ASC", 
+                    new { Pid = playlistId }).ToList();
             }
         }
     }

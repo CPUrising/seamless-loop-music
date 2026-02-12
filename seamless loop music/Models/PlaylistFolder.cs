@@ -11,6 +11,7 @@ namespace seamless_loop_music.Models
         public string Name { get; set; }
         public string Path { get; set; }
         public bool IsFolderLinked { get; set; }
+        public int SongCount { get; set; }
         public DateTime CreatedAt { get; set; }
 
         public override string ToString() => Name;

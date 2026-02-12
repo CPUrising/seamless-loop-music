@@ -248,12 +248,12 @@ namespace seamless_loop_music
             // 4. 如果是文件夹，启动后台扫描同步
             if (isFolder && !string.IsNullOrEmpty(folderPath)) {
                 lblStatus.Text = isZh ? "正在扫描文件夹..." : "Scanning folder...";
-                await _playerService.ScanAndAddFolderToPlaylist(newId, folderPath);
+                await _playerService.AddFolderToPlaylist(newId, folderPath);
                 // 扫描完刷新一下当前显示的歌曲列表
-                if (lstPlaylists.SelectedItem == newItem) {
-                    LoadPlaylistFromDb(newId);
-                }
+                LoadPlaylistFromDb(newId);
             }
+            // 5. 更新列表
+            LoadPlaylists();
         }
 
         private void lstPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e) {
@@ -271,8 +271,10 @@ namespace seamless_loop_music
                     string folderPath = picker.ResultPath;
                     lblStatus.Text = isZh ? $"正在向 '{folder.Name}' 追加曲目..." : $"Appending tracks to '{folder.Name}'...";
                     
-                    await _playerService.ScanAndAddFolderToPlaylist(folder.Id, folderPath);
+                    await _playerService.AddFolderToPlaylist(folder.Id, folderPath);
                     
+                    // 重新加载播放列表以更新数量
+                    LoadPlaylists();
                     // 重新加载当前显示的曲目列表
                     LoadPlaylistFromDb(folder.Id);
                 }
@@ -282,7 +284,7 @@ namespace seamless_loop_music
             }
         }
 
-        private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
+        private async void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
                 bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
                 string newName = Microsoft.VisualBasic.Interaction.InputBox(
@@ -297,6 +299,20 @@ namespace seamless_loop_music
             }
         }
 
+        private async void miRefreshPlaylist_Click(object sender, RoutedEventArgs e) {
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
+                 bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                 lblStatus.Text = isZh ? $"正在刷新 '{folder.Name}'..." : $"Refreshing '{folder.Name}'...";
+                 
+                 await _playerService.RefreshPlaylist(folder.Id);
+                 
+                 // 重新加载播放列表以更新数量
+                 LoadPlaylists();
+                 // 重新加载显示
+                 if (lstPlaylists.SelectedItem == folder) LoadPlaylistFromDb(folder.Id);
+            }
+        }
+
         private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
                 if (MessageBox.Show(Properties.Resources.MsgDeleteConfirm, Properties.Resources.TitleDelete, MessageBoxButton.YesNo) == MessageBoxResult.Yes) {
@@ -307,13 +323,74 @@ namespace seamless_loop_music
             }
         }
 
+        private void lstPlaylists_ContextMenuOpened(object sender, RoutedEventArgs e)
+        {
+            var cm = sender as ContextMenu;
+            if (cm == null) return;
+            
+            bool hasSelection = lstPlaylists.SelectedItem is PlaylistFolder;
+            var folder = lstPlaylists.SelectedItem as PlaylistFolder;
+            bool isFolderBased = folder != null && folder.IsFolderLinked; // 核心判别
+            bool isVirtual = folder != null && !folder.IsFolderLinked;
+
+            // 设置可见性
+            miAddPlaylist.Visibility = (hasSelection && isFolderBased) ? Visibility.Visible : Visibility.Collapsed;
+            miRefreshPlaylist.Visibility = (hasSelection && isFolderBased) ? Visibility.Visible : Visibility.Collapsed;
+            miAddSong.Visibility = (hasSelection && isVirtual) ? Visibility.Visible : Visibility.Collapsed;
+            
+            // 如果没选中任何项，显示默认新建入口
+            if (!hasSelection)
+            {
+                // 其实右键空白处通常也期望能新建，但当前逻辑绑定在 ListBoxItem 上比较方便
+                // 这里简单处理：如果没选中，禁用所有针对特定歌单的操作
+                miAddPlaylist.Visibility = Visibility.Collapsed;
+                miRefreshPlaylist.Visibility = Visibility.Collapsed;
+                miAddSong.Visibility = Visibility.Collapsed; 
+            }
+        }
+
+        private async void miAddSong_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder && !folder.IsFolderLinked)
+            {
+                var dialog = new OpenFileDialog
+                {
+                    Multiselect = true,
+                    Filter = "Audio Files|*.mp3;*.wav;*.ogg;*.flac;*.m4a;*.wma|All Files|*.*"
+                };
+
+                if (dialog.ShowDialog() == true)
+                {
+                    bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                    lblStatus.Text = isZh ? $"正在添加 {dialog.FileNames.Length} 首歌曲..." : $"Adding {dialog.FileNames.Length} tracks...";
+                    
+                    await _playerService.AddFilesToPlaylist(folder.Id, dialog.FileNames);
+                    
+                    // 刷新及显示
+                    LoadPlaylists(); // 更新数量
+                    LoadPlaylistFromDb(folder.Id); // 更新列表
+                     
+                    lblStatus.Text = isZh ? "添加完成" : "Done.";
+                }
+            }
+        }
+
 
         private void LoadPlaylists() {
             try {
+                // 保存当前选中的 ID，以便刷新后恢复
+                var selectedId = (lstPlaylists.SelectedItem as PlaylistFolder)?.Id;
+                
                 _playlists.Clear();
                 var list = _playerService.GetAllPlaylists();
                 foreach (var p in list) {
                     _playlists.Add(p);
+                }
+                
+                // 恢复选中
+                if (selectedId != null) {
+                    var item = _playlists.FirstOrDefault(p => p.Id == selectedId);
+                    if (item != null) lstPlaylists.SelectedItem = item;
                 }
             } catch {}
         }
@@ -446,6 +523,74 @@ namespace seamless_loop_music
             }
         }
 
+
+
+        private void lstTrackList_ContextMenuOpened(object sender, RoutedEventArgs e)
+        {
+            var cm = sender as ContextMenu;
+            if (cm == null) return;
+            
+            bool hasSelection = lstPlaylist.SelectedItems.Count > 0;
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            
+            // 找到占位符菜单项 "miAddToPlaylist"
+            // 注意：因为我们是动态向 ContextMenu 填充的，直接找 x:Name 可能需要遍历 Items
+            // 为了简单，我们每次清空再重建这一部分，或者利用 Tag 标记
+            
+            // 但其实 XAML 里已经定义了 miAddToPlaylist，我们只需操作它的 Items
+            if (miAddToPlaylist != null)
+            {
+                miAddToPlaylist.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
+                miAddToPlaylist.Items.Clear();
+                miAddToPlaylist.Header = isZh ? "添加到歌单" : "Add to Playlist";
+                
+                if (hasSelection)
+                {
+                    // 获取所有【手动维护】的歌单
+                    var manualPlaylists = _playerService.GetAllPlaylists().Where(p => !p.IsFolderLinked).ToList();
+                    
+                    if (manualPlaylists.Count == 0)
+                    {
+                        var emptyItem = new MenuItem { Header = isZh ? "(无可用歌单)" : "(No Playlists)", IsEnabled = false };
+                        miAddToPlaylist.Items.Add(emptyItem);
+                    }
+                    else
+                    {
+                        foreach (var p in manualPlaylists)
+                        {
+                            var item = new MenuItem { Header = p.Name, Tag = p.Id };
+                            item.Click += MiAddToSpecificPlaylist_Click;
+                            miAddToPlaylist.Items.Add(item);
+                        }
+                    }
+                }
+            }
+        }
+
+        private void MiAddToSpecificPlaylist_Click(object sender, RoutedEventArgs e)
+        {
+             if (sender is MenuItem item && item.Tag is int playlistId)
+             {
+                 var tracks = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
+                 if (tracks.Count == 0) return;
+                 
+                 _playerService.AddTracksToPlaylist(playlistId, tracks);
+                 
+                 bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                 string msg = isZh ? $"已将 {tracks.Count} 首歌曲添加到歌单。" : $"Added {tracks.Count} tracks to playlist.";
+                 lblStatus.Text = msg;
+                 
+                 // 如果左侧正好显示的是这个目标歌单，更新一下它的数量显示
+                 var pItem = _playlists.FirstOrDefault(p => p.Id == playlistId);
+                 if (pItem != null) 
+                 {
+                     // 为了更新数量，最简单的是重载列表，但会闪烁
+                     // 这里我们简单调用 LoadPlaylists 更新所有数量
+                     LoadPlaylists();
+                 }
+             }
+        }
+
         private void miOpenFolder_Click(object sender, RoutedEventArgs e)
         {
             if (lstPlaylist.SelectedItem is MusicTrack track && File.Exists(track.FilePath))
@@ -458,12 +603,25 @@ namespace seamless_loop_music
         {
             if (lstPlaylist.SelectedItem is MusicTrack track)
             {
+                var tracksToRemove = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
                 if (lstPlaylists.SelectedItem is PlaylistFolder folder)
                 {
-                    _playerService.RemoveTrackFromPlaylist(folder.Id, track.Id);
+                    foreach (var t in tracksToRemove)
+                    {
+                        _playerService.RemoveTrackFromPlaylist(folder.Id, t.Id);
+                        lstPlaylist.Items.Remove(t); 
+                    }
+                    _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+                    LoadPlaylists(); // 更新数量
                 }
-                lstPlaylist.Items.Remove(track);
-                _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+                else
+                {
+                    // 只是从当前播放列表移除（非数据库歌单模式）
+                    foreach (var t in tracksToRemove)
+                    {
+                        lstPlaylist.Items.Remove(t);
+                    }
+                }
             }
         }
 
@@ -779,6 +937,8 @@ namespace seamless_loop_music
             if (lblTrackList != null) lblTrackList.Text = Properties.Resources.TrackList;
             if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
             if (miAddPlaylist != null) miAddPlaylist.Header = isZh ? "添加文件夹" : "Add Folder";
+            if (miRefreshPlaylist != null) miRefreshPlaylist.Header = isZh ? "刷新歌单" : "Refresh Playlist";
+            if (miAddSong != null) miAddSong.Header = isZh ? "添加文件" : "Add Files";
             if (miRenameTrack != null) miRenameTrack.Header = isZh ? "修改别名" : "Rename Alias";
             if (miOpenFolder != null) miOpenFolder.Header = isZh ? "打开所在文件夹" : "Open Folder";
             if (miRemoveFromList != null) miRemoveFromList.Header = isZh ? "从歌单移除" : "Remove from List";
