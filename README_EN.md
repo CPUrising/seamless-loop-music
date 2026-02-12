@@ -6,6 +6,8 @@
 
 [中文版](README.md) | [English Version](README_EN.md)
 
+![1770867267226](image/README_EN/1770867267226.png)
+
 A specialized tool for seamless looping and configuration of game BGM and ambient sound effects. Features millisecond-precision auto-alignment of loop points via an audio fingerprint matching algorithm.
 
 ---
@@ -46,15 +48,18 @@ A specialized tool for seamless looping and configuration of game BGM and ambien
 We are committed to delivering the ultimate seamless loop experience. Here are our planned improvements:
 
 ### 🔴 High Priority
+
 - [ ] **Pop Noise Elimination**: Further research on sample smoothing algorithms during jumps to eliminate specific "Click/Pop" noises.
 - [ ] **Smart Detection**: Monitor system audio device changes (e.g., headphone disconnection) to implement auto-pause.
 
 ### 🟡 UX Improvements
+
 - [ ] **UI/UX Optimization**: Refine the visual style and refactor playlist management and track addition workflows for better usability.
 - [ ] **Crossfade**: Implement smooth volume transitions between tracks as a user-configurable option.
 - [ ] **Auto-Focus List**: Automatically scroll the playlist to focus on the currently playing track.
 
 ### 🔵 Algorithm & Performance
+
 - [ ] **Algorithm Upgrade**: Introduce more efficient waveform analysis methods (e.g., FFT cross-correlation) to reduce computation time and improve cross-format accuracy.
 - [ ] **Forward Search Support**: Implement matching logic searching forward from the start point to accommodate diverse audio structures.
 
