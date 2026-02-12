@@ -10,6 +10,8 @@ using NAudio.Wave; // 为了识别 PlaybackState
 using seamless_loop_music.Models;
 using seamless_loop_music.Services; // 引入新晋音乐总监
 using System.Collections.ObjectModel;
+using System.Windows.Media;
+using System.Windows.Input;
 
 namespace seamless_loop_music
 {
@@ -42,6 +44,7 @@ namespace seamless_loop_music
         private bool _isDraggingProgress = false;
         private DateTime _lastSeekTime = DateTime.MinValue; 
         private DispatcherTimer _tmrUpdate;
+        private Point _dragStartPoint;
 
         public MainWindow()
         {
@@ -1116,6 +1119,145 @@ namespace seamless_loop_music
             SaveSettings(); 
             _playerService?.Dispose();
             base.OnClosed(e);
+        }
+        private void lstPlaylists_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+        private void lstPlaylists_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point position = e.GetPosition(null);
+                if (Math.Abs(position.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(position.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    ListBox listBox = sender as ListBox;
+                    PlaylistFolder folder = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as PlaylistFolder;
+                    if (folder != null)
+                    {
+                        DragDrop.DoDragDrop(listBox, folder, DragDropEffects.Move);
+                    }
+                }
+            }
+        }
+
+        private void lstPlaylists_Drop(object sender, DragEventArgs e)
+        {
+            PlaylistFolder droppedData = e.Data.GetData(typeof(PlaylistFolder)) as PlaylistFolder;
+            PlaylistFolder target = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as PlaylistFolder;
+
+            if (droppedData != null && target != null && droppedData != target)
+            {
+                int oldIndex = _playlists.IndexOf(droppedData);
+                int newIndex = _playlists.IndexOf(target);
+
+                _playlists.Move(oldIndex, newIndex);
+                _playerService.UpdatePlaylistsSortOrder(_playlists.Select(p => p.Id).ToList());
+            }
+        }
+
+        private void lstPlaylist_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
+        {
+            _dragStartPoint = e.GetPosition(null);
+        }
+
+        private void lstPlaylist_MouseMove(object sender, MouseEventArgs e)
+        {
+            if (e.LeftButton == MouseButtonState.Pressed)
+            {
+                Point position = e.GetPosition(null);
+                if (Math.Abs(position.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
+                    Math.Abs(position.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
+                {
+                    ListBox listBox = sender as ListBox;
+                    MusicTrack track = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as MusicTrack;
+                    if (track != null)
+                    {
+                        DragDrop.DoDragDrop(listBox, track, DragDropEffects.Move);
+                    }
+                }
+            }
+        }
+
+        private void lstPlaylist_Drop(object sender, DragEventArgs e)
+        {
+            MusicTrack droppedData = e.Data.GetData(typeof(MusicTrack)) as MusicTrack;
+            MusicTrack target = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as MusicTrack;
+
+            if (droppedData != null && target != null && droppedData != target)
+            {
+                int oldIndex = lstPlaylist.Items.IndexOf(droppedData);
+                int newIndex = lstPlaylist.Items.IndexOf(target);
+
+                if (oldIndex == -1 || newIndex == -1) return;
+
+                // UI 更新
+                lstPlaylist.Items.RemoveAt(oldIndex);
+                lstPlaylist.Items.Insert(newIndex, droppedData);
+                _playlist.RemoveAt(oldIndex);
+                _playlist.Insert(newIndex, droppedData.FilePath);
+
+                // Service 同步
+                var tracks = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+                _playerService.Playlist = tracks;
+
+                // 数据库持久化
+                if (lstPlaylists.SelectedItem is PlaylistFolder folder)
+                {
+                    _playerService.UpdateTracksSortOrder(folder.Id, tracks.Select(t => t.Id).ToList());
+                }
+            }
+        }
+
+        private void ListBox_DragOver(object sender, DragEventArgs e)
+        {
+            if (sender is ListBox listBox)
+            {
+                var scrollViewer = FindVisualChild<ScrollViewer>(listBox);
+                if (scrollViewer != null)
+                {
+                    double tolerance = 30;
+                    double verticalPos = e.GetPosition(listBox).Y;
+
+                    if (verticalPos < tolerance)
+                    {
+                        scrollViewer.LineUp();
+                    }
+                    else if (verticalPos > listBox.ActualHeight - tolerance)
+                    {
+                        scrollViewer.LineDown();
+                    }
+                }
+            }
+        }
+
+        private static T FindParent<T>(DependencyObject child) where T : DependencyObject
+        {
+            DependencyObject parentObject = VisualTreeHelper.GetParent(child);
+            if (parentObject == null) return null;
+            T parent = parentObject as T;
+            if (parent != null) parent = (T)parentObject; // 冗余检查，修正逻辑
+            if (parent != null) return parent;
+            return FindParent<T>(parentObject);
+        }
+
+        private static T FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
+        {
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
+            {
+                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
+                if (child != null && child is T)
+                    return (T)child;
+                else
+                {
+                    T childOfChild = FindVisualChild<T>(child);
+                    if (childOfChild != null)
+                        return childOfChild;
+                }
+            }
+            return null;
         }
     }
 }

@@ -67,6 +67,8 @@
             <!-- Playlists ListBox -->
             <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,10,10"
                      Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged" SelectionMode="Extended"
+                     AllowDrop="True" PreviewMouseLeftButtonDown="lstPlaylists_PreviewMouseLeftButtonDown"
+                     MouseMove="lstPlaylists_MouseMove" Drop="lstPlaylists_Drop" DragOver="ListBox_DragOver"
                      VirtualizingStackPanel.IsVirtualizing="True"
                      VirtualizingStackPanel.VirtualizationMode="Recycling"
                      ScrollViewer.CanContentScroll="True">
@@ -94,6 +96,8 @@
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
                      Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick" SelectionMode="Extended"
+                     AllowDrop="True" PreviewMouseLeftButtonDown="lstPlaylist_PreviewMouseLeftButtonDown"
+                     MouseMove="lstPlaylist_MouseMove" Drop="lstPlaylist_Drop" DragOver="ListBox_DragOver"
                      VirtualizingStackPanel.IsVirtualizing="True"
                      VirtualizingStackPanel.VirtualizationMode="Recycling"
                      ScrollViewer.CanContentScroll="True">

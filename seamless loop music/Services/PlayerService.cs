@@ -354,6 +354,10 @@ namespace seamless_loop_music.Services
             OnStatusMessage?.Invoke("Restored to original A/B boundary.");
         }
 
+        public void UpdatePlaylistsSortOrder(List<int> playlistIds) => _dbHelper.UpdatePlaylistsSortOrder(playlistIds);
+
+        public void UpdateTracksSortOrder(int playlistId, List<int> songIds) => _dbHelper.UpdateTracksSortOrder(playlistId, songIds);
+
         private void SmartMatchLoopInternal(bool adjustStart, Action onComplete)
         {
             if (CurrentTrack == null) return;

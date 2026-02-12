@@ -65,6 +65,7 @@ namespace seamless_loop_music.Data
                         Name TEXT NOT NULL,
                         FolderPath TEXT, -- 关联的物理路径 (可选)
                         IsFolderLinked INTEGER DEFAULT 0,
+                        SortOrder INTEGER DEFAULT 0,
                         CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
                     );";
                 db.Execute(sqlPlaylists);
@@ -111,6 +112,20 @@ namespace seamless_loop_music.Data
                 if (!hasFilePath)
                 {
                     db.Execute("ALTER TABLE LoopPoints ADD COLUMN FilePath TEXT;");
+                }
+
+                // 检查并添加 Playlists.SortOrder
+                using (var reader = ((SQLiteConnection)db).ExecuteReader("PRAGMA table_info(Playlists)"))
+                {
+                    var hasSort = false;
+                    while (reader.Read())
+                    {
+                        if (reader["name"].ToString().Equals("SortOrder", StringComparison.OrdinalIgnoreCase))
+                        {
+                            hasSort = true; break;
+                        }
+                    }
+                    if (!hasSort) db.Execute("ALTER TABLE Playlists ADD COLUMN SortOrder INTEGER DEFAULT 0;");
                 }
             }
         }
@@ -244,9 +259,10 @@ namespace seamless_loop_music.Data
                         p.FolderPath AS Path, 
                         p.IsFolderLinked, 
                         p.CreatedAt,
+                        p.SortOrder,
                         (SELECT COUNT(1) FROM PlaylistItems pi WHERE pi.PlaylistId = p.Id) AS SongCount
                     FROM Playlists p
-                    ORDER BY p.CreatedAt DESC";
+                    ORDER BY p.SortOrder ASC, p.CreatedAt DESC";
                 return db.Query<PlaylistFolder>(sql);
             }
         }
@@ -389,6 +405,40 @@ namespace seamless_loop_music.Data
             {
                 return db.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId = @Pid AND SongId = @Sid", 
                     new { Pid = playlistId, Sid = songId }) > 0;
+            }
+        }
+
+        public void UpdatePlaylistsSortOrder(List<int> playlistIds)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Open();
+                using (var trans = db.BeginTransaction())
+                {
+                    for (int i = 0; i < playlistIds.Count; i++)
+                    {
+                        db.Execute("UPDATE Playlists SET SortOrder = @Order WHERE Id = @Id", 
+                            new { Order = i, Id = playlistIds[i] }, transaction: trans);
+                    }
+                    trans.Commit();
+                }
+            }
+        }
+
+        public void UpdateTracksSortOrder(int playlistId, List<int> songIds)
+        {
+            using (IDbConnection db = new SQLiteConnection(_connectionString))
+            {
+                db.Open();
+                using (var trans = db.BeginTransaction())
+                {
+                    for (int i = 0; i < songIds.Count; i++)
+                    {
+                        db.Execute("UPDATE PlaylistItems SET SortOrder = @Order WHERE PlaylistId = @Pid AND SongId = @Sid", 
+                            new { Order = i, Pid = playlistId, Sid = songIds[i] }, transaction: trans);
+                    }
+                    trans.Commit();
+                }
             }
         }
 
