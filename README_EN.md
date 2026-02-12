@@ -6,7 +6,7 @@
 
 [中文版](README.md) | [English Version](README_EN.md)
 
-![1770867267226](image/README_EN/1770867267226.png)
+![1770884722242](image/README_EN/1770884722242.png)
 
 A specialized tool for seamless looping and configuration of game BGM and ambient sound effects. Features millisecond-precision auto-alignment of loop points via an audio fingerprint matching algorithm.
 
