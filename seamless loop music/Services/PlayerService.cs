@@ -27,6 +27,7 @@ namespace seamless_loop_music.Services
     {
         private readonly AudioLooper _audioLooper;
         private readonly DatabaseHelper _dbHelper;
+        private readonly PyMusicLooperWrapper _pyMusicLooperWrapper; // 引用新的 Wrapper
         private readonly Random _random = new Random();
         
         // 播放相关
@@ -48,6 +49,7 @@ namespace seamless_loop_music.Services
         {
             _audioLooper = new AudioLooper();
             _dbHelper = new DatabaseHelper();
+            _pyMusicLooperWrapper = new PyMusicLooperWrapper(); // 初始化
 
             // 转发底层事件
             _audioLooper.OnPlayStateChanged += state => OnPlayStateChanged?.Invoke(state);
@@ -263,6 +265,42 @@ namespace seamless_loop_music.Services
                 OnStatusMessage?.Invoke($"Smart Match Applied: Start={newStart}, End={newEnd}");
                 
                 // 4. 通知调用者 (UI) 刷新
+                onComplete?.Invoke();
+            });
+        }
+
+        /// <summary>
+        /// 使用 PyMusicLooper 进行外部终极匹配 (方案 A: 通过 uv 运行源码)
+        /// </summary>
+        public async void SmartMatchLoopExternalAsync(Action onComplete = null)
+        {
+            if (CurrentTrack == null) return;
+            
+            OnStatusMessage?.Invoke($"[PyMusicLooper] Analyzing {CurrentTrack.FileName} via uv...");
+
+            await System.Threading.Tasks.Task.Run(async () =>
+            {
+                var result = await _pyMusicLooperWrapper.FindBestLoopAsync(CurrentTrack.FilePath);
+                
+                if (result.HasValue)
+                {
+                    var (start, end, score) = result.Value;
+                    
+                    // 应用并保存
+                    _audioLooper.SetLoopStartSample(start);
+                    _audioLooper.SetLoopEndSample(end);
+                    
+                    CurrentTrack.LoopStart = start;
+                    CurrentTrack.LoopEnd = end;
+                    SaveCurrentTrack();
+                    
+                    OnStatusMessage?.Invoke($"[PyMusicLooper] Found! Score: {score:P2}. Range: {start}-{end}");
+                    onComplete?.Invoke();
+                }
+                else
+                {
+                    OnStatusMessage?.Invoke("[PyMusicLooper] Analysis failed. Please check uv/source path.");
+                }
                 onComplete?.Invoke();
             });
         }

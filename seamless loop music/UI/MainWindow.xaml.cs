@@ -63,9 +63,7 @@ namespace seamless_loop_music
             _playerService.OnTrackLoaded += OnTrackLoaded;
             _playerService.OnPlayStateChanged += state => Dispatcher.Invoke(() => UpdateButtons(state));
             _playerService.OnStatusMessage += msg => Dispatcher.Invoke(() => {
-                // 简单的状态反馈，不需要每次都弹窗，状态栏显示即可
-                // 如果是 Error 开头，可能稍微醒目一点？暂且都显示在状态栏
-                // lblStatus.Text = msg; // 暂时不覆盖播放状态
+                lblStatus.Text = msg; // 汇报进度，让 cpu 大人知道我在努力工作
             });
             _playerService.OnIndexChanged += (index) => Dispatcher.Invoke(() => {
                 if (lstPlaylist.SelectedIndex != index) {
@@ -729,6 +727,19 @@ namespace seamless_loop_music
             });
         }
 
+        private void btnPyLoop_Click(object sender, RoutedEventArgs e)
+        {
+            ApplyLoopSettings();
+            btnPyLoop.IsEnabled = false;
+
+            _playerService.SmartMatchLoopExternalAsync(() => {
+                Dispatcher.Invoke(() => {
+                    UpdateLoopUI();
+                    btnPyLoop.IsEnabled = true;
+                });
+            });
+        }
+
         private void UpdateLoopUI()
         {
             txtLoopSample.Text = _playerService.LoopStartSample.ToString();
@@ -986,7 +997,12 @@ namespace seamless_loop_music
     if (btnSmartMatchForward != null) {
         btnSmartMatchForward.Content = isZh ? "寻找终点" : "Match End";
         btnSmartMatchForward.ToolTip = isZh ? "根据起点寻找循环终点 (正向)" : "Find loop end based on loop start (Forward)";
-    }        
+    }
+    
+    if (btnPyLoop != null) {
+        btnPyLoop.Content = isZh ? "极致匹配" : "PyLoop Match";
+        btnPyLoop.ToolTip = isZh ? "使用 PyMusicLooper 算法寻找全曲最佳循环 (由于涉及深层分析，可能需要较长时间)" : "Find the best loop points in the entire song using PyMusicLooper (Deep analysis, might take a while)";
+    }
             if (lblFilePath != null) lblFilePath.Text = Properties.Resources.FilePathTitle;
             if (lblLoopStart != null) lblLoopStart.Text = Properties.Resources.LoopStartLabel;
             if (lblLoopEnd != null) lblLoopEnd.Text = Properties.Resources.LoopEndLabel;
