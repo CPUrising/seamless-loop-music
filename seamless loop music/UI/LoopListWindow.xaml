@@ -17,6 +17,27 @@
                  </Trigger>
              </Style.Triggers>
         </Style>
+
+        <Style x:Key="WindowButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#E0E0E0"/>
+            <Setter Property="Foreground" Value="#11111B"/>
+            <Setter Property="Padding" Value="15,5"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#FFFFFF"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
     </Window.Resources>
     
     <Grid Margin="10">
@@ -43,7 +64,7 @@
         
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
             <Button x:Name="btnUpdate" Content="Update" Click="BtnUpdate_Click" Padding="15,5" Margin="0,0,10,0" Background="#89DCEB" Foreground="#11111B" BorderThickness="0"/>
-            <Button Content="Close" Click="BtnClose_Click" Padding="15,5" Background="#3E3E42" Foreground="Black" BorderThickness="0"/>
+            <Button Content="Close" Click="BtnClose_Click" Style="{StaticResource WindowButtonStyle}"/>
         </StackPanel>
     </Grid>
 </Window>

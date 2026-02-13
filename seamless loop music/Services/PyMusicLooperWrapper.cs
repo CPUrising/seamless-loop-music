@@ -192,7 +192,6 @@ namespace seamless_loop_music.Services
                             long.TryParse(parts[1], out long end) &&
                             double.TryParse(parts[4], out double score))
                         {
-                            // 可选解析 NoteDifference 和 LoudnessDifference
                             double.TryParse(parts[2], out double noteDiff);
                             double.TryParse(parts[3], out double loudDiff);
 

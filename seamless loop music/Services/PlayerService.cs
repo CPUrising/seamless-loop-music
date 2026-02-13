@@ -476,6 +476,11 @@ namespace seamless_loop_music.Services
                  }
             }
 
+            if (candidates != null && candidates.Count > 0)
+                 OnStatusMessage?.Invoke("[PyMusicLooper] Candidates updated.");
+            else
+                 OnStatusMessage?.Invoke("[PyMusicLooper] No candidates found.");
+
             return candidates;
         }
 

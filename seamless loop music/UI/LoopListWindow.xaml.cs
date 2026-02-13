@@ -58,12 +58,21 @@ namespace seamless_loop_music.UI
 
         private async void BtnUpdate_Click(object sender, RoutedEventArgs e)
         {
+             string originalText = btnUpdate.Content?.ToString() ?? "Update";
              try
             {
-                if (btnUpdate != null) btnUpdate.IsEnabled = false;
+                if (btnUpdate != null) {
+                    btnUpdate.IsEnabled = false;
+                    bool isZh = seamless_loop_music.Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                    btnUpdate.Content = isZh ? "更新中..." : "Updating...";
+                }
+                
                 // 强制刷新
                 var newCandidates = await _playerService.GetLoopCandidatesAsync(forceRefresh: true);
                 RefreshListView(newCandidates);
+                
+                if (btnUpdate != null) btnUpdate.Content = "√";
+                await System.Threading.Tasks.Task.Delay(500);
             }
             catch (System.Exception ex)
             {
@@ -71,7 +80,10 @@ namespace seamless_loop_music.UI
             }
             finally
             {
-                 if (btnUpdate != null) btnUpdate.IsEnabled = true;
+                 if (btnUpdate != null) {
+                     btnUpdate.IsEnabled = true;
+                     btnUpdate.Content = originalText;
+                 }
             }
         }
 
