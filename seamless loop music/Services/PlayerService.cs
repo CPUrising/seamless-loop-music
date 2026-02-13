@@ -610,6 +610,20 @@ namespace seamless_loop_music.Services
             await RefreshPlaylist(playlistId);
         }
 
+        public async Task RemoveFolderFromPlaylist(int playlistId, string folderPath)
+        {
+            // 1. 从数据库移除关联
+            _dbHelper.RemovePlaylistFolder(playlistId, folderPath);
+            
+            // 2. 刷新歌单内容（这会移除那些仅在该文件夹中存在的曲目记录）
+            await RefreshPlaylist(playlistId);
+        }
+
+        public List<string> GetPlaylistFolders(int playlistId)
+        {
+            return _dbHelper.GetPlaylistFolders(playlistId);
+        }
+
         /// <summary>
         /// 刷新歌单内容：根据记录的文件夹重新扫描，添加新歌，移除消失的歌曲
         /// </summary>

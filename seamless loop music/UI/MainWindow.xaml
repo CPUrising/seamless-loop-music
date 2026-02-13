@@ -82,8 +82,8 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu Opened="lstPlaylists_ContextMenuOpened">
-                        <MenuItem x:Name="miAddPlaylist" Header="Add Folder" Click="miAddFolderToPlaylist_Click"/>
                         <MenuItem x:Name="miRefreshPlaylist" Header="Refresh Playlist" Click="miRefreshPlaylist_Click"/>
+                        <MenuItem x:Name="miManageFolders" Header="Manage Folders" Click="miManageFolders_Click"/>
                         <MenuItem x:Name="miAddSong" Header="Add Files" Click="miAddSong_Click"/>
                         <Separator/>
                         <MenuItem x:Name="miRenamePlaylist" Header="Rename" Click="miRenamePlaylist_Click"/>

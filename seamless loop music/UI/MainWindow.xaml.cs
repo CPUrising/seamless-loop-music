@@ -265,27 +265,6 @@ namespace seamless_loop_music
             }
         }
 
-        private async void miAddFolderToPlaylist_Click(object sender, RoutedEventArgs e) {
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-            
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                var picker = new FolderPicker();
-                if (picker.ShowDialog(this)) {
-                    string folderPath = picker.ResultPath;
-                    lblStatus.Text = isZh ? $"正在向 '{folder.Name}' 追加曲目..." : $"Appending tracks to '{folder.Name}'...";
-                    
-                    await _playerService.AddFolderToPlaylist(folder.Id, folderPath);
-                    
-                    // 重新加载播放列表以更新数量
-                    LoadPlaylists();
-                    // 重新加载当前显示的曲目列表
-                    LoadPlaylistFromDb(folder.Id);
-                }
-            } else {
-                // 如果没选中，就 fallback 到新建逻辑
-                btnAddPlaylist_Click(sender, e);
-            }
-        }
 
         private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
@@ -299,6 +278,20 @@ namespace seamless_loop_music
                     _playerService.RenamePlaylist(folder.Id, newName);
                     lstPlaylists.Items.Refresh();
                 }
+            }
+        }
+
+        private void miManageFolders_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstPlaylists.SelectedItem is PlaylistFolder folder)
+            {
+                var mgr = new UI.FolderManagerWindow(_playerService, folder.Id, folder.Name);
+                mgr.Owner = this;
+                mgr.ShowDialog();
+                
+                // 窗口关闭后，刷新一下当前列表，以防内容变动
+                LoadPlaylists();
+                LoadPlaylistFromDb(folder.Id);
             }
         }
 
@@ -364,21 +357,21 @@ namespace seamless_loop_music
             bool anyVirtual = selectedItems.Any(f => !f.IsFolderLinked);
 
             // 设置可见性
-            miAddPlaylist.Visibility = (singleSelection && anyFolderBased) ? Visibility.Visible : Visibility.Collapsed;
             miRefreshPlaylist.Visibility = anyFolderBased ? Visibility.Visible : Visibility.Collapsed;
             miAddSong.Visibility = (singleSelection && anyVirtual) ? Visibility.Visible : Visibility.Collapsed;
             
             // 重命名只支持单选
             miRenamePlaylist.Visibility = singleSelection ? Visibility.Visible : Visibility.Collapsed;
+            miManageFolders.Visibility = (singleSelection && anyFolderBased) ? Visibility.Visible : Visibility.Collapsed;
             miDeletePlaylist.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
 
             // 如果没选中任何项，全部崩坏
             if (!hasSelection)
             {
-                miAddPlaylist.Visibility = Visibility.Collapsed;
                 miRefreshPlaylist.Visibility = Visibility.Collapsed;
                 miAddSong.Visibility = Visibility.Collapsed; 
                 miRenamePlaylist.Visibility = Visibility.Collapsed;
+                miManageFolders.Visibility = Visibility.Collapsed;
                 miDeletePlaylist.Visibility = Visibility.Collapsed;
             }
         }
@@ -1046,7 +1039,6 @@ namespace seamless_loop_music
             if (lblMyPlaylists != null) lblMyPlaylists.Text = Properties.Resources.MyPlaylist;
             if (lblTrackList != null) lblTrackList.Text = Properties.Resources.TrackList;
             if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
-            if (miAddPlaylist != null) miAddPlaylist.Header = isZh ? "添加文件夹" : "Add Folder";
             if (miRefreshPlaylist != null) miRefreshPlaylist.Header = isZh ? "刷新歌单" : "Refresh Playlist";
             if (miAddSong != null) miAddSong.Header = isZh ? "添加文件" : "Add Files";
             if (miRenameTrack != null) miRenameTrack.Header = isZh ? "修改别名" : "Rename Alias";
