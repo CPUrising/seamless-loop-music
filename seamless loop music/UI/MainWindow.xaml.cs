@@ -667,7 +667,7 @@ namespace seamless_loop_music
             if (confirm != MessageBoxResult.Yes) return;
 
             // 禁用界面上相关的按钮防止冲突（可选，但安全）
-            if (btnPyAuto != null) btnPyAuto.IsEnabled = false;
+
 
             await _playerService.BatchSmartMatchLoopExternalAsync(tracks, 
                 (current, total, fileName) => {
@@ -679,7 +679,7 @@ namespace seamless_loop_music
                 () => {
                     Dispatcher.Invoke(() => {
                         lblStatus.Text = isZh ? "批量极致匹配任务完成！" : "Batch PyLoop tasks completed!";
-                        if (btnPyAuto != null) btnPyAuto.IsEnabled = true;
+
                         // 刷新一下列表显示，防止数据变了 UI 没动
                         lstPlaylist.Items.Refresh();
                         UpdateLoopUI(); // 如果当前播放的正是在批量列表里，更新 UI
@@ -790,22 +790,7 @@ namespace seamless_loop_music
             });
         }
 
-        private void btnPyAuto_Click(object sender, RoutedEventArgs e)
-        {
-            ApplyLoopSettings();
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-            
-            btnPyAuto.IsEnabled = false; 
-            lblStatus.Text = isZh ? "PyMusicLooper 正在自动分析..." : "PyMusicLooper Analyzing...";
 
-            _playerService.SmartMatchLoopExternalAsync(() => {
-                Dispatcher.Invoke(() => {
-                    UpdateLoopUI();
-                    btnPyAuto.IsEnabled = true;
-                    lblStatus.Text = isZh ? "PyMusicLooper 自动化完成" : "PyMusicLooper Auto Done";
-                });
-            });
-        }
 
 
 
@@ -1104,10 +1089,7 @@ namespace seamless_loop_music
     }
     
     // PyMusicLooper Controls
-    if (btnPyAuto != null) {
-        btnPyAuto.Content = isZh ? "全自动" : "Auto";
-        btnPyAuto.ToolTip = isZh ? "直接计算并应用最佳循环点" : "Directly calculate and apply best loop points";
-    }
+
     if (btnPyList != null) {
         btnPyList.Content = isZh ? "排行榜" : "List";
         btnPyList.ToolTip = isZh ? "查看前 10 个候选循环点" : "View Top 10 Loop Candidates";

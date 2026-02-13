@@ -50,6 +50,11 @@ namespace seamless_loop_music.Models
 
         public DateTime LastModified { get; set; } = DateTime.Now;
 
+        /// <summary>
+        /// 存储 PyMusicLooper 计算的所有候选点 (JSON 格式)
+        /// </summary>
+        public string LoopCandidatesJson { get; set; }
+
         // 辅助属性：仅供 UI 显示
         public string Title => string.IsNullOrEmpty(DisplayName) ? System.IO.Path.GetFileNameWithoutExtension(FilePath) : DisplayName;
 

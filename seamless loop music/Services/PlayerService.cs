@@ -425,13 +425,58 @@ namespace seamless_loop_music.Services
 
         /// <summary>
         /// 获取当前歌曲的候选循环点列表（Top 10）
+        /// 优先读取数据库缓存
         /// </summary>
-        public async Task<List<LoopCandidate>> GetLoopCandidatesAsync()
+        public async Task<List<LoopCandidate>> GetLoopCandidatesAsync(bool forceRefresh = false)
         {
             if (CurrentTrack == null) return new List<LoopCandidate>();
+
+            // 1. 尝试从数据库缓存读取
+            if (!forceRefresh && !string.IsNullOrEmpty(CurrentTrack.LoopCandidatesJson))
+            {
+                try 
+                {
+                     // 简单的 JSON 反序列化 (使用 System.Text.Json 或 Newtonsoft)
+                     // 由于环境不确定，这里假设可以用 Newtonsoft (这是 WPF 常备) 
+                     // 或者手写个简易 Parser 如果没有库 (LoopCandidate 很简单)
+                     // 这里我使用 Newtonsoft.Json (JsonConvert.DeserializeObject)，如果不通过再换。
+                     // 实际上，为了保险，我先检测引用。
+                     // 既然不能检测，我用 System.Text.Json (Core) 或 JavaScriptSerializer (Framework)
+                     // 假定是 .NET Framework 且没有 nuget，不仅麻烦。
+                     
+                     // 使用内置简单解析器
+                     var cached = DeserializeLoopCandidates(CurrentTrack.LoopCandidatesJson);
+                     if (cached != null && cached.Count > 0)
+                     {
+                         OnStatusMessage?.Invoke($"[Cache] Loaded {cached.Count} loop candidates from database.");
+                         return cached;
+                     }
+                }
+                catch (Exception ex) 
+                {
+                    System.Diagnostics.Debug.WriteLine("JSON Parse Error: " + ex.Message);
+                }
+            }
             
             OnStatusMessage?.Invoke($"[PyMusicLooper] Fetching top candidates for {CurrentTrack.FileName}...");
-            return await _pyMusicLooperWrapper.GetTopLoopPointsAsync(CurrentTrack.FilePath);
+            var candidates = await _pyMusicLooperWrapper.GetTopLoopPointsAsync(CurrentTrack.FilePath);
+
+            // 2. 存入缓存
+            if (candidates != null && candidates.Count > 0)
+            {
+                try
+                {
+                    string json = SerializeLoopCandidates(candidates);
+                    CurrentTrack.LoopCandidatesJson = json;
+                    SaveCurrentTrack(); // 持久化到数据库
+                }
+                 catch (Exception ex) 
+                 {
+                     System.Diagnostics.Debug.WriteLine("JSON Save Error: " + ex.Message);
+                 }
+            }
+
+            return candidates;
         }
 
 
@@ -503,18 +548,35 @@ namespace seamless_loop_music.Services
 
                     try 
                     {
-                        var result = await _pyMusicLooperWrapper.FindBestLoopAsync(track.FilePath);
-                        if (result.HasValue)
+                        // 1. 获取排行榜 (所有候选点)
+                        var candidates = await _pyMusicLooperWrapper.GetTopLoopPointsAsync(track.FilePath);
+                        
+                        if (candidates != null && candidates.Count > 0)
                         {
-                            track.LoopStart = result.Value.Start;
-                            track.LoopEnd = result.Value.End;
-                            _dbHelper.SaveTrack(track); // 批量模式下直接入库
+                            // 2. 序列化并保存排行榜
+                            try {
+                                track.LoopCandidatesJson = SerializeLoopCandidates(candidates);
+                            } catch { }
 
-                            // 如果当前正好在播放这首歌，顺便更新播放器状态
-                            if (CurrentTrack != null && CurrentTrack.FilePath == track.FilePath)
+                            // 3. 选取分数最高的应用
+                            var best = candidates.OrderByDescending(c => c.Score).FirstOrDefault();
+                            if (best != null)
                             {
-                                _audioLooper.SetLoopStartSample(track.LoopStart);
-                                _audioLooper.SetLoopEndSample(track.LoopEnd);
+                                track.LoopStart = best.LoopStart;
+                                track.LoopEnd = best.LoopEnd;
+                                
+                                _dbHelper.SaveTrack(track); 
+
+                                // 实时更新当前播放状态
+                                if (CurrentTrack != null && CurrentTrack.FilePath == track.FilePath)
+                                {
+                                    CurrentTrack.LoopCandidatesJson = track.LoopCandidatesJson;
+                                    CurrentTrack.LoopStart = track.LoopStart;
+                                    CurrentTrack.LoopEnd = track.LoopEnd;
+                                    
+                                    _audioLooper.SetLoopStartSample(track.LoopStart);
+                                    _audioLooper.SetLoopEndSample(track.LoopEnd);
+                                }
                             }
                         }
                     }
@@ -895,6 +957,64 @@ namespace seamless_loop_music.Services
             } catch (Exception ex) {
                 OnStatusMessage?.Invoke($"Offline Save Error: {ex.Message}");
             }
+        }
+
+
+        // --- LoopCandidate JSON Helpers ---
+
+        private string SerializeLoopCandidates(List<LoopCandidate> list)
+        {
+            if (list == null || list.Count == 0) return "";
+            var sb = new System.Text.StringBuilder();
+            sb.Append("[");
+            for (int i = 0; i < list.Count; i++)
+            {
+                var c = list[i];
+                sb.Append("{");
+                sb.AppendFormat(System.Globalization.CultureInfo.InvariantCulture, 
+                    "\"LoopStart\":{0},\"LoopEnd\":{1},\"Score\":{2},\"NoteDifference\":{3}", 
+                    c.LoopStart, c.LoopEnd, c.Score, c.NoteDifference);
+                sb.Append("}");
+                if (i < list.Count - 1) sb.Append(",");
+            }
+            sb.Append("]");
+            return sb.ToString();
+        }
+
+        private List<LoopCandidate> DeserializeLoopCandidates(string json)
+        {
+            var list = new List<LoopCandidate>();
+            if (string.IsNullOrEmpty(json)) return list;
+            try
+            {
+                // Simple parser for [{"Key":Val,...},...]
+                if (!json.Trim().StartsWith("[")) return list;
+                
+                // Split by "}," to get objects roughly
+                var rawItems = json.Trim().Trim('[', ']').Split(new string[] { "}," }, StringSplitOptions.RemoveEmptyEntries);
+                foreach (var item in rawItems)
+                {
+                    var clean = item.Replace("{", "").Replace("}", "");
+                    var candidate = new LoopCandidate();
+                    
+                    var props = clean.Split(',');
+                    foreach (var p in props)
+                    {
+                        var kv = p.Split(':');
+                        if (kv.Length < 2) continue;
+                        var key = kv[0].Trim().Trim('"');
+                        var val = kv[1].Trim();
+                        
+                        if (key == "LoopStart" && long.TryParse(val, out long ls)) candidate.LoopStart = ls;
+                        if (key == "LoopEnd" && long.TryParse(val, out long le)) candidate.LoopEnd = le;
+                        if (key == "Score" && double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double sc)) candidate.Score = sc;
+                        if (key == "NoteDifference" && double.TryParse(val, System.Globalization.NumberStyles.Any, System.Globalization.CultureInfo.InvariantCulture, out double nd)) candidate.NoteDifference = nd;
+                    }
+                    if (candidate.LoopEnd > 0) list.Add(candidate);
+                }
+            }
+            catch {}
+            return list;
         }
 
         public void Dispose()

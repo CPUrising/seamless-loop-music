@@ -34,6 +34,17 @@ namespace seamless_loop_music.UI
             _playerService = service;
             _candidates = candidates;
             
+            bool isZh = seamless_loop_music.Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            if (btnUpdate != null) {
+                btnUpdate.Content = isZh ? "更新排行榜" : "Update List";
+                btnUpdate.ToolTip = isZh ? "重新计算并覆盖缓存" : "Recalculate and overwrite cache";
+            }
+
+            RefreshListView(candidates);
+        }
+
+        private void RefreshListView(List<LoopCandidate> candidates)
+        {
             int rate = _playerService.SampleRate;
             if (rate <= 0) rate = 44100;
 
@@ -43,6 +54,25 @@ namespace seamless_loop_music.UI
                 list.Add(new LoopCandidateViewModel(c, rate));
             }
             lstCandidates.ItemsSource = list;
+        }
+
+        private async void BtnUpdate_Click(object sender, RoutedEventArgs e)
+        {
+             try
+            {
+                if (btnUpdate != null) btnUpdate.IsEnabled = false;
+                // 强制刷新
+                var newCandidates = await _playerService.GetLoopCandidatesAsync(forceRefresh: true);
+                RefreshListView(newCandidates);
+            }
+            catch (System.Exception ex)
+            {
+                MessageBox.Show("Update failed: " + ex.Message);
+            }
+            finally
+            {
+                 if (btnUpdate != null) btnUpdate.IsEnabled = true;
+            }
         }
 
         private void LstCandidates_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
