@@ -170,10 +170,17 @@
                                 <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopStartSec_TextChanged"/>
 
                                 <UniformGrid Columns="4" Margin="0,15,0,0">
-                                    <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <!-- 大步进：两边大中间小 -->
+                                    <Button Content="-5s" Click="Adjust_Click" Tag="Start:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+1s" Click="Adjust_Click" Tag="Start:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+5s" Click="Adjust_Click" Tag="Start:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    
+                                    <!-- 小步进：精确对齐 -->
                                     <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="-0.01s" Click="Adjust_Click" Tag="Start:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+0.01s" Click="Adjust_Click" Tag="Start:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+1s" Click="Adjust_Click" Tag="Start:1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                 </UniformGrid>
                             </StackPanel>
                         </Border>
@@ -190,10 +197,17 @@
                                 <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopEndSec_TextChanged"/>
 
                                 <UniformGrid Columns="4" Margin="0,15,0,0">
-                                    <Button Content="-1s" Click="Adjust_Click" Tag="End:-1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <!-- 大步进 -->
+                                    <Button Content="-5s" Click="Adjust_Click" Tag="End:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="-1s" Click="Adjust_Click" Tag="End:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+1s" Click="Adjust_Click" Tag="End:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+5s" Click="Adjust_Click" Tag="End:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    
+                                    <!-- 小步进 -->
                                     <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="-0.01s" Click="Adjust_Click" Tag="End:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <Button Content="+0.01s" Click="Adjust_Click" Tag="End:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+1s" Click="Adjust_Click" Tag="End:1.0" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                 </UniformGrid>
                             </StackPanel>
                         </Border>

@@ -856,7 +856,12 @@ namespace seamless_loop_music
             if (_playerService == null || _isUpdatingUI) return;
             long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
             if (long.TryParse(txtLoopSample.Text, out long val)) {
-                if (val > total && total > 0) {
+                if (val < 0) {
+                    _isUpdatingUI = true;
+                    txtLoopSample.Text = "0";
+                    _isUpdatingUI = false;
+                }
+                else if (val > total && total > 0) {
                     _isUpdatingUI = true;
                     txtLoopSample.Text = total.ToString();
                     _isUpdatingUI = false;
@@ -875,6 +880,11 @@ namespace seamless_loop_music
                     txtLoopEndSample.Text = total.ToString();
                     _isUpdatingUI = false;
                 }
+                else if (val < 0) {
+                    _isUpdatingUI = true;
+                    txtLoopEndSample.Text = "0";
+                    _isUpdatingUI = false;
+                }
             }
             UpdateSecLabels();
         }
@@ -886,9 +896,9 @@ namespace seamless_loop_music
             if (rate <= 0) rate = 44100;
 
             if (txtLoopStartSec != null && long.TryParse(txtLoopSample.Text, out long s)) 
-                txtLoopStartSec.Text = ((double)s / rate).ToString("F2");
+                txtLoopStartSec.Text = ((double)s / rate).ToString("F3");
             if (txtLoopEndSec != null && long.TryParse(txtLoopEndSample.Text, out long end)) 
-                txtLoopEndSec.Text = ((double)end / rate).ToString("F2");
+                txtLoopEndSec.Text = ((double)end / rate).ToString("F3");
             _isUpdatingUI = false;
         }
 
