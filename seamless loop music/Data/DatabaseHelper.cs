@@ -26,7 +26,7 @@ namespace seamless_loop_music.Data
             }
 
             _dbPath = Path.Combine(dataDir, "LoopData.db");
-            _connectionString = $"Data Source={_dbPath};Version=3;";
+            _connectionString = $"Data Source={_dbPath};Version=3;Foreign Keys=True;"; // 强制开启外键，确保级联删除有效
             InitializeDatabase();
         }
 
@@ -93,6 +93,10 @@ namespace seamless_loop_music.Data
                         UNIQUE(PlaylistId, FolderPath)
                     );";
                 db.Execute(sqlPlaylistFolders);
+
+                // --- 强力清扫：清除因之前外键未开导致的孤立记录 (Orphan Records) ---
+                db.Execute("DELETE FROM PlaylistItems WHERE PlaylistId NOT IN (SELECT Id FROM Playlists)");
+                db.Execute("DELETE FROM PlaylistFolders WHERE PlaylistId NOT IN (SELECT Id FROM Playlists)");
 
                 // --- 自动升级：检查并添加 FilePath 字段 ---
                 // 不使用 dynamic，改用强类型或直接尝试查询
