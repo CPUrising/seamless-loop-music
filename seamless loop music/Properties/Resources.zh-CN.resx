@@ -127,4 +127,185 @@
   <data name="TitleDelete" xml:space="preserve">
     <value>确认删除</value>
   </data>
+  <data name="ToolTipAddPlaylist" xml:space="preserve">
+    <value>添加新文件夹到歌单</value>
+  </data>
+  <data name="MenuRefresh" xml:space="preserve">
+    <value>刷新歌单</value>
+  </data>
+  <data name="MenuAddFiles" xml:space="preserve">
+    <value>添加文件</value>
+  </data>
+  <data name="MenuRenameAlias" xml:space="preserve">
+    <value>修改别名</value>
+  </data>
+  <data name="MenuOpenFolder" xml:space="preserve">
+    <value>打开所在文件夹</value>
+  </data>
+  <data name="MenuRemoveFromList" xml:space="preserve">
+    <value>从歌单移除</value>
+  </data>
+  <data name="MenuBatchPyLoop" xml:space="preserve">
+    <value>批量极致匹配 (PyLoop)</value>
+  </data>
+  <data name="BtnPrev" xml:space="preserve">
+    <value>&lt;&lt; 上一首</value>
+  </data>
+  <data name="BtnNext" xml:space="preserve">
+    <value>下一首 &gt;&gt;</value>
+  </data>
+  <data name="MatchStart" xml:space="preserve">
+    <value>寻找起点</value>
+  </data>
+  <data name="MatchStartToolTip" xml:space="preserve">
+    <value>根据终点寻找循环起点 (逆向)</value>
+  </data>
+  <data name="MatchEnd" xml:space="preserve">
+    <value>寻找终点</value>
+  </data>
+  <data name="MatchEndToolTip" xml:space="preserve">
+    <value>根据起点寻找循环终点 (正向)</value>
+  </data>
+  <data name="ResetAB" xml:space="preserve">
+    <value>恢复AB接缝</value>
+  </data>
+  <data name="ResetABToolTip" xml:space="preserve">
+    <value>针对 A/B 分体音乐，恢复到原始的物理接缝位置</value>
+  </data>
+  <data name="PyRanking" xml:space="preserve">
+    <value>排行榜</value>
+  </data>
+  <data name="PyRankingToolTip" xml:space="preserve">
+    <value>查看前 10 个候选循环点</value>
+  </data>
+  <data name="PromptNewPlaylist" xml:space="preserve">
+    <value>点击'是'新建一个空的逻辑歌单，点击'否'通过导入文件夹创建歌单。</value>
+  </data>
+  <data name="TitleNewPlaylist" xml:space="preserve">
+    <value>新建歌单</value>
+  </data>
+  <data name="PromptEnterPlaylistName" xml:space="preserve">
+    <value>请输入歌单名称：</value>
+  </data>
+  <data name="TitleNewVirtualPlaylist" xml:space="preserve">
+    <value>新建空歌单</value>
+  </data>
+  <data name="StatusScanning" xml:space="preserve">
+    <value>正在扫描文件夹...</value>
+  </data>
+  <data name="StatusDone" xml:space="preserve">
+    <value>完成</value>
+  </data>
+  <data name="Pause" xml:space="preserve">
+    <value>暂停</value>
+  </data>
+  <data name="ModeSingle" xml:space="preserve">
+    <value>模式：单曲</value>
+  </data>
+  <data name="ModeList" xml:space="preserve">
+    <value>模式：列表</value>
+  </data>
+  <data name="ModeShuffle" xml:space="preserve">
+    <value>模式：随机</value>
+  </data>
+  <data name="MenuAddToPlaylist" xml:space="preserve">
+    <value>添加到歌单</value>
+  </data>
+  <data name="NoPlaylists" xml:space="preserve">
+    <value>(无可用歌单)</value>
+  </data>
+  <data name="AddedToPlaylist" xml:space="preserve">
+    <value>已将 {0} 首歌曲添加到歌单。</value>
+  </data>
+  <data name="BatchAnalysisConfirm" xml:space="preserve">
+    <value>确定要对选中的 {0} 首歌曲进行深度循环分析吗？
+由于调用外部工具，这可能需要较长时间。</value>
+  </data>
+  <data name="BatchAnalysisTitle" xml:space="preserve">
+    <value>批量极致匹配</value>
+  </data>
+  <data name="BatchProgress" xml:space="preserve">
+    <value>[批量进度 {0}/{1}] 正在分析: {2}...</value>
+  </data>
+  <data name="BatchDone" xml:space="preserve">
+    <value>批量极致匹配任务完成！</value>
+  </data>
+  <data name="MenuManageFolders" xml:space="preserve">
+    <value>管理关联文件夹</value>
+  </data>
+  <data name="LabelLoop" xml:space="preserve">
+    <value>循环次数:</value>
+  </data>
+  <data name="LabelPyMusicLooper" xml:space="preserve">
+    <value>深度分析 (PyMusicLooper):</value>
+  </data>
+  <data name="TitleFolderManager" xml:space="preserve">
+    <value>管理关联文件夹</value>
+  </data>
+  <data name="TitleLoopCandidates" xml:space="preserve">
+    <value>候选循环点</value>
+  </data>
+  <data name="PromptSelectLoop" xml:space="preserve">
+    <value>选择一个循环点以立即应用并测试：</value>
+  </data>
+  <data name="HeaderScore" xml:space="preserve">
+    <value>评分</value>
+  </data>
+  <data name="HeaderStart" xml:space="preserve">
+    <value>起点 (采样)</value>
+  </data>
+  <data name="HeaderEnd" xml:space="preserve">
+    <value>终点 (采样)</value>
+  </data>
+  <data name="HeaderDuration" xml:space="preserve">
+    <value>时长 (秒)</value>
+  </data>
+  <data name="HeaderNoteDistance" xml:space="preserve">
+    <value>音高偏差</value>
+  </data>
+  <data name="ButtonUpdate" xml:space="preserve">
+    <value>更新排行榜</value>
+  </data>
+  <data name="ButtonClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>Seamless Loop Music - 无缝循环播放器</value>
+  </data>
+  <data name="StatusUpdating" xml:space="preserve">
+    <value>更新中...</value>
+  </data>
+  <data name="ToolTipRecalculate" xml:space="preserve">
+    <value>重新计算并覆盖缓存</value>
+  </data>
+  <data name="LoopStartLabel" xml:space="preserve">
+    <value>循环起点 (A)</value>
+  </data>
+  <data name="LoopEndLabel" xml:space="preserve">
+    <value>循环终点 (B)</value>
+  </data>
+  <data name="TrackList" xml:space="preserve">
+    <value>歌曲列表</value>
+  </data>
+  <data name="FilePathTitle" xml:space="preserve">
+    <value>当前文件路径:</value>
+  </data>
+  <data name="NoFileSelected" xml:space="preserve">
+    <value>未选择任何文件</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>就绪</value>
+  </data>
+  <data name="StatusPlaying" xml:space="preserve">
+    <value>正在播放</value>
+  </data>
+  <data name="StatusPaused" xml:space="preserve">
+    <value>播放暂停</value>
+  </data>
+  <data name="AudioInfoInit" xml:space="preserve">
+    <value>音频信息: 等待文件加载...</value>
+  </data>
+  <data name="SwitchLang" xml:space="preserve">
+    <value>中 / En</value>
+  </data>
 </root>

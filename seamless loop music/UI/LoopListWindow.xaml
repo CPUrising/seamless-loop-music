@@ -1,70 +1,49 @@
 <Window x:Class="seamless_loop_music.UI.LoopListWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Loop Candidates" Height="450" Width="600" WindowStartupLocation="CenterOwner"
-        Background="#1E1E1E">
+        Title="{Binding [TitleLoopCandidates], Source={StaticResource Loc}}" Height="450" Width="600" WindowStartupLocation="CenterOwner">
     <Window.Resources>
-        <Style TargetType="ListViewItem">
-             <Setter Property="Background" Value="Transparent"/>
-             <Setter Property="Foreground" Value="White"/>
-             <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
-             <Style.Triggers>
-                 <Trigger Property="IsSelected" Value="True">
-                     <Setter Property="Background" Value="#3366CC"/>
-                 </Trigger>
-                 <Trigger Property="IsMouseOver" Value="True">
-                     <Setter Property="Background" Value="#3E3E42"/>
-                 </Trigger>
-             </Style.Triggers>
+        <!-- Standard WPF Button Style -->
+        <Style x:Key="WPFButtonStyle" TargetType="Button">
+            <Setter Property="Padding" Value="15,5"/>
+            <Setter Property="Height" Value="28"/>
         </Style>
 
-        <Style x:Key="WindowButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#E0E0E0"/>
-            <Setter Property="Foreground" Value="#11111B"/>
-            <Setter Property="Padding" Value="15,5"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="4">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="{TemplateBinding Padding}"/>
-                        </Border>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-            <Style.Triggers>
-                <Trigger Property="IsMouseOver" Value="True">
-                    <Setter Property="Background" Value="#FFFFFF"/>
-                </Trigger>
-            </Style.Triggers>
+        <!-- Bold Accent Button -->
+        <Style x:Key="WPFAccentButtonStyle" TargetType="Button" BasedOn="{StaticResource WPFButtonStyle}">
+            <Setter Property="FontWeight" Value="Bold"/>
         </Style>
     </Window.Resources>
     
-    <Grid Margin="10">
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <TextBlock Text="Select a loop to apply and test immediately:" Margin="0,0,0,10" Foreground="#AAAAAA" FontSize="14"/>
+        <TextBlock Text="{Binding [PromptSelectLoop], Source={StaticResource Loc}}" Margin="0,0,0,10" Foreground="Black" FontSize="14"/>
         
-        <ListView Grid.Row="1" Name="lstCandidates" Background="#252526" Foreground="White" BorderThickness="0" 
+        <!-- Standard ListView with White Background and Borders -->
+        <ListView Grid.Row="1" Name="lstCandidates" Background="White" Foreground="Black" BorderBrush="Gray" BorderThickness="1" 
                   SelectionMode="Single" MouseDoubleClick="LstCandidates_MouseDoubleClick">
             <ListView.View>
                 <GridView>
-                    <GridViewColumn Header="Score" DisplayMemberBinding="{Binding ScoreDisplay}" Width="80"/>
-                    <GridViewColumn Header="Start (Sample)" DisplayMemberBinding="{Binding Start}" Width="100"/>
-                    <GridViewColumn Header="End (Sample)" DisplayMemberBinding="{Binding End}" Width="100"/>
-                    <GridViewColumn Header="Length (s)" DisplayMemberBinding="{Binding Duration}" Width="80"/>
-                    <GridViewColumn Header="Note Distance" DisplayMemberBinding="{Binding NoteDistance}" Width="100"/>
+                    <GridViewColumn Header="{Binding [HeaderScore], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding ScoreDisplay}" Width="80"/>
+                    <GridViewColumn Header="{Binding [HeaderStart], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Start}" Width="100"/>
+                    <GridViewColumn Header="{Binding [HeaderEnd], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding End}" Width="100"/>
+                    <GridViewColumn Header="{Binding [HeaderDuration], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Duration}" Width="80"/>
+                    <GridViewColumn Header="{Binding [HeaderNoteDistance], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding NoteDistance}" Width="100"/>
                 </GridView>
             </ListView.View>
         </ListView>
         
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,10,0,0">
-            <Button x:Name="btnUpdate" Content="Update" Click="BtnUpdate_Click" Padding="15,5" Margin="0,0,10,0" Background="#89DCEB" Foreground="#11111B" BorderThickness="0"/>
-            <Button Content="Close" Click="BtnClose_Click" Style="{StaticResource WindowButtonStyle}"/>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+            <Button x:Name="btnUpdate" Content="{Binding [ButtonUpdate], Source={StaticResource Loc}}" Click="BtnUpdate_Click" 
+                    Style="{StaticResource WPFAccentButtonStyle}" Width="110" Margin="0,0,10,0" />
+            
+            <Button Content="{Binding [ButtonClose], Source={StaticResource Loc}}" Click="BtnClose_Click" 
+                    Style="{StaticResource WPFButtonStyle}" Width="75"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -34,10 +34,8 @@ namespace seamless_loop_music.UI
             _playerService = service;
             _candidates = candidates;
             
-            bool isZh = seamless_loop_music.Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
             if (btnUpdate != null) {
-                btnUpdate.Content = isZh ? "更新排行榜" : "Update List";
-                btnUpdate.ToolTip = isZh ? "重新计算并覆盖缓存" : "Recalculate and overwrite cache";
+                btnUpdate.ToolTip = LocalizationService.Instance["ToolTipRecalculate"];
             }
 
             RefreshListView(candidates);
@@ -63,8 +61,7 @@ namespace seamless_loop_music.UI
             {
                 if (btnUpdate != null) {
                     btnUpdate.IsEnabled = false;
-                    bool isZh = seamless_loop_music.Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-                    btnUpdate.Content = isZh ? "更新中..." : "Updating...";
+                    btnUpdate.Content = LocalizationService.Instance["StatusUpdating"];
                 }
                 
                 // 强制刷新

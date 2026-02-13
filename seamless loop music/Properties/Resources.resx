@@ -127,4 +127,185 @@
   <data name="TitleDelete" xml:space="preserve">
     <value>Confirm Delete</value>
   </data>
+  <data name="ToolTipAddPlaylist" xml:space="preserve">
+    <value>Add folder to playlists</value>
+  </data>
+  <data name="MenuRefresh" xml:space="preserve">
+    <value>Refresh Playlist</value>
+  </data>
+  <data name="MenuAddFiles" xml:space="preserve">
+    <value>Add Files</value>
+  </data>
+  <data name="MenuRenameAlias" xml:space="preserve">
+    <value>Rename Alias</value>
+  </data>
+  <data name="MenuOpenFolder" xml:space="preserve">
+    <value>Open Folder</value>
+  </data>
+  <data name="MenuRemoveFromList" xml:space="preserve">
+    <value>Remove from List</value>
+  </data>
+  <data name="MenuBatchPyLoop" xml:space="preserve">
+    <value>Batch Optimize (PyLoop)</value>
+  </data>
+  <data name="BtnPrev" xml:space="preserve">
+    <value>&lt;&lt; Prev</value>
+  </data>
+  <data name="BtnNext" xml:space="preserve">
+    <value>Next &gt;&gt;</value>
+  </data>
+  <data name="MatchStart" xml:space="preserve">
+    <value>Match Start</value>
+  </data>
+  <data name="MatchStartToolTip" xml:space="preserve">
+    <value>Find loop start based on loop end (Reverse)</value>
+  </data>
+  <data name="MatchEnd" xml:space="preserve">
+    <value>Match End</value>
+  </data>
+  <data name="MatchEndToolTip" xml:space="preserve">
+    <value>Find loop end based on loop start (Forward)</value>
+  </data>
+  <data name="ResetAB" xml:space="preserve">
+    <value>Reset A/B</value>
+  </data>
+  <data name="ResetABToolTip" xml:space="preserve">
+    <value>For A/B split tracks, restore to the original physical boundary.</value>
+  </data>
+  <data name="PyRanking" xml:space="preserve">
+    <value>Ranking</value>
+  </data>
+  <data name="PyRankingToolTip" xml:space="preserve">
+    <value>View Top 10 Loop Candidates</value>
+  </data>
+  <data name="PromptNewPlaylist" xml:space="preserve">
+    <value>Click 'Yes' to create an empty virtual playlist, 'No' to create from folder.</value>
+  </data>
+  <data name="TitleNewPlaylist" xml:space="preserve">
+    <value>New Playlist</value>
+  </data>
+  <data name="PromptEnterPlaylistName" xml:space="preserve">
+    <value>Enter playlist name:</value>
+  </data>
+  <data name="TitleNewVirtualPlaylist" xml:space="preserve">
+    <value>New Virtual Playlist</value>
+  </data>
+  <data name="StatusScanning" xml:space="preserve">
+    <value>Scanning folder...</value>
+  </data>
+  <data name="StatusDone" xml:space="preserve">
+    <value>Done.</value>
+  </data>
+  <data name="Pause" xml:space="preserve">
+    <value>Pause</value>
+  </data>
+  <data name="ModeSingle" xml:space="preserve">
+    <value>Mode: Single</value>
+  </data>
+  <data name="ModeList" xml:space="preserve">
+    <value>Mode: List</value>
+  </data>
+  <data name="ModeShuffle" xml:space="preserve">
+    <value>Mode: Shuffle</value>
+  </data>
+  <data name="MenuAddToPlaylist" xml:space="preserve">
+    <value>Add to Playlist</value>
+  </data>
+  <data name="NoPlaylists" xml:space="preserve">
+    <value>(No Playlists)</value>
+  </data>
+  <data name="AddedToPlaylist" xml:space="preserve">
+    <value>Added {0} tracks to playlist.</value>
+  </data>
+  <data name="BatchAnalysisConfirm" xml:space="preserve">
+    <value>Are you sure you want to perform deep loop analysis on the selected {0} tracks?
+This may take a long time.</value>
+  </data>
+  <data name="BatchAnalysisTitle" xml:space="preserve">
+    <value>Batch PyLoop Match</value>
+  </data>
+  <data name="BatchProgress" xml:space="preserve">
+    <value>[Batch {0}/{1}] Analyzing: {2}...</value>
+  </data>
+  <data name="BatchDone" xml:space="preserve">
+    <value>Batch PyLoop tasks completed!</value>
+  </data>
+  <data name="MenuManageFolders" xml:space="preserve">
+    <value>Manage Folders</value>
+  </data>
+  <data name="LabelLoop" xml:space="preserve">
+    <value>Loop:</value>
+  </data>
+  <data name="LabelPyMusicLooper" xml:space="preserve">
+    <value>PyMusicLooper:</value>
+  </data>
+  <data name="TitleFolderManager" xml:space="preserve">
+    <value>Folder Manager</value>
+  </data>
+  <data name="TitleLoopCandidates" xml:space="preserve">
+    <value>Loop Candidates</value>
+  </data>
+  <data name="PromptSelectLoop" xml:space="preserve">
+    <value>Select a loop to apply and test immediately:</value>
+  </data>
+  <data name="HeaderScore" xml:space="preserve">
+    <value>Score</value>
+  </data>
+  <data name="HeaderStart" xml:space="preserve">
+    <value>Start (Sample)</value>
+  </data>
+  <data name="HeaderEnd" xml:space="preserve">
+    <value>End (Sample)</value>
+  </data>
+  <data name="HeaderDuration" xml:space="preserve">
+    <value>Length (s)</value>
+  </data>
+  <data name="HeaderNoteDistance" xml:space="preserve">
+    <value>Note Distance</value>
+  </data>
+  <data name="ButtonUpdate" xml:space="preserve">
+    <value>Update</value>
+  </data>
+  <data name="ButtonClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
+  <data name="AppTitle" xml:space="preserve">
+    <value>Seamless Loop Music Player</value>
+  </data>
+  <data name="StatusUpdating" xml:space="preserve">
+    <value>Updating...</value>
+  </data>
+  <data name="ToolTipRecalculate" xml:space="preserve">
+    <value>Recalculate and overwrite cache</value>
+  </data>
+  <data name="LoopStartLabel" xml:space="preserve">
+    <value>LOOP START (A)</value>
+  </data>
+  <data name="LoopEndLabel" xml:space="preserve">
+    <value>LOOP END (B)</value>
+  </data>
+  <data name="TrackList" xml:space="preserve">
+    <value>Track List</value>
+  </data>
+  <data name="FilePathTitle" xml:space="preserve">
+    <value>Current File Path:</value>
+  </data>
+  <data name="NoFileSelected" xml:space="preserve">
+    <value>No File Selected</value>
+  </data>
+  <data name="StatusReady" xml:space="preserve">
+    <value>Ready</value>
+  </data>
+  <data name="StatusPlaying" xml:space="preserve">
+    <value>Playing</value>
+  </data>
+  <data name="StatusPaused" xml:space="preserve">
+    <value>Paused</value>
+  </data>
+  <data name="AudioInfoInit" xml:space="preserve">
+    <value>Audio Info: Waiting for file...</value>
+  </data>
+  <data name="SwitchLang" xml:space="preserve">
+    <value>En / 中文</value>
+  </data>
 </root>

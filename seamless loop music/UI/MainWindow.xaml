@@ -1,9 +1,9 @@
 <Window x:Class="seamless_loop_music.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="Seamless Loop Music Player" Height="700" Width="1000"
+        Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="700" Width="1000"
         Icon="/Resources/app_icon.png"
-        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei">
+    Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei">
     <Window.Resources>
         <Style x:Key="SideButtonStyle" TargetType="Button">
             <Setter Property="Background" Value="#313244"/>
@@ -47,31 +47,23 @@
         <Grid Grid.Column="0" Margin="0,0,10,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
-                <!-- Header & Add -->
                 <RowDefinition Height="200"/>
-                <!-- My Playlists (Folders) -->
                 <RowDefinition Height="Auto"/>
-                <!-- Spacer Text -->
                 <RowDefinition Height="*"/>
-                <!-- Current Track List -->
                 <RowDefinition Height="Auto"/>
-                <!-- Lang Switch -->
             </Grid.RowDefinitions>
 
             <!-- Playlists Header -->
             <Grid Grid.Row="0" Margin="0,0,0,5">
-                <TextBlock x:Name="lblMyPlaylists" Text="My Playlists" VerticalAlignment="Center" FontWeight="Bold" Foreground="#89B4FA"/>
-                <Button x:Name="btnAddPlaylist" Content="+" Style="{StaticResource SideButtonStyle}" Width="30" HorizontalAlignment="Right" Click="btnAddPlaylist_Click" ToolTip="Add New Playlist Folder"/>
+                <TextBlock x:Name="lblMyPlaylists" Text="{Binding [MyPlaylist], Source={StaticResource Loc}}" VerticalAlignment="Center" FontWeight="Bold" Foreground="#89B4FA"/>
+                <Button x:Name="btnAddPlaylist" Content="+" Style="{StaticResource SideButtonStyle}" Width="30" HorizontalAlignment="Right" Click="btnAddPlaylist_Click" ToolTip="{Binding [ToolTipAddPlaylist], Source={StaticResource Loc}}"/>
             </Grid>
 
             <!-- Playlists ListBox -->
             <ListBox x:Name="lstPlaylists" Grid.Row="1" Background="#181825" BorderThickness="0" Margin="0,0,10,10"
                      Foreground="#CDD6F4" SelectionChanged="lstPlaylists_SelectionChanged" SelectionMode="Extended"
                      AllowDrop="True" PreviewMouseLeftButtonDown="lstPlaylists_PreviewMouseLeftButtonDown"
-                     MouseMove="lstPlaylists_MouseMove" Drop="lstPlaylists_Drop" DragOver="ListBox_DragOver"
-                     VirtualizingStackPanel.IsVirtualizing="True"
-                     VirtualizingStackPanel.VirtualizationMode="Recycling"
-                     ScrollViewer.CanContentScroll="True">
+                     MouseMove="lstPlaylists_MouseMove" Drop="lstPlaylists_Drop" DragOver="ListBox_DragOver">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <StackPanel Orientation="Horizontal">
@@ -82,25 +74,22 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu Opened="lstPlaylists_ContextMenuOpened">
-                        <MenuItem x:Name="miRefreshPlaylist" Header="Refresh Playlist" Click="miRefreshPlaylist_Click"/>
-                        <MenuItem x:Name="miManageFolders" Header="Manage Folders" Click="miManageFolders_Click"/>
-                        <MenuItem x:Name="miAddSong" Header="Add Files" Click="miAddSong_Click"/>
+                        <MenuItem x:Name="miRefreshPlaylist" Header="{Binding [MenuRefresh], Source={StaticResource Loc}}" Click="miRefreshPlaylist_Click"/>
+                        <MenuItem x:Name="miManageFolders" Header="{Binding [MenuManageFolders], Source={StaticResource Loc}}" Click="miManageFolders_Click"/>
+                        <MenuItem x:Name="miAddSong" Header="{Binding [MenuAddFiles], Source={StaticResource Loc}}" Click="miAddSong_Click"/>
                         <Separator/>
-                        <MenuItem x:Name="miRenamePlaylist" Header="Rename" Click="miRenamePlaylist_Click"/>
-                        <MenuItem x:Name="miDeletePlaylist" Header="Delete" Click="miDeletePlaylist_Click"/>
+                        <MenuItem x:Name="miRenamePlaylist" Header="{Binding [MenuRename], Source={StaticResource Loc}}" Click="miRenamePlaylist_Click"/>
+                        <MenuItem x:Name="miDeletePlaylist" Header="{Binding [MenuDelete], Source={StaticResource Loc}}" Click="miDeletePlaylist_Click"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
 
-            <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="Tracks" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
+            <TextBlock x:Name="lblTrackList" Grid.Row="2" Text="{Binding [TrackList], Source={StaticResource Loc}}" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
 
             <ListBox x:Name="lstPlaylist" Grid.Row="3" Background="#181825" BorderThickness="0" Margin="0,0,0,10"
                      Foreground="#CDD6F4" MouseDoubleClick="lstPlaylist_MouseDoubleClick" SelectionMode="Extended"
                      AllowDrop="True" PreviewMouseLeftButtonDown="lstPlaylist_PreviewMouseLeftButtonDown"
-                     MouseMove="lstPlaylist_MouseMove" Drop="lstPlaylist_Drop" DragOver="ListBox_DragOver"
-                     VirtualizingStackPanel.IsVirtualizing="True"
-                     VirtualizingStackPanel.VirtualizationMode="Recycling"
-                     ScrollViewer.CanContentScroll="True">
+                     MouseMove="lstPlaylist_MouseMove" Drop="lstPlaylist_Drop" DragOver="ListBox_DragOver">
                 <ListBox.ItemTemplate>
                     <DataTemplate>
                         <TextBlock Text="{Binding Title}" Padding="2" />
@@ -108,40 +97,41 @@
                 </ListBox.ItemTemplate>
                 <ListBox.ContextMenu>
                     <ContextMenu Opened="lstTrackList_ContextMenuOpened">
-                        <MenuItem x:Name="miAddToPlaylist" Header="Add to Playlist"/>
+                        <MenuItem x:Name="miAddToPlaylist" Header="{Binding [MenuAddToPlaylist], Source={StaticResource Loc}}"/>
                         <Separator/>
-                        <MenuItem x:Name="miBatchPyLoop" Header="Batch Optimize (PyLoop)" Click="miBatchPyLoop_Click"/>
-                        <MenuItem x:Name="miRenameTrack" Header="Rename Alias" Click="miRenameTrack_Click"/>
-                        <MenuItem x:Name="miOpenFolder" Header="Open Containing Folder" Click="miOpenFolder_Click"/>
+                        <MenuItem x:Name="miBatchPyLoop" Header="{Binding [MenuBatchPyLoop], Source={StaticResource Loc}}" Click="miBatchPyLoop_Click"/>
+                        <MenuItem x:Name="miRenameTrack" Header="{Binding [MenuRenameAlias], Source={StaticResource Loc}}" Click="miRenameTrack_Click"/>
+                        <MenuItem x:Name="miOpenFolder" Header="{Binding [MenuOpenFolder], Source={StaticResource Loc}}" Click="miOpenFolder_Click"/>
                         <Separator/>
-                        <MenuItem x:Name="miRemoveFromList" Header="Remove from List" Click="miRemoveFromList_Click" Foreground="#F38BA8"/>
+                        <MenuItem x:Name="miRemoveFromList" Header="{Binding [MenuRemoveFromList], Source={StaticResource Loc}}" Click="miRemoveFromList_Click" Foreground="#F38BA8"/>
                     </ContextMenu>
                 </ListBox.ContextMenu>
             </ListBox>
 
-            <StackPanel Grid.Row="4">
-                <Button x:Name="btnSwitchLang" Content="中文" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click"/>
-            </StackPanel>
+            <Button x:Name="btnSwitchLang" Grid.Row="4" Content="{Binding [SwitchLang], Source={StaticResource Loc}}" Style="{StaticResource SideButtonStyle}" Click="btnSwitchLang_Click" Height="30" Margin="0,5,0,0"/>
         </Grid>
 
         <!-- Main Area -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/> <!-- Header: Info -->
-                <RowDefinition Height="*"/>    <!-- Center: Loop Workspace -->
-                <RowDefinition Height="Auto"/> <!-- Progress Slider -->
-                <RowDefinition Height="Auto"/> <!-- Bottom Bar: Playback Controls -->
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
             <!-- Header: File Info -->
             <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                <TextBlock x:Name="lblFilePath" Text="File Path:" FontSize="12" Foreground="#A6ADC8"/>
-                <TextBlock x:Name="txtFilePath" Text="No file selected" FontSize="14" FontWeight="Bold" Margin="0,2,0,10" TextTrimming="CharacterEllipsis"/>
+                <TextBlock x:Name="lblFilePath" Text="{Binding [FilePathTitle], Source={StaticResource Loc}}" FontSize="12" Foreground="#A6ADC8"/>
+                <TextBox x:Name="txtFilePath" Text="{Binding [NoFileSelected], Source={StaticResource Loc}, Mode=OneWay}" 
+                         FontSize="14" FontWeight="Bold" Margin="-2,2,0,10" 
+                         Background="Transparent" Foreground="#CDD6F4" BorderThickness="0" Padding="0"
+                         IsReadOnly="True" TextWrapping="NoWrap" Cursor="IBeam"/>
 
                 <Border Background="#313244" CornerRadius="5" Padding="10">
                     <StackPanel>
-                        <TextBlock x:Name="lblStatus" Text="Ready" Foreground="#89B4FA" FontWeight="Bold"/>
-                        <TextBlock x:Name="lblAudioInfo" Text="Details: Not loaded" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
+                        <TextBlock x:Name="lblStatus" Text="{Binding [StatusReady], Source={StaticResource Loc}}" Foreground="#89B4FA" FontWeight="Bold"/>
+                        <TextBlock x:Name="lblAudioInfo" Text="{Binding [AudioInfoInit], Source={StaticResource Loc}}" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
@@ -149,7 +139,7 @@
             <!-- Center: Loop Workspace -->
             <Grid Grid.Row="1" VerticalAlignment="Center">
                 <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
                 
@@ -163,20 +153,18 @@
                     <StackPanel Grid.Column="0" Margin="0,0,10,0">
                         <Border Background="#181825" CornerRadius="10" Padding="15">
                             <StackPanel>
-                                <TextBlock x:Name="lblLoopStart" Text="Loop Start (Samples)" HorizontalAlignment="Center" Foreground="#89B4FA" Margin="0,0,0,10"/>
+                                <TextBlock x:Name="lblLoopStart" Text="{Binding [LoopStartLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#89B4FA" Margin="0,0,0,10"/>
                                 <TextBox x:Name="txtLoopSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#89B4FA" 
                                          BorderBrush="#89B4FA" BorderThickness="0,0,0,2" Margin="0,0,0,5"
                                          TextChanged="txtLoopSample_TextChanged"/>
                                 <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopStartSec_TextChanged"/>
 
                                 <UniformGrid Columns="4" Margin="0,15,0,0">
-                                    <!-- 大步进：两边大中间小 -->
                                     <Button Content="-5s" Click="Adjust_Click" Tag="Start:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+1s" Click="Adjust_Click" Tag="Start:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+5s" Click="Adjust_Click" Tag="Start:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     
-                                    <!-- 小步进：精确对齐 -->
                                     <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="-0.01s" Click="Adjust_Click" Tag="Start:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+0.01s" Click="Adjust_Click" Tag="Start:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
@@ -190,20 +178,18 @@
                     <StackPanel Grid.Column="1" Margin="10,0,0,0">
                         <Border Background="#181825" CornerRadius="10" Padding="15">
                             <StackPanel>
-                                <TextBlock x:Name="lblLoopEnd" Text="Loop End (Samples)" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
+                                <TextBlock x:Name="lblLoopEnd" Text="{Binding [LoopEndLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
                                 <TextBox x:Name="txtLoopEndSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#F38BA8" 
                                          BorderBrush="#F38BA8" BorderThickness="0,0,0,2" Margin="0,0,0,5"
                                          TextChanged="txtLoopEndSample_TextChanged"/>
                                 <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopEndSec_TextChanged"/>
 
                                 <UniformGrid Columns="4" Margin="0,15,0,0">
-                                    <!-- 大步进 -->
                                     <Button Content="-5s" Click="Adjust_Click" Tag="End:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="-1s" Click="Adjust_Click" Tag="End:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+1s" Click="Adjust_Click" Tag="End:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+5s" Click="Adjust_Click" Tag="End:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     
-                                    <!-- 小步进 -->
                                     <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="-0.01s" Click="Adjust_Click" Tag="End:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
                                     <Button Content="+0.01s" Click="Adjust_Click" Tag="End:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
@@ -214,82 +200,59 @@
                     </StackPanel>
                 </Grid>
 
-                <!-- Action Buttons & Settings in Center -->
-                <StackPanel Grid.Row="1" VerticalAlignment="Bottom" Margin="0,20,0,0">
+                <StackPanel Grid.Row="1" Margin="0,20,0,0">
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
-                        <!-- Moved Mode & Loop Count here for better visibility -->
-                        <Button x:Name="btnPlayMode" Content="Mode: Single" Style="{StaticResource SideButtonStyle}" Width="100" Click="btnPlayMode_Click" Margin="0,0,15,0"/>
+                        <Button x:Name="btnPlayMode" Content="{Binding [ModeSingle], Source={StaticResource Loc}}" Style="{StaticResource SideButtonStyle}" Width="100" Click="btnPlayMode_Click" Margin="0,0,15,0"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="Loop:" VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="0,0,5,0"/>
+                            <TextBlock Text="{Binding [LabelLoop], Source={StaticResource Loc}}" VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="0,0,5,0"/>
                             <TextBox x:Name="txtLoopLimit" Width="35" Text="1" Height="25" TextAlignment="Center" TextChanged="txtLoopLimit_TextChanged" Background="#181825"/>
                         </StackPanel>
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button x:Name="btnSmartMatch" Content="寻找起点" Width="100" Height="40"
+                        <Button x:Name="btnSmartMatch" Content="{Binding [MatchStart], Source={StaticResource Loc}}" Width="100" Height="40"
                                 Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
-                                Click="btnSmartMatch_Click" ToolTip="根据终点寻找循环起点 (逆向)"/>
-                        
-                        <Button x:Name="btnSmartMatchForward" Content="寻找终点" Width="100" Height="40"
+                                Click="btnSmartMatch_Click" ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
+                        <Button x:Name="btnSmartMatchForward" Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Width="100" Height="40"
                                 Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
-                                Click="btnSmartMatchForward_Click" ToolTip="根据起点寻找循环终点 (正向)"/>
-
-                        <Button x:Name="btnResetAB" Content="恢复AB接缝" Width="100" Height="40" IsEnabled="False"
+                                Click="btnSmartMatchForward_Click" ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
+                        <Button x:Name="btnResetAB" Content="{Binding [ResetAB], Source={StaticResource Loc}}" Width="100" Height="40"
                                 Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
-                                Click="btnResetAB_Click" ToolTip="恢复到 A/B 文件的原始接缝位置 (仅针对 A/B 配对歌曲)"/>
-                        
-                        <Button x:Name="btnApplyLoop" Content="Test Loop" Width="120" Height="40"
+                                Click="btnResetAB_Click" ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
+                        <Button x:Name="btnApplyLoop" Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Width="120" Height="40"
                                 Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"
                                 Click="btnApplyLoop_Click"/>
                     </StackPanel>
 
-                    <!-- Advanced PyMusicLooper Controls -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
                         <TextBlock Text="PyMusicLooper:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#F5C2E7" FontWeight="Bold"/>
-                        
-
-
-                        <Button x:Name="btnPyList" Content="排行榜" Width="80" Height="30"
+                        <Button x:Name="btnPyList" Content="{Binding [PyRanking], Source={StaticResource Loc}}" Width="100" Height="30"
                                 Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}"
-                                Click="btnPyList_Click" ToolTip="查看前 10 个候选循环点"/>
+                                Click="btnPyList_Click" ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
 
             <!-- Progress Area -->
             <StackPanel Grid.Row="2" Margin="0,15">
-                <Grid Margin="0,0,0,5">
-                    <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="18" FontWeight="Light"/>
-                </Grid>
-                <Slider x:Name="trkProgress" Maximum="1000" IsMoveToPointEnabled="True"
-                        ValueChanged="trkProgress_ValueChanged"
-                        Thumb.DragStarted="trkProgress_DragStarted"
-                        Thumb.DragCompleted="trkProgress_DragCompleted"/>
+                <TextBlock x:Name="lblTime" Text="00:00 / 00:00" HorizontalAlignment="Right" FontSize="18" FontWeight="Light"/>
+                <Slider x:Name="trkProgress" Maximum="1000" IsMoveToPointEnabled="True" Margin="0,5,0,0"
+                        ValueChanged="trkProgress_ValueChanged" Thumb.DragStarted="trkProgress_DragStarted" Thumb.DragCompleted="trkProgress_DragCompleted"/>
             </StackPanel>
 
-            <!-- Bottom Bar: Playback Controls (Simplified) -->
+            <!-- Bottom Bar: Playback Controls -->
             <Grid Grid.Row="3" Margin="0,0,0,10">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-
-                <!-- Center: Playback Controls -->
-                <StackPanel Grid.Column="1" Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button x:Name="btnPrev" Content="Prev" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPrev_Click"/>
-                    <Button x:Name="btnPlay" Content="Play/Pause" Style="{StaticResource SideButtonStyle}" Width="110" Height="45" Margin="15,0" 
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button x:Name="btnPrev" Content="&lt;&lt;" Style="{StaticResource SideButtonStyle}" Width="60" Click="btnPrev_Click"/>
+                    <Button x:Name="btnPlay" Content="{Binding [Play], Source={StaticResource Loc}}" Style="{StaticResource SideButtonStyle}" Width="110" Height="45" Margin="15,0" 
                             Click="btnPlay_Click" FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
-                    <Button x:Name="btnStop" Content="Replay" Style="{StaticResource SideButtonStyle}" Width="75" Click="btnReplay_Click"/>
-                    <Button x:Name="btnNext" Content="Next" Style="{StaticResource SideButtonStyle}" Width="60" Margin="15,0,0,0" Click="btnNext_Click"/>
+                    <Button x:Name="btnStop" Content="{Binding [Replay], Source={StaticResource Loc}}" Style="{StaticResource SideButtonStyle}" Width="75" Click="btnReplay_Click"/>
+                    <Button x:Name="btnNext" Content="&gt;&gt;" Style="{StaticResource SideButtonStyle}" Width="60" Margin="15,0,0,0" Click="btnNext_Click"/>
                 </StackPanel>
 
-                <!-- Right: Volume Only -->
-                <StackPanel Grid.Column="2" Orientation="Horizontal" HorizontalAlignment="Right">
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="Vol" VerticalAlignment="Center" Margin="0,0,10,0" FontSize="11" Opacity="0.5"/>
-                        <Slider x:Name="trkVolume" Width="100" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
-                    </StackPanel>
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                    <TextBlock Text="Vol:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11" Opacity="0.5"/>
+                    <Slider x:Name="trkVolume" Width="80" Minimum="0" Maximum="100" Value="80" IsMoveToPointEnabled="True" ValueChanged="trkVolume_ValueChanged"/>
                 </StackPanel>
             </Grid>
         </Grid>

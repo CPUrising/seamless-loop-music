@@ -1,8 +1,10 @@
 <Application x:Class="seamless_loop_music.App"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:local="clr-namespace:seamless_loop_music"
+             xmlns:services="clr-namespace:seamless_loop_music.Services"
              StartupUri="UI/MainWindow.xaml">
     <Application.Resources>
-         
+        <x:Static Member="services:LocalizationService.Instance" x:Key="Loc" />
     </Application.Resources>
 </Application>

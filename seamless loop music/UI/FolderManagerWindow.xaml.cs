@@ -26,8 +26,8 @@ namespace seamless_loop_music.UI
 
         private void ApplyLanguage()
         {
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-            Title = isZh ? "管理关联文件夹" : "Folder Manager";
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
+            Title = LocalizationService.Instance["TitleFolderManager"];
             lblTitle.Text = (isZh ? "歌单关联文件夹: " : "Linked Folders for: ") + _playlistName;
             btnAdd.Content = isZh ? "+ 添加文件夹" : "+ Add Folder";
             btnClose.Content = isZh ? "关闭" : "Close";
@@ -53,7 +53,7 @@ namespace seamless_loop_music.UI
         {
             if (sender is Button btn && btn.Tag is string path)
             {
-                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
                 var result = MessageBox.Show(
                     isZh ? $"确定要移除此文件夹关联吗？\n{path}\n(磁盘上的文件不会被删除)" 
                          : $"Are you sure to remove this folder link?\n{path}\n(Files on disk won't be deleted)",

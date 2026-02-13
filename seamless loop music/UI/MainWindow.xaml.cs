@@ -157,7 +157,7 @@ namespace seamless_loop_music
                 txtLoopSample.Text = track.LoopStart.ToString();
                 txtLoopEndSample.Text = track.LoopEnd.ToString();
                 btnResetAB.IsEnabled = _playerService.IsABMode;
-                lblStatus.Text = $"{Properties.Resources.StatusPlaying}: {track.Title}";
+                lblStatus.Text = $"{LocalizationService.Instance["StatusPlaying"]}: {track.Title}";
                 
                 // 整理：如果列表里也有这个 Track，更新列表项显示
                 // 必须通过文件路径精确查找，防止快速切歌时索引错位
@@ -183,23 +183,22 @@ namespace seamless_loop_music
             btnPlay.IsEnabled = hasFile;
 
             if (state == PlaybackState.Playing) {
-                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-                btnPlay.Content = isZh ? "暂停" : "Pause"; 
+                btnPlay.Content = LocalizationService.Instance["Pause"];
                 btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 226, 175)); // Yellowish
                 _tmrUpdate.Start(); 
 
                 string trackName = Path.GetFileNameWithoutExtension(txtFilePath.Text);
                 if (_playerService.CurrentTrack != null) trackName = _playerService.CurrentTrack.Title;
-                lblStatus.Text = $"{Properties.Resources.StatusPlaying}: {trackName}";
+                lblStatus.Text = $"{LocalizationService.Instance["StatusPlaying"]}: {trackName}";
             } else {
-                btnPlay.Content = Properties.Resources.Play;
+                btnPlay.Content = LocalizationService.Instance["Play"];
                 btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(166, 227, 161)); // Green
                 if (state == PlaybackState.Paused) {
                     _tmrUpdate.Stop(); 
-                    lblStatus.Text = Properties.Resources.StatusPaused;
+                    lblStatus.Text = LocalizationService.Instance["StatusPaused"];
                 } else { 
                     _tmrUpdate.Stop(); 
-                    lblStatus.Text = Properties.Resources.StatusReady; 
+                    lblStatus.Text = LocalizationService.Instance["StatusReady"]; 
                     trkProgress.Value = 0; 
                     lblTime.Text = "00:00 / 00:00";
                 }
@@ -208,12 +207,12 @@ namespace seamless_loop_music
         }
 
         private async void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             
             // 1. 询问是“新建空歌单”还是“导入文件夹”
             var choice = MessageBox.Show(
-                isZh ? "点击'是'新建一个空的逻辑歌单，点击'否'通过导入文件夹创建歌单。" : "Click 'Yes' to create an empty virtual playlist, 'No' to create from folder.",
-                isZh ? "新建歌单" : "New Playlist",
+                LocalizationService.Instance["PromptNewPlaylist"],
+                LocalizationService.Instance["TitleNewPlaylist"],
                 MessageBoxButton.YesNoCancel,
                 MessageBoxImage.Question);
 
@@ -232,9 +231,9 @@ namespace seamless_loop_music
                 } else return;
             } else {
                 folderName = Microsoft.VisualBasic.Interaction.InputBox(
-                    isZh ? "请输入歌单名称：" : "Enter playlist name:",
-                    isZh ? "新建空歌单" : "New Virtual Playlist",
-                    isZh ? "新建歌单" : "New Playlist");
+                    LocalizationService.Instance["PromptEnterPlaylistName"],
+                    LocalizationService.Instance["TitleNewVirtualPlaylist"],
+                    LocalizationService.Instance["TitleNewPlaylist"]);
                 if (string.IsNullOrEmpty(folderName)) return;
             }
 
@@ -250,7 +249,7 @@ namespace seamless_loop_music
 
             // 4. 如果是文件夹，启动后台扫描同步
             if (isFolder && !string.IsNullOrEmpty(folderPath)) {
-                lblStatus.Text = isZh ? "正在扫描文件夹..." : "Scanning folder...";
+                lblStatus.Text = LocalizationService.Instance["StatusScanning"];
                 await _playerService.AddFolderToPlaylist(newId, folderPath);
                 // 扫描完刷新一下当前显示的歌曲列表
                 LoadPlaylistFromDb(newId);
@@ -268,10 +267,9 @@ namespace seamless_loop_music
 
         private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
                 string newName = Microsoft.VisualBasic.Interaction.InputBox(
-                    isZh ? "输入新的歌单名称：" : "Enter new playlist name:", 
-                    isZh ? "重命名" : "Rename", 
+                    LocalizationService.Instance["PromptEnterPlaylistName"], 
+                    LocalizationService.Instance["MenuRename"], 
                     folder.Name);
                 if (!string.IsNullOrEmpty(newName)) {
                     folder.Name = newName;
@@ -300,14 +298,12 @@ namespace seamless_loop_music
                                     .Where(f => f.IsFolderLinked).ToList();
             if (selectedFolders.Count == 0) return;
 
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
             int count = 0;
 
             foreach (var folder in selectedFolders)
             {
                 count++;
-                lblStatus.Text = isZh ? $"正在批量刷新 ({count}/{selectedFolders.Count}): {folder.Name}..." 
-                                     : $"Batch Refreshing ({count}/{selectedFolders.Count}): {folder.Name}...";
+                lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "正在批量刷新 ({0}/{1}): {2}..." : "Batch Refreshing ({0}/{1}): {2}...", count, selectedFolders.Count, folder.Name);
                 
                 await _playerService.RefreshPlaylist(folder.Id);
             }
@@ -321,26 +317,24 @@ namespace seamless_loop_music
                 LoadPlaylistFromDb(current.Id);
             }
             
-            lblStatus.Text = isZh ? $"已完成 {selectedFolders.Count} 个歌单的批量刷新。" : $"Batch refresh of {selectedFolders.Count} playlists completed.";
+            lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "已完成 {0} 个歌单的批量刷新。" : "Batch refresh of {0} playlists completed.", selectedFolders.Count);
         }
 
         private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
             var selectedFolders = lstPlaylists.SelectedItems.Cast<PlaylistFolder>().ToList();
             if (selectedFolders.Count == 0) return;
 
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-            string msg = isZh ? $"确定要从库中移除这 {selectedFolders.Count} 个歌单吗？(磁盘文件不会被删除)" 
-                              : $"Are you sure to remove {selectedFolders.Count} playlists? (Source files won't be deleted)";
+            string msg = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "确定要从库中移除这 {0} 个歌单吗？(磁盘文件不会被删除)" : "Are you sure to remove {0} playlists? (Source files won't be deleted)", selectedFolders.Count);
             
-            if (MessageBox.Show(msg, Properties.Resources.TitleDelete, MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes) {
+            if (MessageBox.Show(msg, LocalizationService.Instance["TitleDelete"], MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes) {
                 foreach (var folder in selectedFolders)
                 {
                     _playerService.DeletePlaylist(folder.Id);
                     _playlists.Remove(folder);
                 }
                 lstPlaylist.Items.Clear();
-                txtFilePath.Text = isZh ? "未选择歌单" : "No playlist selected";
-                lblStatus.Text = isZh ? $"已批量删除 {selectedFolders.Count} 个歌单。" : $"Deleted {selectedFolders.Count} playlists.";
+                txtFilePath.Text = LocalizationService.Instance["NoFileSelected"];
+                lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "已批量删除 {0} 个歌单。" : "Deleted {0} playlists.", selectedFolders.Count);
             }
         }
 
@@ -388,16 +382,13 @@ namespace seamless_loop_music
 
                 if (dialog.ShowDialog() == true)
                 {
-                    bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-                    lblStatus.Text = isZh ? $"正在添加 {dialog.FileNames.Length} 首歌曲..." : $"Adding {dialog.FileNames.Length} tracks...";
-                    
                     await _playerService.AddFilesToPlaylist(folder.Id, dialog.FileNames);
                     
                     // 刷新及显示
                     LoadPlaylists(); // 更新数量
                     LoadPlaylistFromDb(folder.Id); // 更新列表
                      
-                    lblStatus.Text = isZh ? "添加完成" : "Done.";
+                    lblStatus.Text = LocalizationService.Instance["StatusDone"];
                 }
             }
         }
@@ -439,7 +430,7 @@ namespace seamless_loop_music
                     if (!exists) {
                         missingCount++;
                         // 如果文件丢了，在显示名上打个标记，但不影响数据库数据
-                        track.DisplayName = (Properties.Resources.Culture?.Name.StartsWith("zh") ?? false ? "[文件丢失] " : "[Missing] ") + (track.DisplayName ?? track.FileName);
+                        track.DisplayName = (LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") ? "[文件丢失] " : "[Missing] ") + (track.DisplayName ?? track.FileName);
                     }
                     
                     _playlist.Add(track.FilePath);
@@ -448,11 +439,10 @@ namespace seamless_loop_music
                 
                 _playerService.Playlist = tracks;
                 
-                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
                 if (missingCount > 0) {
-                    lblStatus.Text = isZh ? $"加载了 {tracks.Count} 首歌曲，其中 {missingCount} 首文件路径无效。" : $"Loaded {tracks.Count} tracks ({missingCount} files missing).";
+                    lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "加载了 {0} 首歌曲，其中 {1} 首文件路径无效。" : "Loaded {0} tracks ({1} files missing).", tracks.Count, missingCount);
                 } else {
-                    lblStatus.Text = isZh ? $"成功加载 {tracks.Count} 首歌曲" : $"Successfully loaded {tracks.Count} tracks";
+                    lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "成功加载 {0} 首歌曲" : "Successfully loaded {0} tracks", tracks.Count);
                 }
             } catch (Exception ex) {
                 MessageBox.Show("加载歌单失败: " + ex.Message);
@@ -499,8 +489,7 @@ namespace seamless_loop_music
                 _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
 
                 if (notify) {
-                    bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-                    lblStatus.Text = isZh ? $"成功导入 {files.Count} 首歌曲！" : $"Imported {files.Count} tracks!";
+                    lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "成功导入 {0} 首歌曲！" : "Imported {0} tracks!", files.Count);
                 }
             } catch (Exception ex) {
                 MessageBox.Show("加载列表失败: " + ex.Message);
@@ -513,10 +502,9 @@ namespace seamless_loop_music
 
         private void miRenameTrack_Click(object sender, RoutedEventArgs e) {
             if (lstPlaylist.SelectedItem is MusicTrack track) {
-                bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
                 string newName = Microsoft.VisualBasic.Interaction.InputBox(
-                    isZh ? $"给 '{track.FileName}' 起个别名：" : $"Set alias for '{track.FileName}':",
-                    isZh ? "修改别名" : "Edit Alias",
+                    string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "给 '{0}' 起个别名：" : "Set alias for '{0}':", track.FileName),
+                    LocalizationService.Instance["MenuRenameAlias"],
                     track.DisplayName ?? track.Title);
                 
                 if (!string.IsNullOrEmpty(newName)) {
@@ -558,7 +546,6 @@ namespace seamless_loop_music
             if (cm == null) return;
             
             bool hasSelection = lstPlaylist.SelectedItems.Count > 0;
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
             
             // 找到占位符菜单项 "miAddToPlaylist"
             // 注意：因为我们是动态向 ContextMenu 填充的，直接找 x:Name 可能需要遍历 Items
@@ -569,7 +556,7 @@ namespace seamless_loop_music
             {
                 miAddToPlaylist.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
                 miAddToPlaylist.Items.Clear();
-                miAddToPlaylist.Header = isZh ? "添加到歌单" : "Add to Playlist";
+                miAddToPlaylist.Header = LocalizationService.Instance["MenuAddToPlaylist"];
                 
                 if (hasSelection)
                 {
@@ -578,7 +565,7 @@ namespace seamless_loop_music
                     
                     if (manualPlaylists.Count == 0)
                     {
-                        var emptyItem = new MenuItem { Header = isZh ? "(无可用歌单)" : "(No Playlists)", IsEnabled = false };
+                        var emptyItem = new MenuItem { Header = LocalizationService.Instance["NoPlaylists"], IsEnabled = false };
                         miAddToPlaylist.Items.Add(emptyItem);
                     }
                     else
@@ -603,9 +590,7 @@ namespace seamless_loop_music
                  
                  _playerService.AddTracksToPlaylist(playlistId, tracks);
                  
-                 bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
-                 string msg = isZh ? $"已将 {tracks.Count} 首歌曲添加到歌单。" : $"Added {tracks.Count} tracks to playlist.";
-                 lblStatus.Text = msg;
+                  lblStatus.Text = string.Format(LocalizationService.Instance["AddedToPlaylist"], tracks.Count);
                  
                  // 如果左侧正好显示的是这个目标歌单，更新一下它的数量显示
                  var pItem = _playlists.FirstOrDefault(p => p.Id == playlistId);
@@ -657,11 +642,9 @@ namespace seamless_loop_music
             var tracks = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
             if (tracks.Count == 0) return;
 
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
             var confirm = MessageBox.Show(
-                isZh ? $"确定要对选中的 {tracks.Count} 首歌曲进行深度循环分析吗？\n由于调用外部工具，这可能需要较长时间。" 
-                     : $"Are you sure you want to perform deep loop analysis on the selected {tracks.Count} tracks?\nThis may take a long time.",
-                isZh ? "批量极致匹配" : "Batch PyLoop Match",
+                string.Format(LocalizationService.Instance["BatchAnalysisConfirm"], tracks.Count),
+                LocalizationService.Instance["BatchAnalysisTitle"],
                 MessageBoxButton.YesNo, MessageBoxImage.Question);
 
             if (confirm != MessageBoxResult.Yes) return;
@@ -672,13 +655,12 @@ namespace seamless_loop_music
             await _playerService.BatchSmartMatchLoopExternalAsync(tracks, 
                 (current, total, fileName) => {
                     Dispatcher.Invoke(() => {
-                        lblStatus.Text = isZh ? $"[批量进度 {current}/{total}] 正在分析: {fileName}..." 
-                                             : $"[Batch {current}/{total}] Analyzing: {fileName}...";
+                        lblStatus.Text = string.Format(LocalizationService.Instance["BatchProgress"], current, total, fileName);
                     });
                 },
                 () => {
                     Dispatcher.Invoke(() => {
-                        lblStatus.Text = isZh ? "批量极致匹配任务完成！" : "Batch PyLoop tasks completed!";
+                        lblStatus.Text = LocalizationService.Instance["BatchDone"];
 
                         // 刷新一下列表显示，防止数据变了 UI 没动
                         lstPlaylist.Items.Refresh();
@@ -725,13 +707,13 @@ namespace seamless_loop_music
 
         private void UpdateModeUI()
         {
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             string modeText = "";
             switch (_playerService.CurrentMode)
             {
-                case PlayMode.SingleLoop: modeText = isZh ? "模式：单曲" : "Mode: Single"; break;
-                case PlayMode.ListLoop: modeText = isZh ? "模式：列表" : "Mode: List"; break;
-                case PlayMode.Shuffle: modeText = isZh ? "模式：随机" : "Mode: Shuffle"; break;
+                case PlayMode.SingleLoop: modeText = LocalizationService.Instance["ModeSingle"]; break;
+                case PlayMode.ListLoop: modeText = LocalizationService.Instance["ModeList"]; break;
+                case PlayMode.Shuffle: modeText = LocalizationService.Instance["ModeShuffle"]; break;
             }
             btnPlayMode.Content = modeText;
         }
@@ -797,7 +779,7 @@ namespace seamless_loop_music
         private async void btnPyList_Click(object sender, RoutedEventArgs e)
         {
              ApplyLoopSettings();
-             bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+             bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
              
              btnPyList.IsEnabled = false;
              lblStatus.Text = isZh ? "正在计算前10个循环点..." : "Fetching top 10 loops...";
@@ -834,7 +816,7 @@ namespace seamless_loop_music
             txtLoopSample.Text = _playerService.LoopStartSample.ToString();
             txtLoopEndSample.Text = _playerService.LoopEndSample.ToString();
             
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             lblStatus.Text = isZh ? "智能匹配完成" : "Smart Match Done";
         }
 
@@ -944,23 +926,11 @@ namespace seamless_loop_music
         }
 
         private void btnSwitchLang_Click(object sender, RoutedEventArgs e) {
-            // Toggle config
-            _currentLang = (_currentLang == "zh-CN") ? "en-US" : "zh-CN";
+            _currentLang = (_currentLang == "en-US") ? "zh-CN" : "en-US";
+            LocalizationService.Instance.CurrentCulture = new System.Globalization.CultureInfo(_currentLang);
             
-            // Set Culture
-            var culture = new System.Globalization.CultureInfo(_currentLang);
-            Properties.Resources.Culture = culture;
-            
+            ApplyLanguage();
             SaveSettings();
-            
-            bool isZh = _currentLang == "zh-CN";
-            string title = isZh ? "语言切换" : "Language Switch";
-            string msg = isZh ? "语言已切换，需要重启软件生效。现在重启吗？" : "Language switched. Restart now to apply?";
-            
-            if (MessageBox.Show(msg, title, MessageBoxButton.YesNo, MessageBoxImage.Question) == MessageBoxResult.Yes) {
-                System.Diagnostics.Process.Start(System.Windows.Application.ResourceAssembly.Location);
-                System.Windows.Application.Current.Shutdown();
-            }
         }
 
         private void LoadConfig() {
@@ -1000,7 +970,7 @@ namespace seamless_loop_music
                     if (File.Exists(bakPath)) File.Delete(bakPath);
                     File.Move(_configPath, bakPath);
                     
-                    bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+                    bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
                     MessageBox.Show(isZh ? $"成功从旧配置文件导入 {tracksToImport.Count} 条数据！" : $"Imported {tracksToImport.Count} entries from CSV!");
                 }
             } catch {}
@@ -1027,9 +997,9 @@ namespace seamless_loop_music
                 }
                 
                 try {
-                    Properties.Resources.Culture = new System.Globalization.CultureInfo(_currentLang);
+                    LocalizationService.Instance.CurrentCulture = new System.Globalization.CultureInfo(_currentLang);
                 } catch {
-                    Properties.Resources.Culture = new System.Globalization.CultureInfo("en-US");
+                    LocalizationService.Instance.CurrentCulture = new System.Globalization.CultureInfo("en-US");
                 }
 
             } catch (Exception ex) {
@@ -1063,73 +1033,41 @@ namespace seamless_loop_music
         }
 
         private void ApplyLanguage() {
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            // Most of the localization is now handled by XAML bindings.
+            // Only dynamic elements like status messages need to be updated here if they don't have bindings.
             
-            this.Title = Properties.Resources.AppTitle; 
-            if (lblMyPlaylists != null) lblMyPlaylists.Text = Properties.Resources.MyPlaylist;
-            if (lblTrackList != null) lblTrackList.Text = Properties.Resources.TrackList;
-            if (btnAddPlaylist != null) btnAddPlaylist.ToolTip = isZh ? "添加新文件夹到歌单" : "Add folder to playlists";
-            if (miRefreshPlaylist != null) miRefreshPlaylist.Header = isZh ? "刷新歌单" : "Refresh Playlist";
-            if (miAddSong != null) miAddSong.Header = isZh ? "添加文件" : "Add Files";
-            if (miRenameTrack != null) miRenameTrack.Header = isZh ? "修改别名" : "Rename Alias";
-            if (miOpenFolder != null) miOpenFolder.Header = isZh ? "打开所在文件夹" : "Open Folder";
-            if (miRemoveFromList != null) miRemoveFromList.Header = isZh ? "从歌单移除" : "Remove from List";
-            if (miBatchPyLoop != null) miBatchPyLoop.Header = isZh ? "批量极致匹配 (PyLoop)" : "Batch Optimize (PyLoop)";
-            
-            if (btnPlay != null) {
-                bool isPlaying = (_playerService != null && _playerService.PlaybackState == PlaybackState.Playing);
-                if (isPlaying) btnPlay.Content = isZh ? "暂停" : "Pause";
-                else btnPlay.Content = Properties.Resources.Play;
-            }
-            if (btnStop != null) btnStop.Content = Properties.Resources.Replay;
-            if (btnPrev != null) btnPrev.Content = isZh ? "<< 上一首" : "<< Prev";
-            if (btnNext != null) btnNext.Content = isZh ? "下一首 >>" : "Next >>";
- 
-            if (btnApplyLoop != null) btnApplyLoop.Content = Properties.Resources.ApplyAndTest;
-    
-    if (btnSmartMatch != null) {
-        // 显式设置双语文本，不再依赖资源文件可能缺失的键
-        btnSmartMatch.Content = isZh ? "寻找起点" : "Match Start";
-        btnSmartMatch.ToolTip = isZh ? "根据终点寻找循环起点 (逆向)" : "Find loop start based on loop end (Reverse)";
-    }
-    
-    if (btnSmartMatchForward != null) {
-        btnSmartMatchForward.Content = isZh ? "寻找终点" : "Match End";
-        btnSmartMatchForward.ToolTip = isZh ? "根据起点寻找循环终点 (正向)" : "Find loop end based on loop start (Forward)";
-    }
-    
-    // PyMusicLooper Controls
-
-    if (btnPyList != null) {
-        btnPyList.Content = isZh ? "排行榜" : "List";
-        btnPyList.ToolTip = isZh ? "查看前 10 个候选循环点" : "View Top 10 Loop Candidates";
-    }
-
-            if (btnResetAB != null) {
-                btnResetAB.Content = isZh ? "恢复AB接缝" : "Reset A/B";
-                btnResetAB.ToolTip = isZh ? "针对 A/B 分体音乐，恢复到原始的物理接缝位置" : "For A/B split tracks, restore to the original physical boundary.";
-            }
-            if (lblFilePath != null) lblFilePath.Text = Properties.Resources.FilePathTitle;
-            if (lblLoopStart != null) lblLoopStart.Text = Properties.Resources.LoopStartLabel;
-            if (lblLoopEnd != null) lblLoopEnd.Text = Properties.Resources.LoopEndLabel;
-            if (btnSwitchLang != null) btnSwitchLang.Content = Properties.Resources.SwitchLang;
-            
-            UpdateModeUI(); // 更新模式按钮语言
-
-            if (lblStatus != null) lblStatus.Text = Properties.Resources.StatusReady;
-            
+            UpdateModeUI(); // Update play mode button text
             UpdateAudioInfoText();
+            UpdateButtons(_playerService?.PlaybackState ?? PlaybackState.Stopped);
+
+            // Refresh status if it's a simple state or includes variable parts
+            if (lblStatus.Text == "Ready" || lblStatus.Text == "就绪")
+                lblStatus.Text = LocalizationService.Instance["StatusReady"];
+            else if (lblStatus.Text == "Smart Match Done" || lblStatus.Text == "智能匹配完成" || lblStatus.Text == "Done.")
+                lblStatus.Text = LocalizationService.Instance["StatusDone"];
+            else if (lblStatus.Text == "Paused" || lblStatus.Text == "播放暂停")
+                lblStatus.Text = LocalizationService.Instance["StatusPaused"];
+            else if (lblStatus.Text.Contains("Playing:") || lblStatus.Text.Contains("正在播放:"))
+            {
+                 string trackName = "";
+                 if (lblStatus.Text.Contains(":"))
+                    trackName = lblStatus.Text.Substring(lblStatus.Text.IndexOf(':') + 1).Trim();
+                 lblStatus.Text = $"{LocalizationService.Instance["StatusPlaying"]}: {trackName}";
+            }
+
+            // Refresh the track list to update any "[Missing]" tags
+            lstPlaylist.Items.Refresh();
         }
 
         private void UpdateAudioInfoText() {
             if (lblAudioInfo == null) return;
-            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             
             long total = _playerService?.CurrentTrack?.TotalSamples ?? 0;
             int rate = _playerService?.SampleRate ?? 44100;
 
             if (total == 0) {
-                 lblAudioInfo.Text = Properties.Resources.AudioInfoInit;
+                 lblAudioInfo.Text = LocalizationService.Instance["AudioInfoInit"];
             } else {
                 lblAudioInfo.Text = isZh ? 
                     $"音频信息：Total {total} | 采样率 {rate} Hz" : 
