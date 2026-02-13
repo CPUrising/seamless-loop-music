@@ -41,9 +41,7 @@ namespace seamless_loop_music
             {
                 lock (_lockObject)
                 {
-                    // 确保设置的位置有效
-                    value = Math.Max(0, Math.Min(value, _sourceStream.Length));
-                    _sourceStream.Position = value;
+                    SafeSetPosition(value);
                 }
             }
         }
@@ -78,9 +76,6 @@ namespace seamless_loop_music
                 LoopStartPosition = 0;
             }
 
-            // 构造时: 默认定位到 Start 处开始播放? 
-            // 如果为了严谨，我们应该遵循: 如果是重新创建流，可能用户期望从 Start 开始。
-            // 但如果是切歌后的首次播放，我们可能希望从头播。
             // 构造时: 默认定位到 0 (文件开头)，实现 Intro + Loop 的效果
             // 首次播放从头开始，循环时才跳回 LoopStart
             _sourceStream.Position = 0;
@@ -110,12 +105,19 @@ namespace seamless_loop_music
                     if (currentPos >= LoopEndPosition)
                     {
                         // 已经超过结束点了，立即跳回
-                        _sourceStream.Position = LoopStartPosition;
-                        currentPos = LoopStartPosition;
-                        OnLoopCompleted?.Invoke(); // 触发事件
+                        SafeSetPosition(LoopStartPosition);
+                        currentPos = _sourceStream.Position; // 更新 currentPos!
+                        OnLoopCompleted?.Invoke(); 
                     }
 
                     long remainingBytes = LoopEndPosition - currentPos;
+                    // 如果 remainingBytes <= 0，说明还在 LoopEnd 之后（虽然刚seek过），可能 Seek 到了奇怪的位置或者 LoopStart >= LoopEnd
+                    if (remainingBytes <= 0) 
+                    {
+                         // 强制归零以防死锁，或结束
+                         remainingBytes = 0; 
+                    }
+
                     int bytesToRead = (int)Math.Min(count - totalBytesRead, remainingBytes);
 
                     if (bytesToRead > 0)
@@ -126,8 +128,9 @@ namespace seamless_loop_music
                         if (bytesRead == 0) 
                         {
                             // 读不到数据了，跳回 LoopStart
-                            _sourceStream.Position = LoopStartPosition;
-                            OnLoopCompleted?.Invoke(); // 触发事件
+                            SafeSetPosition(LoopStartPosition);
+                            OnLoopCompleted?.Invoke(); 
+                            // 此时 currentPos 变了，继续循环
                         }
                         else 
                         {
@@ -137,13 +140,23 @@ namespace seamless_loop_music
                     else
                     {
                         // 已到 LoopEnd，跳回 LoopStart
-                        _sourceStream.Position = LoopStartPosition;
-                        OnLoopCompleted?.Invoke(); // 触发事件
+                        SafeSetPosition(LoopStartPosition);
+                        OnLoopCompleted?.Invoke(); 
                     }
                 }
 
                 return totalBytesRead;
             }
+        }
+
+        /// <summary>
+        /// 安全设置位置
+        /// </summary>
+        private void SafeSetPosition(long targetPos)
+        {
+            // 确保位置在合法范围内
+            targetPos = Math.Max(0, Math.Min(targetPos, _sourceStream.Length));
+            _sourceStream.Position = targetPos;
         }
     }
 }

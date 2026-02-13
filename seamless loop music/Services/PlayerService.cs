@@ -51,7 +51,7 @@ namespace seamless_loop_music.Services
         {
             _audioLooper = new AudioLooper();
             _dbHelper = new DatabaseHelper();
-            _pyMusicLooperWrapper = new PyMusicLooperWrapper(); // 初始化
+            _pyMusicLooperWrapper = new PyMusicLooperWrapper();
 
             // 转发底层事件
             _audioLooper.OnPlayStateChanged += state => OnPlayStateChanged?.Invoke(state);
@@ -422,6 +422,64 @@ namespace seamless_loop_music.Services
                 onComplete?.Invoke();
             });
         }
+
+        /// <summary>
+        /// 获取当前歌曲的候选循环点列表（Top 10）
+        /// </summary>
+        public async Task<List<LoopCandidate>> GetLoopCandidatesAsync()
+        {
+            if (CurrentTrack == null) return new List<LoopCandidate>();
+            
+            OnStatusMessage?.Invoke($"[PyMusicLooper] Fetching top candidates for {CurrentTrack.FileName}...");
+            return await _pyMusicLooperWrapper.GetTopLoopPointsAsync(CurrentTrack.FilePath);
+        }
+
+
+
+        /// <summary>
+        /// 应用指定的循环点候选
+        /// </summary>
+        public void ApplyLoopCandidate(LoopCandidate candidate)
+        {
+            if (candidate == null) return;
+            // 自动播放以进行测试：跳转到循环结束前 3 秒处，方便用户确认衔接效果
+            ApplyLoop(candidate.LoopStart, candidate.LoopEnd, true);
+        }
+
+        private void ApplyLoop(long start, long end, bool autoPlay = false)
+        {
+             if (CurrentTrack != null)
+             {
+                CurrentTrack.LoopStart = start;
+                CurrentTrack.LoopEnd = end;
+                
+                _audioLooper.SetLoopStartSample(start);
+                _audioLooper.SetLoopEndSample(end);
+                
+                SaveCurrentTrack();
+                OnTrackLoaded?.Invoke(CurrentTrack);
+                
+                OnStatusMessage?.Invoke($"Loop Applied: {start} - {end}");
+
+                if (autoPlay)
+                {
+                    // 跳转到循环结束前 3 秒 (或者循环长度的一半，如果循环很短)
+                    long leadIn = 3L * SampleRate;
+                    long loopLen = end - start;
+                    if (leadIn > loopLen) leadIn = loopLen / 2; // 如果循环特别短，至少听一半
+                    
+                    long seekTarget = end - leadIn;
+                    
+                    // 确保不要跳到负数（虽然理论上不会，因为 start >= 0）
+                    if (seekTarget < 0) seekTarget = 0; 
+                    
+                    SeekToSample(seekTarget);
+                    Play();
+                }
+             }
+        }
+
+
 
         /// <summary>
         /// 批量对指定的歌曲列表进行 PyMusicLooper 极致优化

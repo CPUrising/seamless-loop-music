@@ -667,7 +667,7 @@ namespace seamless_loop_music
             if (confirm != MessageBoxResult.Yes) return;
 
             // 禁用界面上相关的按钮防止冲突（可选，但安全）
-            btnPyLoop.IsEnabled = false;
+            if (btnPyAuto != null) btnPyAuto.IsEnabled = false;
 
             await _playerService.BatchSmartMatchLoopExternalAsync(tracks, 
                 (current, total, fileName) => {
@@ -679,7 +679,7 @@ namespace seamless_loop_music
                 () => {
                     Dispatcher.Invoke(() => {
                         lblStatus.Text = isZh ? "批量极致匹配任务完成！" : "Batch PyLoop tasks completed!";
-                        btnPyLoop.IsEnabled = true;
+                        if (btnPyAuto != null) btnPyAuto.IsEnabled = true;
                         // 刷新一下列表显示，防止数据变了 UI 没动
                         lstPlaylist.Items.Refresh();
                         UpdateLoopUI(); // 如果当前播放的正是在批量列表里，更新 UI
@@ -790,17 +790,52 @@ namespace seamless_loop_music
             });
         }
 
-        private void btnPyLoop_Click(object sender, RoutedEventArgs e)
+        private void btnPyAuto_Click(object sender, RoutedEventArgs e)
         {
             ApplyLoopSettings();
-            btnPyLoop.IsEnabled = false;
+            bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+            
+            btnPyAuto.IsEnabled = false; 
+            lblStatus.Text = isZh ? "PyMusicLooper 正在自动分析..." : "PyMusicLooper Analyzing...";
 
             _playerService.SmartMatchLoopExternalAsync(() => {
                 Dispatcher.Invoke(() => {
                     UpdateLoopUI();
-                    btnPyLoop.IsEnabled = true;
+                    btnPyAuto.IsEnabled = true;
+                    lblStatus.Text = isZh ? "PyMusicLooper 自动化完成" : "PyMusicLooper Auto Done";
                 });
             });
+        }
+
+
+
+        private async void btnPyList_Click(object sender, RoutedEventArgs e)
+        {
+             ApplyLoopSettings();
+             bool isZh = Properties.Resources.Culture?.Name.StartsWith("zh") ?? false;
+             
+             btnPyList.IsEnabled = false;
+             lblStatus.Text = isZh ? "正在计算前10个循环点..." : "Fetching top 10 loops...";
+             
+             try 
+             {
+                 var candidates = await _playerService.GetLoopCandidatesAsync();
+                 if (candidates.Count == 0)
+                 {
+                     MessageBox.Show(isZh ? "未找到循环点。" : "No loops found.");
+                 }
+                 else
+                 {
+                     var win = new seamless_loop_music.UI.LoopListWindow(candidates, _playerService);
+                     win.Owner = this;
+                     win.Show(); // 非模态窗口，允许用户一边看一边操作主界面（虽然 apply 会自动操作）
+                 }
+             }
+             finally
+             {
+                 btnPyList.IsEnabled = true;
+                 lblStatus.Text = isZh ? "就绪" : "Ready";
+             }
         }
 
         private void btnResetAB_Click(object sender, RoutedEventArgs e)
@@ -1068,10 +1103,15 @@ namespace seamless_loop_music
         btnSmartMatchForward.ToolTip = isZh ? "根据起点寻找循环终点 (正向)" : "Find loop end based on loop start (Forward)";
     }
     
-            if (btnPyLoop != null) {
-                btnPyLoop.Content = isZh ? "极致匹配" : "PyLoop Match";
-                btnPyLoop.ToolTip = isZh ? "使用 PyMusicLooper 算法寻找全曲最佳循环 (由于涉及深层分析，可能需要较长时间)" : "Find the best loop points in the entire song using PyMusicLooper (Deep analysis, might take a while)";
-            }
+    // PyMusicLooper Controls
+    if (btnPyAuto != null) {
+        btnPyAuto.Content = isZh ? "全自动" : "Auto";
+        btnPyAuto.ToolTip = isZh ? "直接计算并应用最佳循环点" : "Directly calculate and apply best loop points";
+    }
+    if (btnPyList != null) {
+        btnPyList.Content = isZh ? "排行榜" : "List";
+        btnPyList.ToolTip = isZh ? "查看前 10 个候选循环点" : "View Top 10 Loop Candidates";
+    }
 
             if (btnResetAB != null) {
                 btnResetAB.Content = isZh ? "恢复AB接缝" : "Reset A/B";

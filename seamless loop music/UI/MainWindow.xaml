@@ -220,10 +220,6 @@
                                 Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
                                 Click="btnSmartMatchForward_Click" ToolTip="根据起点寻找循环终点 (正向)"/>
 
-                        <Button x:Name="btnPyLoop" Content="PyLoop" Width="100" Height="40"
-                                Background="#F5C2E7" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
-                                Click="btnPyLoop_Click" ToolTip="使用 PyMusicLooper 算法寻找全曲最佳循环 (极慢但最强)"/>
-
                         <Button x:Name="btnResetAB" Content="恢复AB接缝" Width="100" Height="40" IsEnabled="False"
                                 Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
                                 Click="btnResetAB_Click" ToolTip="恢复到 A/B 文件的原始接缝位置 (仅针对 A/B 配对歌曲)"/>
@@ -231,6 +227,19 @@
                         <Button x:Name="btnApplyLoop" Content="Test Loop" Width="120" Height="40"
                                 Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"
                                 Click="btnApplyLoop_Click"/>
+                    </StackPanel>
+
+                    <!-- Advanced PyMusicLooper Controls -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
+                        <TextBlock Text="PyMusicLooper:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#F5C2E7" FontWeight="Bold"/>
+                        
+                        <Button x:Name="btnPyAuto" Content="全自动" Width="80" Height="30"
+                                Background="#F5C2E7" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
+                                Click="btnPyAuto_Click" ToolTip="直接计算并应用最佳循环点"/>
+
+                        <Button x:Name="btnPyList" Content="排行榜" Width="80" Height="30"
+                                Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}"
+                                Click="btnPyList_Click" ToolTip="查看前 10 个候选循环点"/>
                     </StackPanel>
                 </StackPanel>
             </Grid>
