@@ -15,6 +15,67 @@ namespace seamless_loop_music.Services
     {
         // 使用 uvx 作为执行器，即使其他用户没装 pymusiclooper 也能自动下载运行
         public string ExecutorPath { get; set; } = "uvx"; 
+        
+        /// <summary>
+        /// 自定义下载/缓存路径 (对应 UV_CACHE_DIR)
+        /// </summary>
+        public string CustomCachePath { get; set; }
+
+        /// <summary>
+        /// 自定义 PyMusicLooper 可执行文件路径 (优先级最高)
+        /// </summary>
+        public string PyMusicLooperExecutablePath { get; set; }
+
+        public event Action<string> OnStatusMessage;
+
+        /// <summary>
+        /// 检查环境：是否已经安装了 PyMusicLooper 或者已经在缓存中了
+        /// </summary>
+        /// <returns>0: 已就绪; 1: 需要下载; 2: uv 都不存在</returns>
+        public async Task<int> CheckEnvironmentAsync()
+        {
+            // 0. 优先查手动指定的 EXE 路径
+            if (!string.IsNullOrEmpty(PyMusicLooperExecutablePath) && File.Exists(PyMusicLooperExecutablePath))
+            {
+                if (await IsCommandAvailableAsync(PyMusicLooperExecutablePath, "--version")) return 0;
+            }
+
+            // 1. 查系统路径 (直接运行 pymusiclooper)
+            if (await IsCommandAvailableAsync("pymusiclooper", "--version")) return 0;
+
+            // 2. 查 uv 是否存在
+            if (!await IsCommandAvailableAsync("uv", "--version")) return 2;
+
+            // 3. 查 uvx 缓存 (用 --offline 探测)
+            // 如果 uvx 已经下载过，offline 也能跑通获取版本
+            if (await IsCommandAvailableAsync("uv", "tool run --offline pymusiclooper --version")) return 0;
+
+            return 1; // 需要下载
+        }
+
+        private async Task<bool> IsCommandAvailableAsync(string cmd, string args)
+        {
+            try {
+                var startInfo = new ProcessStartInfo {
+                    FileName = cmd,
+                    Arguments = args,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true
+                };
+                // 如果设置了自定义路径，检查时也要带上，否则查不到对应的离线工具
+                if (!string.IsNullOrEmpty(CustomCachePath) && cmd == "uv") {
+                    startInfo.EnvironmentVariables["UV_CACHE_DIR"] = CustomCachePath;
+                }
+
+                using (var p = Process.Start(startInfo)) {
+                    // 给予 5 秒超时，防止死锁
+                    bool exited = await Task.Run(() => p.WaitForExit(5000));
+                    return exited && p.ExitCode == 0;
+                }
+            } catch { return false; }
+        }
 
         /// <summary>
         /// 调用 PyMusicLooper 寻找最佳循环点
@@ -29,10 +90,12 @@ namespace seamless_loop_music.Services
 
             try
             {
+                OnStatusMessage?.Invoke("LOC:StatusAnalyzing");
                 // 1. 优先尝试直接调用系统环境中的 pymusiclooper
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = "pymusiclooper",
+                    FileName = !string.IsNullOrEmpty(PyMusicLooperExecutablePath) && File.Exists(PyMusicLooperExecutablePath) 
+                               ? PyMusicLooperExecutablePath : "pymusiclooper",
                     Arguments = args,
                     RedirectStandardOutput = true,
                     RedirectStandardError = true, 
@@ -58,15 +121,34 @@ namespace seamless_loop_music.Services
                     }
                 }
             }
-            catch (Exception)
-            {
-                // 2. 如果失败（如未安装或未加入PATH），尝试使用 uvx 作为 fallback
-                // uvx pymusiclooper ...
-                return await TryFallbackAsync($"pymusiclooper {args}");
-            }
+            catch (Exception) { }
             
-            // 如果 exit code != 0，也尝试 fallback
-            return await TryFallbackAsync($"pymusiclooper {args}");
+            // 2. 如果直接调用失败，尝试使用 uv (必须是离线可用的)
+            try
+            {
+                var startInfo = new ProcessStartInfo
+                {
+                    FileName = "uv",
+                    Arguments = $"tool run --offline pymusiclooper {args}",
+                    RedirectStandardOutput = true,
+                    RedirectStandardError = true,
+                    UseShellExecute = false,
+                    CreateNoWindow = true,
+                    StandardOutputEncoding = System.Text.Encoding.UTF8
+                };
+                if (!string.IsNullOrEmpty(CustomCachePath)) startInfo.EnvironmentVariables["UV_CACHE_DIR"] = CustomCachePath;
+
+                using (var process = new Process { StartInfo = startInfo })
+                {
+                    process.Start();
+                    var output = await process.StandardOutput.ReadToEndAsync();
+                    process.WaitForExit();
+                    if (process.ExitCode == 0) return ParseOutput(output);
+                }
+            }
+            catch { }
+
+            return null;
         }
 
         /// <summary>
@@ -104,15 +186,28 @@ namespace seamless_loop_music.Services
                     if (process.ExitCode == 0) output = stdoutTask.Result;
                 }
             }
-            catch
-            {
-                 // fallback immediately
-            }
+            catch { }
 
             if (string.IsNullOrEmpty(output))
             {
-                // Fallback via uvx
-                 output = await TryFallbackCaptureOutputAsync($"pymusiclooper {args}");
+                // Try uv offline
+                try {
+                    var startInfo = new ProcessStartInfo {
+                        FileName = "uv",
+                        Arguments = $"tool run --offline pymusiclooper {args}",
+                        RedirectStandardOutput = true,
+                        RedirectStandardError = true,
+                        UseShellExecute = false,
+                        CreateNoWindow = true,
+                        StandardOutputEncoding = System.Text.Encoding.UTF8
+                    };
+                    if (!string.IsNullOrEmpty(CustomCachePath)) startInfo.EnvironmentVariables["UV_CACHE_DIR"] = CustomCachePath;
+                    using (var process = new Process { StartInfo = startInfo }) {
+                        process.Start();
+                        output = await process.StandardOutput.ReadToEndAsync();
+                        process.WaitForExit();
+                    }
+                } catch { }
             }
 
             return ParseLoopCandidates(output);
@@ -120,44 +215,38 @@ namespace seamless_loop_music.Services
 
 
 
+        // --- 辅助方法已移除，因为不再支持自动下载 ---
 
 
-
-
-        private async Task<(long Start, long End, double Score)?> TryFallbackAsync(string args)
+        private void ParseAndReportProgress(string data)
         {
-            string output = await TryFallbackCaptureOutputAsync(args);
-            if (!string.IsNullOrEmpty(output)) return ParseOutput(output);
-            return null;
-        }
+            if (string.IsNullOrWhiteSpace(data)) return;
 
-        private async Task<string> TryFallbackCaptureOutputAsync(string args)
-        {
-            try {
-                var startInfo = new ProcessStartInfo
-                {
-                    FileName = "uvx", // 现在这里专门跑 uvx 作为 fallback
-                    Arguments = args,
-                    RedirectStandardOutput = true,
-                    RedirectStandardError = true, // 同样需要处理 stderr
-                    UseShellExecute = false,
-                    CreateNoWindow = true,
-                    StandardOutputEncoding = System.Text.Encoding.UTF8
-                };
-                using (var process = new Process { StartInfo = startInfo })
-                {
-                    process.Start();
-                    
-                    var stdoutTask = process.StandardOutput.ReadToEndAsync();
-                    var stderrTask = process.StandardError.ReadToEndAsync();
+            // 特征值 1: Preparing packages... (10/41)
+            var matchNum = System.Text.RegularExpressions.Regex.Match(data, @"\((\d+)/(\d+)\)");
+            if (matchNum.Success)
+            {
+                string current = matchNum.Groups[1].Value;
+                string total = matchNum.Groups[2].Value;
+                OnStatusMessage?.Invoke($"[uv] Loading... ({current}/{total})");
+                return;
+            }
 
-                    await Task.WhenAll(stdoutTask, stderrTask);
-                    process.WaitForExit();
+            // 特征值 2: 具体的 MiB 下载进度 (例如: " 5.00 MiB/7.65 MiB")
+            var matchSize = System.Text.RegularExpressions.Regex.Match(data, @"(\d+\.?\d*\s*\w+iB/\d+\.?\d*\s*\w+iB)");
+            if (matchSize.Success)
+            {
+                OnStatusMessage?.Invoke($"[uv] Downloading: {matchSize.Groups[1].Value}");
+                return;
+            }
 
-                    if (process.ExitCode == 0) return stdoutTask.Result;
-                }
-            } catch { }
-            return null;
+            // 特征值 3: 解析进度百分比 (如果有的话)
+            var matchPercent = System.Text.RegularExpressions.Regex.Match(data, @"(\d+)%");
+            if (matchPercent.Success)
+            {
+                OnStatusMessage?.Invoke($"[uv] Progress: {matchPercent.Groups[1].Value}%");
+                return;
+            }
         }
 
         private (long Start, long End, double Score)? ParseOutput(string output)

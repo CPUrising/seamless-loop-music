@@ -308,4 +308,28 @@
   <data name="SwitchLang" xml:space="preserve">
     <value>中 / En</value>
   </data>
+  <data name="StatusDownloadingPymusiclooper" xml:space="preserve">
+    <value>正在下载/准备 PyMusicLooper (首次运行可能较慢)...</value>
+  </data>
+  <data name="StatusPymusiclooperReady" xml:space="preserve">
+    <value>PyMusicLooper 准备就绪，正在分析音频...</value>
+  </data>
+  <data name="StatusAnalyzing" xml:space="preserve">
+    <value>正在利用 PyMusicLooper 寻找最佳点...</value>
+  </data>
+  <data name="PromptDownloadPymusiclooper" xml:space="preserve">
+    <value>未在系统中找到 PyMusicLooper 环境。
+请先在命令行运行以下命令进行安装：
+uvx pymusiclooper --version
+完成后请重新启动此功能。</value>
+  </data>
+  <data name="TitleDownloadNeeded" xml:space="preserve">
+    <value>环境下载确认</value>
+  </data>
+  <data name="ButtonSetPath" xml:space="preserve">
+    <value>自定义位置</value>
+  </data>
+  <data name="MsgNoUv" xml:space="preserve">
+    <value>系统未找到 uv 工具。请先安装 uv，或者按照 PyMusicLooper_README 手动配置环境。</value>
+  </data>
 </root>

@@ -55,6 +55,14 @@ namespace seamless_loop_music.Services
             _audioLooper = new AudioLooper();
             _dbHelper = new DatabaseHelper();
             _loopAnalysisService = new LoopAnalysisService();
+            _loopAnalysisService.OnStatusMessage += msg => {
+                string localized = msg;
+                if (msg.StartsWith("LOC:")) {
+                    string key = msg.Substring(4);
+                    localized = LocalizationService.Instance[key];
+                }
+                OnStatusMessage?.Invoke(localized);
+            };
             _playlistManager = new PlaylistManagerService(_dbHelper);
             _playlistManager.OnStatusMessage = msg => OnStatusMessage?.Invoke(msg);
             _playbackQueue = new PlaybackQueueService();
@@ -70,6 +78,21 @@ namespace seamless_loop_music.Services
             
             // 循环完成回调
             _audioLooper.OnLoopCycleCompleted += HandleLoopCycleCompleted;
+        }
+
+        public void SetPyMusicLooperCachePath(string path)
+        {
+            _loopAnalysisService.SetCustomCachePath(path);
+        }
+
+        public void SetPyMusicLooperExecutablePath(string path)
+        {
+            _loopAnalysisService.SetPyMusicLooperExecutablePath(path);
+        }
+
+        public async Task<int> CheckPyMusicLooperStatusAsync()
+        {
+            return await _loopAnalysisService.CheckEnvironmentAsync();
         }
 
         private void HandleLoopCycleCompleted()

@@ -1,0 +1,51 @@
+**卸载**
+
+uv tool uninstall pymusiclooper
+
+打开安装目录：按下 `Win + R`，输入以下路径并回车，直接定位到 uv 的安装文件夹：
+
+```
+USERPROFILE%\.local\bin
+```
+
+```
+powershell卸载
+$uvPath = "$env:USERPROFILE\.local\bin" 
+# 删除 uv 相关可执行文件 
+Remove-Item -Path "$uvPath\uv.exe" -ErrorAction SilentlyContinue 
+Remove-Item -Path "$uvPath\uvx.exe" -ErrorAction SilentlyContinue 
+Remove-Item -Path "$uvPath\uvw.exe" -ErrorAction SilentlyContinue 
+# 验证是否删除成功 
+if (-not (Test-Path "$uvPath\uv.exe")) 
+{
+    Write-Host "uv 已成功卸载！" -ForegroundColor Green } else {    Write-Host "卸载失败，请手动删除文件。" -ForegroundColor Red }
+```
+
+pip uninstall uv
+
+或
+这个命令会清空 uv 的所有临时工具缓存。
+
+cmd下
+uv cache clean
+
+**下载**
+
+powershell下载
+powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
+
+1. 它的默认地址
+  您可以直接把下面这段路径粘贴进文件夹路径栏（或者按 Win + R 输入）：
+  %LOCALAPPDATA%\uv
+  具体路径通常是：C:\Users\您的用户名\AppData\Local\uv\cache。
+
+2. 怎么精准找到它？
+如果您想让 uv 自己老老实实交代位置，可以在终端输入这个命令：
+
+cmd下
+uv cache dir
+
+这个命令会清空 uv 的所有临时工具缓存。
+
+cmd下
+uv cache clean

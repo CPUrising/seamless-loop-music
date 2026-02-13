@@ -12,11 +12,28 @@ namespace seamless_loop_music.Services
     /// </summary>
     public class LoopAnalysisService
     {
+        public event Action<string> OnStatusMessage;
         private readonly PyMusicLooperWrapper _pyMusicLooperWrapper;
 
         public LoopAnalysisService()
         {
             _pyMusicLooperWrapper = new PyMusicLooperWrapper();
+            _pyMusicLooperWrapper.OnStatusMessage += msg => OnStatusMessage?.Invoke(msg);
+        }
+
+        public void SetCustomCachePath(string path)
+        {
+            _pyMusicLooperWrapper.CustomCachePath = path;
+        }
+
+        public void SetPyMusicLooperExecutablePath(string path)
+        {
+            _pyMusicLooperWrapper.PyMusicLooperExecutablePath = path;
+        }
+
+        public async Task<int> CheckEnvironmentAsync()
+        {
+            return await _pyMusicLooperWrapper.CheckEnvironmentAsync();
         }
 
         // --- JSON Helpers (原 PlayerService.cs 内置无依赖版) ---

@@ -2,6 +2,7 @@ using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using System.Collections.Generic;
 using System.Windows;
+using System.Threading.Tasks;
 
 namespace seamless_loop_music.UI
 {
@@ -9,6 +10,7 @@ namespace seamless_loop_music.UI
     {
         private PlayerService _playerService;
         private List<LoopCandidate> _candidates;
+        private System.Func<System.Threading.Tasks.Task<bool>> _checker;
         
         public class LoopCandidateViewModel
         {
@@ -28,11 +30,12 @@ namespace seamless_loop_music.UI
             }
         }
 
-        public LoopListWindow(List<LoopCandidate> candidates, PlayerService service)
+        public LoopListWindow(List<LoopCandidate> candidates, PlayerService service, System.Func<System.Threading.Tasks.Task<bool>> checker = null)
         {
             InitializeComponent();
             _playerService = service;
             _candidates = candidates;
+            _checker = checker;
             
             if (btnUpdate != null) {
                 btnUpdate.ToolTip = LocalizationService.Instance["ToolTipRecalculate"];
@@ -64,6 +67,9 @@ namespace seamless_loop_music.UI
                     btnUpdate.Content = LocalizationService.Instance["StatusUpdating"];
                 }
                 
+                // 环境预检
+                if (_checker != null && !await _checker()) return;
+
                 // 强制刷新
                 var newCandidates = await _playerService.GetLoopCandidatesAsync(forceRefresh: true);
                 RefreshListView(newCandidates);

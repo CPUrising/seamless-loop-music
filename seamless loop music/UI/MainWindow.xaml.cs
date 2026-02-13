@@ -12,6 +12,8 @@ using seamless_loop_music.Services; // 引入新晋音乐总监
 using System.Collections.ObjectModel;
 using System.Windows.Media;
 using System.Windows.Input;
+using seamless_loop_music.UI;
+using System.Threading.Tasks;
 
 namespace seamless_loop_music
 {
@@ -649,6 +651,8 @@ namespace seamless_loop_music
 
             if (confirm != MessageBoxResult.Yes) return;
 
+            if (!await EnsurePyMusicLooperReadyAsync()) return;
+
             // 禁用界面上相关的按钮防止冲突（可选，但安全）
 
 
@@ -776,12 +780,38 @@ namespace seamless_loop_music
 
 
 
+        private async System.Threading.Tasks.Task<bool> EnsurePyMusicLooperReadyAsync()
+        {
+            int status = await _playerService.CheckPyMusicLooperStatusAsync();
+            if (status == 0) return true; // Ready
+
+            if (status == 2)
+            {
+                MessageBox.Show(LocalizationService.Instance["MsgNoUv"], "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            // status == 1, Needs manual setup
+            MessageBox.Show(LocalizationService.Instance["PromptDownloadPymusiclooper"], 
+                            LocalizationService.Instance["TitleDownloadNeeded"], 
+                            MessageBoxButton.OK, MessageBoxImage.Information);
+                                         
+            return false; // Not ready, user must install manually
+        }
+
         private async void btnPyList_Click(object sender, RoutedEventArgs e)
         {
              ApplyLoopSettings();
              bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
              
              btnPyList.IsEnabled = false;
+
+             if (!await EnsurePyMusicLooperReadyAsync())
+             {
+                 btnPyList.IsEnabled = true;
+                 return;
+             }
+
              lblStatus.Text = isZh ? "正在计算前10个循环点..." : "Fetching top 10 loops...";
              
              try 
@@ -793,7 +823,8 @@ namespace seamless_loop_music
                  }
                  else
                  {
-                     var win = new seamless_loop_music.UI.LoopListWindow(candidates, _playerService);
+                                           var win = new seamless_loop_music.UI.LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
+
                      win.Owner = this;
                      win.Show(); // 非模态窗口，允许用户一边看一边操作主界面（虽然 apply 会自动操作）
                  }
@@ -1020,7 +1051,7 @@ namespace seamless_loop_music
                 if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
                     lines.Add($"LastPlaylist={folder.Id}");
                 }
- else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
+                else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
                     lines.Add($"LastPlaylist={_lastPlaylistPath}");
                 }
 

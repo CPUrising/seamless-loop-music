@@ -6,71 +6,89 @@
 
 [中文版](README.md) | [English Version](README_EN.md)
 
-![1770884722242](image/README_EN/1770884722242.png)
+A seamless looping and high-efficiency management tool crafted for game BGM (such as Galgames and RPGs) and ambient sound effects (such as white noise). Powered by both self-developed algorithms and top-tier open-source engines, it achieves precise sample-level loop alignment.
 
-A specialized tool for seamless looping and configuration of game BGM and ambient sound effects. Features millisecond-precision auto-alignment of loop points via an audio fingerprint matching algorithm.
+Currently supports Windows 10 and above operating systems.
 
----
-
-## 🛠️ Key Features
-
-- **Smart Match (Audio Loop Alignment)**: Based on the SAD (Sum of Absolute Differences) algorithm. Automatically fine-tunes and aligns the loop start point by analyzing waveform phases to ensure smooth transitions.
-- **Database-Driven Playlist System**: Managed via SQLite. Supports audio fingerprinting to automatically restore loop configurations, aliases, and other metadata even if file locations change.
-- **Alias System**: Allows setting custom display names (DisplayName) for tracks in the database without modifying physical filenames.
-- **Low-Level Stream Loop Control**: Utilizes NAudio-based circular buffering for sample-accurate, gapless looping.
-- **Diverse Playback Modes**:
-  - Supports "Single Cycle", "List Loop", and "Shuffle".
-  - Configurable loop count limit per track before automatically switching to the next.
-- **Low Dependency**: Built on .NET Framework 4.8, typically requiring no additional runtime installation on Windows 10/11.
+![1770995667392](image/README_EN/1770995667392.png)
 
 ---
 
-## 🚀 Technical Specifications
+## 🛠️ Core Features
 
-- **Audio Backend**: NAudio
+### 1. Smart & Deep Match
+
+- **Manual Smart Match**: Supports "Reverse" (find start) and "Forward" (find end) modes, perfectly adapted to OST tracks with Intro + Loop Section + Loop Section Start.
+  - **Reverse**: Uses the one second before the current loop end as a fingerprint, searching for the highest match within 10 seconds around the current loop start to update it.
+  - **Forward**: Uses the one second after the current loop start as a fingerprint, searching for the highest match within 10 seconds around the current loop end to update it.
+- **Automatic Smart Match**: Integrated with the industry-leading PyMusicLooper engine, allowing for one-click batch loop point matching (requires manual installation by the user).
+
+### 2. A/B Looping Mode
+
+- **Dual-File Concatenation**: Supports logically concatenating two independent tracks (e.g., Intro.wav + Loop.wav, 01_a.ogg + 01_b.ogg, 02_A.mp3 + 02_B.mp3) into a single playable track. This is ideal for original game BGM matching like White Album 2 or Meteor World Actor.
+  - *Note*: Since the implementation loads both files directly into memory, **do not** use audio files that are **several hours long**, as this may cause high system temperature.
+- Users can manually set the merged loop start and end points, or restore the original A/B seam via the "Restore A/B Seam" button.
+
+### 3. Three Playback Modes
+
+- Supports Single Track Loop.
+- Supports Playlist Loop and Random Playback, with customizable loop counts per track before switching to the next one.
+
+### 4. Persistence Data Management (Safe & Portable)
+
+- **Fingerprint Identification**: Audio fingerprinting technology based on `(Filename + Total Samples)`. Aliases and loop configurations are automatically recovered even if files are moved.
+- **Industrial-Grade Backend**: Built on SQLite + Dapper architecture with WAL concurrency mode enabled, supporting high-speed read/write for large music libraries.
+- **Alias System**: Customize display names in the UI without modifying physical filenames.
+
+### 5. Modern UX & Interactivity
+
+- **Native Drag-and-Drop**: Directly drag music tracks or playlists to reorder them; results are persisted to the database in real-time.
+- **Batch Management Engine**: Multi-select playlists to perform one-click refresh, batch deep matching, or deletion.
+- **Smart Edge Scrolling**: Automatically senses boundaries and scrolls when dragging in long lists for a smooth experience.
+
+---
+
+## 🚀 Tech Stack
+
+- **Audio Backend**: NAudio (Seamless streaming technology based on ring buffers)
 - **Data Storage**: SQLite + Dapper (ORM)
-- **UI Framework**: WPF (with UI Virtualization for large-scale lists)
-- **Algorithm Model**: Time-domain Cross-correlation
+- **UI Framework**: WPF (Supports UI virtualization and dynamic list redrawing)
+- **Matching Algorithms**: Time-domain cross-correlation (Custom) + PyMusicLooper (Integrated)
 
 ---
 
 ## 📖 User Guide
 
-1. **Import Tracks**: Click the `+` button next to "My Playlists" in the sidebar to select a folder containing audio files.
-2. **Set Loop Range**: Enter approximate loop start and end points (in samples) in the central workspace.
-3. **Execute Smart Match**: Click the **"Smart Match"** button. The program analyzes the waveform near the end point and searches for the best matching position near the start point for automatic calibration.
-4. **Apply and Verify**: Click **"Apply & Test Loop"**. The player will jump to 3 seconds before the loop end point for you to verify the transition quality.
+1. **Batch Operations**: Similar to Windows file selection: `CTRL` + Click for multiple individual selections, `CTRL+A` for selecting all in a list, and `Shift` + Click for range selection.
+2. **Importing**: Click the `+` icon next to "My Playlists" in the upper-left corner. There are two types of playlists: one managed only by adding/deleting folders, and another managed by individual tracks which the system automatically scans and maps via fingerprints.
+3. **Loop Matching**:
+   - **Manual Smart Match**: Input or use buttons on the main interface to get rough sample points or timestamps. Use "Find Start/End" for local phase alignment. Use "Confirm and Preview" to jump to 3 seconds before the loop end to verify seamlessness.
+   - **Deep Match**: Requires PyMusicLooper to be configured. Refer to [arkrow/PyMusicLooper](https://github.com/arkrow/PyMusicLooper/blob/master/README.md) or point 5 in this guide.
+     - You can batch-select songs for "Deep Match". The engine will find the best loop positions. Double-click an entry in the "Leaderboard" to preview and select. If a song hasn't been matched yet, clicking the leaderboard will trigger the matching process first.
+     - *Tested Tip*: Deep matching isn't always 100% accurate; manual fine-tuning might still be needed.
+   - **A/B Segment Matching**: When adding A/B tracks, the loop start/end is automatically set to the beginning/end of the B segment. It also supports the two matching methods mentioned above. Use "Restore A/B Seam" to return to the initial state.
+   - **Looping Issues**: In rare cases, the chosen loop point might be difficult to decode, causing a failure (e.g., stopping or returning to the start). Fine-tuning the loop point by a few milliseconds usually solves this.
+4. **Playlist & Song Management**:
+   - Right-click playlists or songs for operations like delete, rename, or add.
+   - Drag and drop tracks with the left mouse button to arrange your preferred play order.
+5. **PyMusicLooper Installation Guide**:
+   - **uv Version (Recommended):**
+     - Requires a stable network environment, especially for installing the `uv` tool.（those reading *here* don't need worry about it）
+     - Open PowerShell and run: `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`.
+     - Once installed, open CMD (Win+R -> cmd) and run: `uv tool install pymusiclooper`.
+   - **pip Version:**
+     - If you have Python and `pip` configured, run: `pipx install pymusiclooper` or `pip install pymusiclooper`.
 
 ---
 
-## 📝 Roadmap
+## 🕹️ Credits
 
-We are committed to delivering the ultimate seamless loop experience. Here are our planned improvements:
+This project was initially inspired by [melodicule/AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer). The loop-related code provided great inspiration for our A/B segment processing (loading the entire song into memory...). We have expanded and enhanced it for broader applications.
 
-### 🔴 High Priority
-
-- [ ] **Pop Noise Elimination**: Further research on sample smoothing algorithms during jumps to eliminate specific "Click/Pop" noises.
-- [ ] **Smart Detection**: Monitor system audio device changes (e.g., headphone disconnection) to implement auto-pause.
-
-### 🟡 UX Improvements
-
-- [ ] **UI/UX Optimization**: Refine the visual style and refactor playlist management and track addition workflows for better usability.
-- [ ] **Crossfade**: Implement smooth volume transitions between tracks as a user-configurable option.
-- [ ] **Auto-Focus List**: Automatically scroll the playlist to focus on the currently playing track.
-
-### 🔵 Algorithm & Performance
-
-- [ ] **Algorithm Upgrade**: Introduce more efficient waveform analysis methods (e.g., FFT cross-correlation) to reduce computation time and improve cross-format accuracy.
-- [ ] **Forward Search Support**: Implement matching logic searching forward from the start point to accommodate diverse audio structures.
-
----
-
-## 🕹️ Acknowledgement
-
-This project is inspired by AokanaMusicPlayer. We have fully refactored its architecture and enhanced its features to provide a more modern and stable audio looping solution.
+Batch Deep Matching is supported by [arkrow/PyMusicLooper](https://github.com/arkrow/PyMusicLooper), an incredible open-source project for finding seamless loops. Please give them a star!
 
 ---
 
 ## 📜 License
 
-This project is licensed under the **Microsoft Public License (Ms-PL)**.
+This project respects the open-source contributions of [melodicule/AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer) and follows the **Microsoft Public License (Ms-PL)**.

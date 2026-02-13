@@ -308,4 +308,28 @@ This may take a long time.</value>
   <data name="SwitchLang" xml:space="preserve">
     <value>En / 中文</value>
   </data>
+  <data name="StatusDownloadingPymusiclooper" xml:space="preserve">
+    <value>Downloading/Preparing PyMusicLooper (First time may be slow)...</value>
+  </data>
+  <data name="StatusPymusiclooperReady" xml:space="preserve">
+    <value>PyMusicLooper ready, analyzing audio...</value>
+  </data>
+  <data name="StatusAnalyzing" xml:space="preserve">
+    <value>Analyzing with PyMusicLooper...</value>
+  </data>
+  <data name="PromptDownloadPymusiclooper" xml:space="preserve">
+    <value>PyMusicLooper not found. 
+Please run the following command in your terminal to install:
+uvx pymusiclooper --version
+Then restart this feature.</value>
+  </data>
+  <data name="TitleDownloadNeeded" xml:space="preserve">
+    <value>Download Confirmation</value>
+  </data>
+  <data name="ButtonSetPath" xml:space="preserve">
+    <value>Custom Location...</value>
+  </data>
+  <data name="MsgNoUv" xml:space="preserve">
+    <value>uv tool not found. Please install uv first, or follow PyMusicLooper_README to install manually.</value>
+  </data>
 </root>
