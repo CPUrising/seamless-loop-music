@@ -1,43 +1,16 @@
-**卸载**
-
+下载：
+pip uninstall uv
 uv tool uninstall pymusiclooper
 
-打开安装目录：按下 `Win + R`，输入以下路径并回车，直接定位到 uv 的安装文件夹：
-
-```
-USERPROFILE%\.local\bin
-```
-
-```
-powershell卸载
-$uvPath = "$env:USERPROFILE\.local\bin" 
-# 删除 uv 相关可执行文件 
-Remove-Item -Path "$uvPath\uv.exe" -ErrorAction SilentlyContinue 
-Remove-Item -Path "$uvPath\uvx.exe" -ErrorAction SilentlyContinue 
-Remove-Item -Path "$uvPath\uvw.exe" -ErrorAction SilentlyContinue 
-# 验证是否删除成功 
-if (-not (Test-Path "$uvPath\uv.exe")) 
-{
-    Write-Host "uv 已成功卸载！" -ForegroundColor Green } else {    Write-Host "卸载失败，请手动删除文件。" -ForegroundColor Red }
-```
-
-pip uninstall uv
-
-或
-这个命令会清空 uv 的所有临时工具缓存。
-
-cmd下
-uv cache clean
-
-**下载**
-
-powershell下载
+powershell下
 powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"
 
 1. 它的默认地址
-  您可以直接把下面这段路径粘贴进文件夹路径栏（或者按 Win + R 输入）：
-  %LOCALAPPDATA%\uv
-  具体路径通常是：C:\Users\您的用户名\AppData\Local\uv\cache。
+您可以直接把下面这段路径粘贴进文件夹路径栏（或者按 Win + R 输入）：
+
+text
+%LOCALAPPDATA%\uv
+具体路径通常是：C:\Users\您的用户名\AppData\Local\uv\cache。
 
 2. 怎么精准找到它？
 如果您想让 uv 自己老老实实交代位置，可以在终端输入这个命令：
@@ -49,3 +22,25 @@ uv cache dir
 
 cmd下
 uv cache clean
+
+1. 简单的预下载命令
+在大人的命令行（CMD 或 PowerShell）里输入：
+
+powershell
+uvx pymusiclooper --version
+这条命令会让 uv 自动去下载并配置好所有运行环境。一旦这条命令运行成功并显示了版本号，莱芙的程序就能在下次启动时自动扫描到它，再也不会弹出那个讨人厌的确认框了！(๑>◡<๑)
+
+2. 如果指定下载位置
+如果您想让 uv 把环境手动下到指定的目录D:\program，可以用这两步：
+
+PowerShell 版：
+
+powershell
+$env:UV_CACHE_DIR="D:\program\uv_cache"
+uvx pymusiclooper --version
+
+CMD 版：
+
+cmd
+set UV_CACHE_DIR=D:\program\uv_cache
+uvx pymusiclooper --version
