@@ -16,6 +16,9 @@ namespace seamless_loop_music
         private long _loopStartSample;
         private long _loopEndSample = 0; // 新增: 循环结束采样数
         private long _totalSamples;
+        private BufferedWaveProvider _bufferedProvider;
+        private System.Threading.CancellationTokenSource _fillerCts;
+        private volatile bool _isSeeking = false;
 
 
         // 公开读取接口
@@ -240,20 +243,24 @@ namespace seamless_loop_music
                 _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
                 _loopStream.OnLoopCompleted += () => OnLoopCycleCompleted?.Invoke();
 
+                // --- 异步缓冲系统配置 ---
+                _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
+                {
+                    BufferDuration = TimeSpan.FromSeconds(1), // 缩小到 1 秒，平衡稳定性与同步性
+                    DiscardOnBufferOverflow = true
+                };
+
                 // 创建播放器
                 _wavePlayer = new WaveOutEvent
                 {
-                    DesiredLatency = 100,  // 低延迟
+                    DesiredLatency = 100, // 恢复 100ms
                     NumberOfBuffers = 2
                 };
 
-                _wavePlayer.Init(_loopStream);
+                _wavePlayer.Init(_bufferedProvider);
                 _wavePlayer.PlaybackStopped += (s, e) =>
                 {
-                    // 如果正在加载新歌，忽略旧播放器的停止事件
                     if (_isLoading) return;
-
-                    // 只有非手动暂停导致的停止才触发完全停止逻辑
                     if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
                     {
                         OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
@@ -261,9 +268,12 @@ namespace seamless_loop_music
                     }
                 };
 
+                // 启动后台填充任务
+                StartFillerTask();
+
                 _wavePlayer.Play();
                 OnPlayStateChanged?.Invoke(PlaybackState.Playing);
-                OnStatusChanged?.Invoke("Loop playback started...");
+                OnStatusChanged?.Invoke("Stable Loop playback started (Async Buffering Enabled)...");
             }
             catch (Exception ex)
             {
@@ -327,9 +337,12 @@ namespace seamless_loop_music
         {
             get
             {
-                if (_loopStream != null && _audioStream != null)
+                if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
                 {
-                    return TimeSpan.FromSeconds((double)_loopStream.Position / _audioStream.WaveFormat.AverageBytesPerSecond);
+                    // 修正：实际播放进度 = 已读取并填充的位置 - 还在缓冲区没被硬件吃掉的字节
+                    long actualPos = _loopStream.Position - _bufferedProvider.BufferedBytes;
+                    if (actualPos < 0) actualPos = 0;
+                    return TimeSpan.FromSeconds((double)actualPos / _audioStream.WaveFormat.AverageBytesPerSecond);
                 }
                 return TimeSpan.Zero;
             }
@@ -365,12 +378,18 @@ namespace seamless_loop_music
         /// </summary>
         public void SeekToSample(long sample)
         {
-            if (_loopStream != null && _audioStream != null)
+            if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
             {
+                _isSeeking = true;
+                _bufferedProvider.ClearBuffer(); // 立即排干缓冲区，防止听到旧数据
+
                 long position = sample * _audioStream.WaveFormat.BlockAlign;
                 if (position < 0) position = 0;
-                if (position > _loopStream.Length) position = _loopStream.Length;
+                long totalLen = _loopStream.Length;
+                if (position > totalLen) position = totalLen;
+                
                 _loopStream.Position = position;
+                _isSeeking = false;
             }
         }
 
@@ -677,11 +696,68 @@ namespace seamless_loop_music
         /// </summary>
         private void DisposeAudioResources()
         {
+            StopFillerTask();
             _wavePlayer?.Dispose();
             _loopStream = null;
             _audioStream?.Dispose();
+            _bufferedProvider = null;
             _wavePlayer = null;
             _audioStream = null;
+        }
+
+        private void StartFillerTask()
+        {
+            StopFillerTask();
+            _fillerCts = new System.Threading.CancellationTokenSource();
+            var token = _fillerCts.Token;
+            
+            System.Threading.Tasks.Task.Run(() => BackgroundFillLoop(token), token);
+        }
+
+        private void StopFillerTask()
+        {
+            _fillerCts?.Cancel();
+            _fillerCts = null;
+        }
+
+        private async System.Threading.Tasks.Task BackgroundFillLoop(System.Threading.CancellationToken token)
+        {
+            byte[] readBuffer = new byte[16384]; // 16KB 每次读取量
+            
+            while (!token.IsCancellationRequested)
+            {
+                if (_isSeeking) // 等待 Seek 完成
+                {
+                    await System.Threading.Tasks.Task.Delay(10, token);
+                    continue;
+                }
+
+                if (_bufferedProvider == null || _loopStream == null) break;
+
+                // 保持缓冲区在 400ms 左右的余量，既能抗抖动，又不至于让事件太超前
+                TimeSpan buffered = _bufferedProvider.BufferedDuration;
+                if (buffered.TotalMilliseconds < 400)
+                {
+                    try 
+                    {
+                        int read = _loopStream.Read(readBuffer, 0, readBuffer.Length);
+                        if (read > 0)
+                        {
+                            _bufferedProvider.AddSamples(readBuffer, 0, read);
+                        }
+                        else 
+                        {
+                            await System.Threading.Tasks.Task.Delay(20, token);
+                        }
+                    }
+                    catch { break; }
+                }
+                else 
+                {
+                    // 粮草充足，休息一会儿
+                    await System.Threading.Tasks.Task.Delay(30, token);
+                }
+            }
         }
 
         public void Dispose()

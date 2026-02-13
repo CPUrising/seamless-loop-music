@@ -15,6 +15,7 @@ namespace seamless_loop_music
         public long LoopStartPosition { get; set; } 
         public long LoopEndPosition { get; set; }  
         private int _bytesPerSample;
+        private long _currentPosition; // 用于记录当前的逻辑位置，不受异步缓冲提前填充的影响
 
         private readonly object _lockObject = new object(); // 线程锁
 
