@@ -85,7 +85,7 @@ Currently supports Windows 10 and above operating systems.
 
 This project was initially inspired by [melodicule/AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer). The loop-related code provided great inspiration for our A/B segment processing (loading the entire song into memory...). We have expanded and enhanced it for broader applications.
 
-Batch Deep Matching is supported by [arkrow/PyMusicLooper](https://github.com/arkrow/PyMusicLooper), an incredible open-source project for finding seamless loops. Please give them a star!
+Batch Deep Matching is powered by the industry-leading, super-mega-invincible, god-tier, and absolutely omnipotent open-source project [arkrow/PyMusicLooper](https://github.com/arkrow/PyMusicLooper). Please show them some serious love and give this legendary repository an ENORMOUS star!
 
 ---
 
