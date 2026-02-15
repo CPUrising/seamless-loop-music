@@ -8,7 +8,7 @@
 
 A seamless looping and high-efficiency management tool crafted for game BGM (such as Galgames and RPGs) and ambient sound effects (such as white noise). Powered by both self-developed algorithms and top-tier open-source engines, it achieves precise sample-level loop alignment.
 
-Currently supports Windows 10 and above operating systems.
+Currently only supports Windows 10 and above operating systems, with MP3, OGG, and WAV audio formats.
 
 ![1770995667392](image/README_EN/1770995667392.png)
 
