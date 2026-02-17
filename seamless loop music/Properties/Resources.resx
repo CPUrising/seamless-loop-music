@@ -332,4 +332,10 @@ Then restart this feature.</value>
   <data name="MsgNoUv" xml:space="preserve">
     <value>uv tool not found. Please install uv first, or follow PyMusicLooper_README to install manually.</value>
   </data>
+  <data name="BtnMin" xml:space="preserve">
+    <value>Min</value>
+  </data>
+  <data name="BtnMax" xml:space="preserve">
+    <value>Max</value>
+  </data>
 </root>

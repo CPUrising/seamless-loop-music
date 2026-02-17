@@ -851,18 +851,41 @@ namespace seamless_loop_music
             lblStatus.Text = isZh ? "智能匹配完成" : "Smart Match Done";
         }
 
-        private void Adjust_Click(object sender, RoutedEventArgs e) {
+        private void Adjust_Click(object sender, RoutedEventArgs e)
+        {
             var btn = sender as Button;
             if (btn == null || btn.Tag == null) return;
-            var parts = btn.Tag.ToString().Split(':');
-            double deltaSec = double.Parse(parts[1]);
-            long delta = (long)(_playerService.SampleRate * deltaSec); // 使用 Service 中的 SampleRate
-            
-            TextBox target = (parts[0] == "Start") ? txtLoopSample : txtLoopEndSample;
+
+            string tag = btn.Tag.ToString();
+            var parts = tag.Split(':');
+            if (parts.Length < 2) return;
+
+            string type = parts[0];   // Start / End
+            string value = parts[1];  // Min / Max / number
+
+            TextBox target = (type == "Start") ? txtLoopSample : txtLoopEndSample;
             long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
             
-            if (long.TryParse(target.Text, out long current)) 
-                target.Text = Math.Max(0, Math.Min(total, current + delta)).ToString();
+            long current = 0;
+            long.TryParse(target.Text, out current);
+
+            if (value == "Min")
+            {
+                target.Text = "0";
+            }
+            else if (value == "Max")
+            {
+                target.Text = total.ToString();
+            }
+            else
+            {
+                if (double.TryParse(value, out double deltaSec))
+                {
+                    // 使用 Service 中的 SampleRate 来计算偏移量
+                    long delta = (long)(_playerService.SampleRate * deltaSec);
+                    target.Text = Math.Max(0, Math.Min(total, current + delta)).ToString();
+                }
+            }
         }
 
         private void txtLoopSample_TextChanged(object sender, TextChangedEventArgs e) { 

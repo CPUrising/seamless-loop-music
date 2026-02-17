@@ -332,4 +332,10 @@ uvx pymusiclooper --version
   <data name="MsgNoUv" xml:space="preserve">
     <value>系统未找到 uv 工具。请先安装 uv，或者按照 PyMusicLooper_README 手动配置环境。</value>
   </data>
+  <data name="BtnMin" xml:space="preserve">
+    <value>最小</value>
+  </data>
+  <data name="BtnMax" xml:space="preserve">
+    <value>最大</value>
+  </data>
 </root>

@@ -159,42 +159,52 @@
                                          TextChanged="txtLoopSample_TextChanged"/>
                                 <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopStartSec_TextChanged"/>
 
-                                <UniformGrid Columns="4" Margin="0,15,0,0">
-                                    <Button Content="-5s" Click="Adjust_Click" Tag="Start:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+1s" Click="Adjust_Click" Tag="Start:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+5s" Click="Adjust_Click" Tag="Start:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    <UniformGrid Columns="2" Margin="0,15,0,0">
+                                        <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Click="Adjust_Click" Tag="Start:Min" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                                        <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Click="Adjust_Click" Tag="Start:Max" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                                    </UniformGrid>
                                     
-                                    <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="-0.01s" Click="Adjust_Click" Tag="Start:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+0.01s" Click="Adjust_Click" Tag="Start:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                </UniformGrid>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
+                                    <UniformGrid Columns="4" Margin="0,5,0,0">
+                                        <Button Content="-5s" Click="Adjust_Click" Tag="Start:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+1s" Click="Adjust_Click" Tag="Start:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+5s" Click="Adjust_Click" Tag="Start:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        
+                                        <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="-0.01s" Click="Adjust_Click" Tag="Start:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+0.01s" Click="Adjust_Click" Tag="Start:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    </UniformGrid>
+                                </StackPanel>
+                            </Border>
+                        </StackPanel>
 
-                    <!-- End Point -->
-                    <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                        <Border Background="#181825" CornerRadius="10" Padding="15">
-                            <StackPanel>
-                                <TextBlock x:Name="lblLoopEnd" Text="{Binding [LoopEndLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
-                                <TextBox x:Name="txtLoopEndSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#F38BA8" 
-                                         BorderBrush="#F38BA8" BorderThickness="0,0,0,2" Margin="0,0,0,5"
-                                         TextChanged="txtLoopEndSample_TextChanged"/>
-                                <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopEndSec_TextChanged"/>
+                        <!-- End Point -->
+                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                            <Border Background="#181825" CornerRadius="10" Padding="15">
+                                <StackPanel>
+                                    <TextBlock x:Name="lblLoopEnd" Text="{Binding [LoopEndLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
+                                    <TextBox x:Name="txtLoopEndSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#F38BA8" 
+                                             BorderBrush="#F38BA8" BorderThickness="0,0,0,2" Margin="0,0,0,5"
+                                             TextChanged="txtLoopEndSample_TextChanged"/>
+                                    <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopEndSec_TextChanged"/>
 
-                                <UniformGrid Columns="4" Margin="0,15,0,0">
-                                    <Button Content="-5s" Click="Adjust_Click" Tag="End:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="-1s" Click="Adjust_Click" Tag="End:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+1s" Click="Adjust_Click" Tag="End:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+5s" Click="Adjust_Click" Tag="End:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    
-                                    <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="-0.01s" Click="Adjust_Click" Tag="End:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+0.01s" Click="Adjust_Click" Tag="End:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                </UniformGrid>
+                                    <UniformGrid Columns="2" Margin="0,15,0,0">
+                                        <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Click="Adjust_Click" Tag="End:Min" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                                        <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Click="Adjust_Click" Tag="End:Max" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                                    </UniformGrid>
+
+                                    <UniformGrid Columns="4" Margin="0,5,0,0">
+                                        <Button Content="-5s" Click="Adjust_Click" Tag="End:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="-1s" Click="Adjust_Click" Tag="End:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+1s" Click="Adjust_Click" Tag="End:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+5s" Click="Adjust_Click" Tag="End:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        
+                                        <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="-0.01s" Click="Adjust_Click" Tag="End:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+0.01s" Click="Adjust_Click" Tag="End:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                        <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                    </UniformGrid>
                             </StackPanel>
                         </Border>
                     </StackPanel>
