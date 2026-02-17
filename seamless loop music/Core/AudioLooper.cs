@@ -6,15 +6,15 @@ using System.IO;
 namespace seamless_loop_music
 {
     /// <summary>
-    /// 无缝循环音频播放器
+    /// 无缝循环音频播放器 (主控部分)
     /// </summary>
-    public class AudioLooper : IDisposable
+    public partial class AudioLooper : IDisposable
     {
         private IWavePlayer _wavePlayer;
         private WaveStream _audioStream;
         private LoopStream _loopStream;
         private long _loopStartSample;
-        private long _loopEndSample = 0; // 新增: 循环结束采样数
+        private long _loopEndSample = 0; 
         private long _totalSamples;
         private BufferedWaveProvider _bufferedProvider;
         private System.Threading.CancellationTokenSource _fillerCts;
@@ -28,124 +28,14 @@ namespace seamless_loop_music
 
         // 状态回调事件
         public event Action<string> OnStatusChanged;
-        public event Action<PlaybackState> OnPlayStateChanged; // 升级: 传递详细状态
-        // 新增: 音频加载完成事件 (总采样数, 采样率)
+        public event Action<PlaybackState> OnPlayStateChanged; 
         public event Action<long, int> OnAudioLoaded;
-        // 新增: 循环完成一次事件
         public event Action OnLoopCycleCompleted;
 
-        private string _currentFilePath; // 第一部分 (Part A)
-        private string _partBFilePath;   // 第二部分 (Part B)
+        private string _currentFilePath; 
+        private string _partBFilePath;   
         private bool _isLoading = false; 
 
-
-        /// <summary>
-        /// 加载单音频文件
-        /// </summary>
-        public void LoadAudio(string filePath)
-        {
-            LoadAudio(filePath, null);
-        }
-
-        /// <summary>
-        /// 加载音频。如果提供了 secondFilePath，则执行“物理预合并”方案 (A+B)
-        /// </summary>
-        public void LoadAudio(string firstFilePath, string secondFilePath)
-        {
-            try
-            {
-                _isLoading = true;
-                Stop();
-                DisposeAudioResources();
-
-                _currentFilePath = firstFilePath;
-                _partBFilePath = secondFilePath;
-
-                if (string.IsNullOrEmpty(secondFilePath))
-                {
-                    // 普通单文件加载模式
-                    _audioStream = CreateAudioStream(firstFilePath);
-                    if (_audioStream == null)
-                    {
-                        OnStatusChanged?.Invoke("Unsupported audio format!");
-                        return;
-                    }
-                    _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
-                    _loopStartSample = 0;
-                    _loopEndSample = _totalSamples;
-                }
-                else
-                {
-                    // 暴力方案：物理预合并 A + B
-                    OnStatusChanged?.Invoke("Merging A/B parts in memory for perfect seamlessness...");
-                    
-                    using (var readerA = CreateAudioStream(firstFilePath))
-                    using (var readerB = CreateAudioStream(secondFilePath))
-                    {
-                        if (readerA == null || readerB == null)
-                        {
-                            OnStatusChanged?.Invoke("Failed to load one of the A/B parts.");
-                            return;
-                        }
-
-                        if (readerA.WaveFormat.SampleRate != readerB.WaveFormat.SampleRate || 
-                            readerA.WaveFormat.Channels != readerB.WaveFormat.Channels)
-                        {
-                            OnStatusChanged?.Invoke("A/B parts format mismatch! Falling back to Part A.");
-                            LoadAudio(firstFilePath);
-                            return;
-                        }
-
-                        // 创建内存流并拼接
-                        var memStream = new MemoryStream();
-                        readerA.CopyTo(memStream);
-                        long lengthA = memStream.Position; // 记录接缝点
-                        readerB.CopyTo(memStream);
-                        memStream.Position = 0;
-
-                        // 包装成原始波形流。这样对于系统来说，这就是一首完整的、物理上连续的长歌。
-                        _audioStream = new RawSourceWaveStream(memStream, readerA.WaveFormat);
-                        
-                        _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
-                        _loopStartSample = lengthA / _audioStream.WaveFormat.BlockAlign; // 自动瞄准 B 开头
-                        _loopEndSample = _totalSamples;
-                    }
-                }
-
-                var waveFormat = _audioStream.WaveFormat;
-                OnAudioLoaded?.Invoke(_totalSamples, waveFormat.SampleRate);
-                OnStatusChanged?.Invoke(string.IsNullOrEmpty(secondFilePath) 
-                    ? "Audio loaded. Set loop points and play!"
-                    : "A/B Seamless Fusion Complete. Enjoy the perfect transition!");
-            }
-            catch (Exception ex)
-            {
-                OnStatusChanged?.Invoke($"Load operation failed: {ex.Message}");
-            }
-            finally
-            {
-                _isLoading = false;
-            }
-        }
-
-        /// <summary>
-        /// 创建对应格式的音频流
-        /// </summary>
-        private WaveStream CreateAudioStream(string filePath)
-        {
-            string ext = Path.GetExtension(filePath).ToLower();
-            switch (ext)
-            {
-                case ".wav":
-                    return new WaveFileReader(filePath);
-                case ".ogg":
-                    return new VorbisWaveReader(filePath);
-                case ".mp3":
-                    return new Mp3FileReader(filePath);
-                default:
-                    return null;
-            }
-        }
 
         /// <summary>
         /// 设置循环起始采样数
@@ -307,9 +197,6 @@ namespace seamless_loop_music
             OnStatusChanged?.Invoke("Stopped.");
         }
 
-        /// <summary>
-        /// 设置音量(0~1)
-        /// </summary>
         public float Volume
         {
             get => _wavePlayer?.Volume ?? 1.0f;
@@ -325,14 +212,8 @@ namespace seamless_loop_music
             }
         }
 
-        /// <summary>
-        /// 获取当前播放状态
-        /// </summary>
         public PlaybackState PlaybackState => _wavePlayer?.PlaybackState ?? PlaybackState.Stopped;
 
-        /// <summary>
-        /// 获取当前播放时间
-        /// </summary>
         public TimeSpan CurrentTime
         {
             get
@@ -348,14 +229,8 @@ namespace seamless_loop_music
             }
         }
 
-        /// <summary>
-        /// 获取音频总时长
-        /// </summary>
         public TimeSpan TotalTime => _audioStream?.TotalTime ?? TimeSpan.Zero;
 
-        /// <summary>
-        /// 跳转进度 (0.0 ~ 1.0)
-        /// </summary>
         public void Seek(double percent)
         {
             if (_audioStream == null) return;
@@ -367,21 +242,17 @@ namespace seamless_loop_music
 
             if (_loopStream != null) {
                 double p = Math.Max(0, Math.Min(1.0, percent));
-                // 统一使用采样数进行跳转计算，避免字节偏移误差
                 long targetSample = (long)(_totalSamples * p);
                 SeekToSample(targetSample);
             }
         }
 
-        /// <summary>
-        /// 精准跳转到指定采样数
-        /// </summary>
         public void SeekToSample(long sample)
         {
             if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
             {
                 _isSeeking = true;
-                _bufferedProvider.ClearBuffer(); // 立即排干缓冲区，防止听到旧数据
+                _bufferedProvider.ClearBuffer(); 
 
                 long position = sample * _audioStream.WaveFormat.BlockAlign;
                 if (position < 0) position = 0;
@@ -393,307 +264,6 @@ namespace seamless_loop_music
             }
         }
 
-        /// <summary>
-        /// 智能寻找最佳循环点 (基于金字塔搜索 Pyramid Search)
-        /// 优化后：先降采样粗搜，再局部精搜，速度大幅提升。
-        /// </summary>
-
-        /// <summary>
-        /// 智能寻找最佳循环点 (异步版 - 基于金字塔搜索 Pyramid Search)
-        /// 使用独立文件流，避免与播放线程冲突。
-        /// </summary>
-        /// <param name="adjustStart">True: 固定 End 找 Start (逆向); False: 固定 Start 找 End (正向)</param>
-        public async void FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart, Action<long, long> onResult)
-        {
-            if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
-            {
-                OnStatusChanged?.Invoke("Error: File path not available for analysis.");
-                onResult?.Invoke(currentStart, currentEnd);
-                return;
-            }
-
-            string pathA = _currentFilePath;
-            string pathB = _partBFilePath;
-            
-            await System.Threading.Tasks.Task.Run(() =>
-            {
-                WaveStream tempStream = null;
-                try
-                {
-                    // 1. 创建独立的临时流
-                    if (string.IsNullOrEmpty(pathB))
-                    {
-                        tempStream = CreateAudioStream(pathA);
-                    }
-                    else
-                    {
-                        // A/B 模式：重新加载 A 和 B 分散分析任务压力
-                        using (var rA = CreateAudioStream(pathA))
-                        using (var rB = CreateAudioStream(pathB))
-                        {
-                            if (rA != null && rB != null)
-                            {
-                                var ms = new MemoryStream();
-                                rA.CopyTo(ms);
-                                rB.CopyTo(ms);
-                                ms.Position = 0;
-                                tempStream = new RawSourceWaveStream(ms, rA.WaveFormat);
-                            }
-                        }
-                    }
-
-                    if (tempStream == null)
-                    {
-                        onResult?.Invoke(currentStart, currentEnd);
-                        return;
-                    }
-
-                    var fmt = tempStream.WaveFormat;
-                    int sampleRate = fmt.SampleRate;
-                    long totalSamples = tempStream.Length / fmt.BlockAlign;
-
-                    // --- 参数准备 ---
-                    int windowSize = sampleRate; 
-                    
-                    if (adjustStart) {
-                         if (currentEnd < windowSize) windowSize = (int)currentEnd;
-                    } else {
-                         if (currentStart + windowSize > totalSamples) windowSize = (int)(totalSamples - currentStart);
-                    }
-                    
-                    if (windowSize < 1024) 
-                    {
-                         OnStatusChanged?.Invoke("Match Error: Sample region too small.");
-                         onResult?.Invoke(currentStart, currentEnd);
-                         return;
-                    }
-
-                    long searchRadius = sampleRate * 5; 
-                    long templateStartPos, templateEndPos;
-                    long searchRegionCenter;
-
-                    if (adjustStart)
-                    {
-                        templateEndPos = currentEnd;
-                        templateStartPos = templateEndPos - windowSize;
-                        searchRegionCenter = currentStart;
-                    }
-                    else
-                    {
-                        templateStartPos = currentStart;
-                        templateEndPos = templateStartPos + windowSize;
-                        searchRegionCenter = currentEnd;
-                    }
-
-                    if (templateStartPos < 0) templateStartPos = 0;
-                    long templateLen = templateEndPos - templateStartPos;
-
-                    long searchRegionBegin = searchRegionCenter - searchRadius;
-                    long searchRegionEnd = searchRegionCenter + searchRadius;
-                    
-                    if (searchRegionBegin < 0) searchRegionBegin = 0;
-                    if (searchRegionEnd > totalSamples) searchRegionEnd = totalSamples;
-
-                    long searchLen = searchRegionEnd - searchRegionBegin;
-                    if (searchLen < templateLen) 
-                    {
-                         OnStatusChanged?.Invoke("Match Error: Search region smaller than template.");
-                         onResult?.Invoke(currentStart, currentEnd);
-                         return;
-                    }
-
-                    // 从临时流读取数据 (批量读取)
-                    float[] templateFull = ReadSamplesFromStream(tempStream, templateStartPos, (int)templateLen);
-                    float[] searchBufferFull = ReadSamplesFromStream(tempStream, searchRegionBegin, (int)searchLen);
-
-                    if (templateFull.Length < 100 || searchBufferFull.Length < templateFull.Length)
-                    {
-                         OnStatusChanged?.Invoke("Match Error: Data insufficient.");
-                         onResult?.Invoke(currentStart, currentEnd);
-                         return;
-                    }
-
-                    // --- 第一层：粗搜 ---
-                    int downsampleFactor = 8;
-                    float[] templateSmall = Downsample(templateFull, downsampleFactor);
-                    float[] searchSmall = Downsample(searchBufferFull, downsampleFactor);
-
-                    int bestCoarseOffset = -1;
-                    double minCoarseDiff = double.MaxValue;
-
-                    for (int i = 0; i <= searchSmall.Length - templateSmall.Length; i++)
-                    {
-                        double diff = 0;
-                        for (int t = 0; t < templateSmall.Length; t++)
-                        {
-                            diff += Math.Abs(templateSmall[t] - searchSmall[i + t]);
-                            if (diff > minCoarseDiff) break;
-                        }
-                        if (diff < minCoarseDiff)
-                        {
-                            minCoarseDiff = diff;
-                            bestCoarseOffset = i;
-                        }
-                    }
-
-                    if (bestCoarseOffset == -1)
-                    {
-                         OnStatusChanged?.Invoke("Match Error: No clear pattern found.");
-                         onResult?.Invoke(currentStart, currentEnd);
-                         return;
-                    }
-
-                    // --- 第二层：精搜 ---
-                    int fineSearchRadius = downsampleFactor * 4;
-                    int fineStart = bestCoarseOffset * downsampleFactor - fineSearchRadius;
-                    int fineEnd = bestCoarseOffset * downsampleFactor + fineSearchRadius;
-
-                    if (fineStart < 0) fineStart = 0;
-                    if (fineEnd > searchBufferFull.Length - templateFull.Length) 
-                        fineEnd = searchBufferFull.Length - templateFull.Length;
-
-                    double minFineDiff = double.MaxValue;
-                    int bestFineOffset = -1;
-
-                    for (int i = fineStart; i <= fineEnd; i++)
-                    {
-                        double diff = 0;
-                        for (int t = 0; t < templateFull.Length; t += 2) 
-                        {
-                            diff += Math.Abs(templateFull[t] - searchBufferFull[i + t]);
-                            if (diff > minFineDiff) break;
-                        }
-                        if (diff < minFineDiff)
-                        {
-                            minFineDiff = diff;
-                            bestFineOffset = i;
-                        }
-                    }
-
-                    if (bestFineOffset != -1)
-                    {
-                        long matchPosStart = searchRegionBegin + bestFineOffset;
-                        long matchPosEnd = matchPosStart + templateLen;
-
-                        long finalResultStart = currentStart;
-                        long finalResultEnd = currentEnd;
-
-                        if (adjustStart) finalResultStart = matchPosEnd;
-                        else finalResultEnd = matchPosStart;
-
-                        onResult?.Invoke(finalResultStart, finalResultEnd);
-                        OnStatusChanged?.Invoke($"Match OK! Diff: {minFineDiff:F3}");
-                    }
-                    else
-                    {
-                        onResult?.Invoke(currentStart, currentEnd);
-                    }
-                }
-                catch (Exception ex)
-                {
-                    OnStatusChanged?.Invoke($"Smart Match Error: {ex.Message}");
-                    onResult?.Invoke(currentStart, currentEnd);
-                }
-                finally
-                {
-                    tempStream?.Dispose();
-                }
-            });
-        }
-
-        /// <summary>
-        /// 简单的降采样助手：每 N 个点取平均
-        /// </summary>
-        private float[] Downsample(float[] input, int factor)
-        {
-            if (factor <= 1) return input;
-            int newSize = input.Length / factor;
-            float[] output = new float[newSize];
-            for (int i = 0; i < newSize; i++)
-            {
-                float sum = 0;
-                // 简单的均值池化
-                for (int j = 0; j < factor; j++)
-                {
-                    sum += input[i * factor + j];
-                }
-                output[i] = sum / factor;
-            }
-            return output;
-        }
-
-
-        private float[] ReadSamples(long startSample, int count)
-        {
-            if (_audioStream == null) return new float[0];
-
-            int bytesPerSample = _audioStream.WaveFormat.BlockAlign;
-            int bitsPerSample = _audioStream.WaveFormat.BitsPerSample;
-            byte[] raw = new byte[count * bytesPerSample];
-
-            // 保存当前流位置用于恢复
-            long oldPos = _audioStream.Position;
-            
-            _audioStream.Position = startSample * bytesPerSample;
-            int bytesRead = _audioStream.Read(raw, 0, raw.Length);
-            
-            _audioStream.Position = oldPos; // 恢复位置
-
-            int samplesRead = bytesRead / bytesPerSample;
-            float[] samples = new float[samplesRead];
-
-            // 简单的 PCM 转 Float 解析
-            // 注意：这里只取第一个声道做匹配即可，为了速度。如果是立体声，取左声道。
-            for (int i = 0; i < samplesRead; i++)
-            {
-                if (bitsPerSample == 16)
-                {
-                    short s = BitConverter.ToInt16(raw, i * bytesPerSample);
-                    samples[i] = s / 32768f;
-                }
-                else if (bitsPerSample == 32)
-                {
-                    samples[i] = BitConverter.ToSingle(raw, i * bytesPerSample);
-                }
-                // 暂不处理8bit或24bit，通常够用
-            }
-
-            return samples;
-        }
-
-        private float[] ReadSamplesFromStream(WaveStream stream, long startSample, int count)
-        {
-            if (stream == null) return new float[0];
-
-            int bytesPerSample = stream.WaveFormat.BlockAlign;
-            int bitsPerSample = stream.WaveFormat.BitsPerSample;
-            byte[] raw = new byte[count * bytesPerSample];
-
-            // 这里的 seek 是安全的，因为它是独立的临时流
-            stream.Position = startSample * bytesPerSample;
-            int bytesRead = stream.Read(raw, 0, raw.Length);
-            
-            int samplesRead = bytesRead / bytesPerSample;
-            float[] samples = new float[samplesRead];
-
-            for (int i = 0; i < samplesRead; i++)
-            {
-                if (bitsPerSample == 16)
-                {
-                    short s = BitConverter.ToInt16(raw, i * bytesPerSample);
-                    samples[i] = s / 32768f;
-                }
-                else if (bitsPerSample == 32)
-                {
-                    samples[i] = BitConverter.ToSingle(raw, i * bytesPerSample);
-                }
-            }
-            return samples;
-        }
-
-        /// <summary>
-        /// 释放音频资源
-        /// </summary>
         private void DisposeAudioResources()
         {
             StopFillerTask();
@@ -703,61 +273,6 @@ namespace seamless_loop_music
             _bufferedProvider = null;
             _wavePlayer = null;
             _audioStream = null;
-        }
-
-        private void StartFillerTask()
-        {
-            StopFillerTask();
-            _fillerCts = new System.Threading.CancellationTokenSource();
-            var token = _fillerCts.Token;
-            
-            System.Threading.Tasks.Task.Run(() => BackgroundFillLoop(token), token);
-        }
-
-        private void StopFillerTask()
-        {
-            _fillerCts?.Cancel();
-            _fillerCts = null;
-        }
-
-        private async System.Threading.Tasks.Task BackgroundFillLoop(System.Threading.CancellationToken token)
-        {
-            byte[] readBuffer = new byte[16384]; // 16KB 每次读取量
-            
-            while (!token.IsCancellationRequested)
-            {
-                if (_isSeeking) // 等待 Seek 完成
-                {
-                    await System.Threading.Tasks.Task.Delay(10, token);
-                    continue;
-                }
-
-                if (_bufferedProvider == null || _loopStream == null) break;
-
-                // 保持缓冲区在 400ms 左右的余量，既能抗抖动，又不至于让事件太超前
-                TimeSpan buffered = _bufferedProvider.BufferedDuration;
-                if (buffered.TotalMilliseconds < 400)
-                {
-                    try 
-                    {
-                        int read = _loopStream.Read(readBuffer, 0, readBuffer.Length);
-                        if (read > 0)
-                        {
-                            _bufferedProvider.AddSamples(readBuffer, 0, read);
-                        }
-                        else 
-                        {
-                            await System.Threading.Tasks.Task.Delay(20, token);
-                        }
-                    }
-                    catch { break; }
-                }
-                else 
-                {
-                    // 粮草充足，休息一会儿
-                    await System.Threading.Tasks.Task.Delay(30, token);
-                }
-            }
         }
 
         public void Dispose()
