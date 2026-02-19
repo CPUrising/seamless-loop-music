@@ -140,15 +140,15 @@ namespace seamless_loop_music
                 // --- 异步缓冲系统配置 ---
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
                 {
-                    BufferDuration = TimeSpan.FromSeconds(1), // 缩小到 1 秒，平衡稳定性与同步性
+                    BufferDuration = TimeSpan.FromSeconds(10), // 扩容到 10 秒，抗干扰能力 MAX
                     DiscardOnBufferOverflow = true
                 };
 
                 // 创建播放器
                 _wavePlayer = new WaveOutEvent
                 {
-                    DesiredLatency = 100, // 恢复 100ms
-                    NumberOfBuffers = 2
+                    DesiredLatency = 200, // 稍微放松到底层 200ms，大幅减少爆音概率
+                    NumberOfBuffers = 3  // 增加缓冲块数量
                 };
 
                 _wavePlayer.Init(_bufferedProvider);

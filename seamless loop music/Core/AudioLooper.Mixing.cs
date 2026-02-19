@@ -7,59 +7,74 @@ namespace seamless_loop_music
 {
     public partial class AudioLooper
     {
+        private Thread _fillerThread;
+
         private void StartFillerTask()
         {
             StopFillerTask();
             _fillerCts = new CancellationTokenSource();
-            var token = _fillerCts.Token;
             
-            Task.Run(() => BackgroundFillLoop(token), token);
+            _fillerThread = new Thread(() => LoopFillerLoop(_fillerCts.Token))
+            {
+                IsBackground = true,
+                Priority = ThreadPriority.AboveNormal, // VIP 通道！
+                Name = "AudioLooperFiller"
+            };
+            _fillerThread.Start();
         }
 
         private void StopFillerTask()
         {
             _fillerCts?.Cancel();
+            _fillerThread?.Join(200); // 给它一点时间优雅停止
             _fillerCts = null;
+            _fillerThread = null;
         }
 
-        private async Task BackgroundFillLoop(CancellationToken token)
+        private void LoopFillerLoop(CancellationToken token)
         {
-            byte[] readBuffer = new byte[16384]; // 16KB 每次读取量
+            byte[] readBuffer = new byte[32768]; // 32KB 每次读取量，更加豪迈
             
-            while (!token.IsCancellationRequested)
+            try
             {
-                if (_isSeeking) // 等待 Seek 完成
+                while (!token.IsCancellationRequested)
                 {
-                    await Task.Delay(10, token);
-                    continue;
-                }
-
-                if (_bufferedProvider == null || _loopStream == null) break;
-
-                // 保持缓冲区在 400ms 左右的余量，既能抗抖动，又不至于让事件太超前
-                TimeSpan buffered = _bufferedProvider.BufferedDuration;
-                if (buffered.TotalMilliseconds < 400)
-                {
-                    try 
+                    if (_isSeeking) 
                     {
-                        int read = _loopStream.Read(readBuffer, 0, readBuffer.Length);
-                        if (read > 0)
-                        {
-                            _bufferedProvider.AddSamples(readBuffer, 0, read);
-                        }
-                        else 
-                        {
-                            await Task.Delay(20, token);
-                        }
+                        Thread.Sleep(10);
+                        continue;
                     }
-                    catch { break; }
-                }
-                else 
-                {
-                    // 粮草充足，休息一会儿
-                    await Task.Delay(30, token);
+
+                    if (_bufferedProvider == null || _loopStream == null) break;
+
+                    // 维持 3 秒存粮，即使 CPU 忙其他的，这些也够吃很久
+                    TimeSpan buffered = _bufferedProvider.BufferedDuration;
+                    if (buffered.TotalMilliseconds < 3000)
+                    {
+                        try 
+                        {
+                            int read = _loopStream.Read(readBuffer, 0, readBuffer.Length);
+                            if (read > 0)
+                            {
+                                _bufferedProvider.AddSamples(readBuffer, 0, read);
+                            }
+                            else 
+                            {
+                                // End of stream reached (LoopStream handles looping internally, so this might be error)
+                                Thread.Sleep(20);
+                            }
+                        }
+                        catch { break; }
+                    }
+                    else 
+                    {
+                        // 粮草极其充足，休息一会儿
+                        Thread.Sleep(50);
+                    }
                 }
             }
+            catch (ThreadAbortException) { }
+            catch (Exception) { }
         }
     }
 }
