@@ -1121,6 +1121,7 @@ namespace seamless_loop_music
             UpdateModeUI(); // Update play mode button text
             UpdateAudioInfoText();
             UpdateButtons(_playerService?.PlaybackState ?? PlaybackState.Stopped);
+            UpdateMatchLabels(); // 莱芙也要记得更新这里喵！
 
             // Refresh status if it's a simple state or includes variable parts
             if (lblStatus.Text == "Ready" || lblStatus.Text == "就绪")

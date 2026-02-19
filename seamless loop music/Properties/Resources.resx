@@ -339,9 +339,9 @@ Then restart this feature.</value>
     <value>Max</value>
   </data>
   <data name="LabelMatchWindow" xml:space="preserve">
-    <value>匹配长度: {0:F1}s</value>
+    <value>Match Length: {0:F1}s</value>
   </data>
   <data name="LabelSearchRadius" xml:space="preserve">
-    <value>搜索半径: {0:F1}s</value>
+    <value>Search Radius: {0:F1}s</value>
   </data>
 </root>

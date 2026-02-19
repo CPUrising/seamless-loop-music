@@ -210,8 +210,8 @@
                     </StackPanel>
                 </Grid>
 
-                <StackPanel Grid.Row="1" Margin="0,20,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,10">
+                <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
                         <Button x:Name="btnPlayMode" Content="{Binding [ModeSingle], Source={StaticResource Loc}}" Style="{StaticResource SideButtonStyle}" Width="100" Click="btnPlayMode_Click" Margin="0,0,15,0"/>
                         <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                             <TextBlock Text="{Binding [LabelLoop], Source={StaticResource Loc}}" VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="0,0,5,0"/>
@@ -220,47 +220,37 @@
                     </StackPanel>
 
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button x:Name="btnSmartMatch" Content="{Binding [MatchStart], Source={StaticResource Loc}}" Width="100" Height="40"
-                                Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
+                        <Button x:Name="btnSmartMatch" Content="{Binding [MatchStart], Source={StaticResource Loc}}" Width="90" Height="36"
+                                Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
                                 Click="btnSmartMatch_Click" ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnSmartMatchForward" Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Width="100" Height="40"
-                                Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
+                        <Button x:Name="btnSmartMatchForward" Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Width="90" Height="36"
+                                Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
                                 Click="btnSmartMatchForward_Click" ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnResetAB" Content="{Binding [ResetAB], Source={StaticResource Loc}}" Width="100" Height="40"
-                                Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,10,0"
+                        <Button x:Name="btnResetAB" Content="{Binding [ResetAB], Source={StaticResource Loc}}" Width="90" Height="36"
+                                Background="#F5C2E7" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
                                 Click="btnResetAB_Click" ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnApplyLoop" Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Width="120" Height="40"
+                        <Button x:Name="btnPyList" Content="{Binding [PyRanking], Source={StaticResource Loc}}" Width="90" Height="36"
+                                Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
+                                Click="btnPyList_Click" ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
+                        <Button x:Name="btnApplyLoop" Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Width="110" Height="36"
                                 Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"
                                 Click="btnApplyLoop_Click"/>
                     </StackPanel>
 
-                    <Grid Width="350" HorizontalAlignment="Center" Margin="0,15,0,0">
+                    <Grid Width="360" HorizontalAlignment="Center" Margin="0,8,0,0">
                         <Grid.ColumnDefinitions>
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <Grid.RowDefinitions>
-                            <RowDefinition Height="Auto"/>
-                            <RowDefinition Height="Auto"/>
-                        </Grid.RowDefinitions>
-
-                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="5">
-                            <TextBlock x:Name="lblMatchWindow" Text="匹配长度: 1.0s" FontSize="11" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
-                            <Slider x:Name="sldMatchWindow" Minimum="1" Maximum="10" Value="1.0" TickFrequency="0.5" IsSnapToTickEnabled="True" ValueChanged="sldMatchParams_ValueChanged"/>
+                        <StackPanel Grid.Column="0" Margin="4">
+                            <TextBlock x:Name="lblMatchWindow" Text="匹配长度: 1.0s" FontSize="10" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
+                            <Slider x:Name="sldMatchWindow" Minimum="1" Maximum="10" Value="1.0" TickFrequency="0.5" IsSnapToTickEnabled="True" ValueChanged="sldMatchParams_ValueChanged" Height="25"/>
                         </StackPanel>
-
-                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="5">
-                            <TextBlock x:Name="lblSearchRadius" Text="搜索半径: 5.0s" FontSize="11" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
-                            <Slider x:Name="sldSearchRadius" Minimum="1" Maximum="20" Value="5.0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="sldMatchParams_ValueChanged"/>
+                        <StackPanel Grid.Column="1" Margin="4">
+                            <TextBlock x:Name="lblSearchRadius" Text="搜索半径: 5.0s" FontSize="10" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
+                            <Slider x:Name="sldSearchRadius" Minimum="1" Maximum="20" Value="5.0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="sldMatchParams_ValueChanged" Height="25"/>
                         </StackPanel>
                     </Grid>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-                        <TextBlock Text="PyMusicLooper:" VerticalAlignment="Center" Margin="0,0,10,0" Foreground="#F5C2E7" FontWeight="Bold"/>
-                        <Button x:Name="btnPyList" Content="{Binding [PyRanking], Source={StaticResource Loc}}" Width="100" Height="30"
-                                Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}"
-                                Click="btnPyList_Click" ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
-                    </StackPanel>
                 </StackPanel>
             </Grid>
 
