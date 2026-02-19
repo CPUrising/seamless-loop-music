@@ -63,7 +63,7 @@ namespace seamless_loop_music
                     long totalSamples = tempStream.Length / fmt.BlockAlign;
 
                     // --- 参数准备 ---
-                    int windowSize = sampleRate; 
+                    int windowSize = (int)(sampleRate * MatchWindowSize); 
                     
                     if (adjustStart) {
                          if (currentEnd < windowSize) windowSize = (int)currentEnd;
@@ -78,7 +78,7 @@ namespace seamless_loop_music
                          return;
                     }
 
-                    long searchRadius = sampleRate * 5; 
+                    long searchRadius = (long)(sampleRate * MatchSearchRadius); 
                     long templateStartPos, templateEndPos;
                     long searchRegionCenter;
 

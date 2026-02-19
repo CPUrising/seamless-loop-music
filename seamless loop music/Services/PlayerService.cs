@@ -537,6 +537,9 @@ namespace seamless_loop_music.Services
         public long LoopEndSample => _audioLooper.LoopEndSample;
         public int SampleRate => _audioLooper.SampleRate; 
 
+        public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
+        public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
+
         public void SetLoopStart(long sample) => _audioLooper.SetLoopStartSample(sample);
         public void SetLoopEnd(long sample) => _audioLooper.SetLoopEndSample(sample);
 

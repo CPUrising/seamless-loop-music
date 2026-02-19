@@ -20,6 +20,10 @@ namespace seamless_loop_music
         private System.Threading.CancellationTokenSource _fillerCts;
         private volatile bool _isSeeking = false;
 
+        // 匹配长度配置 (秒)
+        public double MatchWindowSize { get; set; } = 1.0; 
+        public double MatchSearchRadius { get; set; } = 5.0; 
+
 
         // 公开读取接口
         public long LoopStartSample => _loopStartSample;

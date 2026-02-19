@@ -338,4 +338,10 @@ Then restart this feature.</value>
   <data name="BtnMax" xml:space="preserve">
     <value>Max</value>
   </data>
+  <data name="LabelMatchWindow" xml:space="preserve">
+    <value>匹配长度: {0:F1}s</value>
+  </data>
+  <data name="LabelSearchRadius" xml:space="preserve">
+    <value>搜索半径: {0:F1}s</value>
+  </data>
 </root>

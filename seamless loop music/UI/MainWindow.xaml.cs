@@ -145,6 +145,11 @@ namespace seamless_loop_music
                     }
                 } catch { }
             }
+
+            // 初始化匹配参数滑块
+            sldMatchWindow.Value = _playerService.MatchWindowSize;
+            sldSearchRadius.Value = _playerService.MatchSearchRadius;
+            UpdateMatchLabels();
         }
 
         private void OnTrackLoaded(MusicTrack track)
@@ -975,6 +980,25 @@ namespace seamless_loop_music
             _isDraggingProgress = false; 
         }
 
+        private void sldMatchParams_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
+        {
+            if (_playerService == null || _isUpdatingUI) return;
+
+            if (sldMatchWindow != null) _playerService.MatchWindowSize = sldMatchWindow.Value;
+            if (sldSearchRadius != null) _playerService.MatchSearchRadius = sldSearchRadius.Value;
+
+            UpdateMatchLabels();
+            SaveSettings(); // 实时保存参数
+        }
+
+        private void UpdateMatchLabels()
+        {
+            if (lblMatchWindow != null) 
+                lblMatchWindow.Text = string.Format(LocalizationService.Instance["LabelMatchWindow"], sldMatchWindow.Value);
+            if (lblSearchRadius != null) 
+                lblSearchRadius.Text = string.Format(LocalizationService.Instance["LabelSearchRadius"], sldSearchRadius.Value);
+        }
+
         private void trkVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
             if (_playerService != null) _playerService.SetVolume((float)e.NewValue / 100f);
         }
@@ -1047,6 +1071,8 @@ namespace seamless_loop_music
                         if (l.StartsWith("LastFile=")) _lastLoadedFilePath = l.Substring(9).Trim();
                         if (l.StartsWith("LastPlaylist=")) _lastPlaylistPath = l.Substring(13).Trim();
                         if (l.StartsWith("Volume=") && double.TryParse(l.Substring(7), out double vol)) _globalVolume = vol;
+                        if (l.StartsWith("MatchWindow=") && double.TryParse(l.Substring(12), out double mw)) _playerService.MatchWindowSize = mw;
+                        if (l.StartsWith("SearchRadius=") && double.TryParse(l.Substring(13), out double sr)) _playerService.MatchSearchRadius = sr;
                     }
                 }
                 
@@ -1079,6 +1105,8 @@ namespace seamless_loop_music
                 }
 
                 lines.Add($"Volume={trkVolume.Value}");
+                lines.Add($"MatchWindow={sldMatchWindow.Value}");
+                lines.Add($"SearchRadius={sldSearchRadius.Value}");
 
                 File.WriteAllLines(_settingsPath, lines); 
             } catch (Exception ex) {
