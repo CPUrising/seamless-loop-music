@@ -10,7 +10,7 @@ A seamless looping and high-efficiency management tool crafted for game BGM (suc
 
 Currently only supports Windows 10 and above operating systems, with MP3, OGG, and WAV audio formats.
 
-![1770995667392](image/README_EN/1770995667392.png)
+![1771557628765](image/README_EN/1771557628765.png)
 
 ---
 
@@ -63,6 +63,8 @@ Currently only supports Windows 10 and above operating systems, with MP3, OGG, a
 2. **Importing**: Click the `+` icon next to "My Playlists" in the upper-left corner. There are two types of playlists: one managed only by adding/deleting folders, and another managed by individual tracks which the system automatically scans and maps via fingerprints.
 3. **Loop Matching**:
    - **Manual Smart Match**: Input or use buttons on the main interface to get rough sample points or timestamps. Use "Find Start/End" for local phase alignment. Use "Confirm and Preview" to jump to 3 seconds before the loop end to verify seamlessness.
+
+     Additionally, you can fine-tune the match window size and search radius to achieve more precise loop matching.
    - **Deep Match**: Requires PyMusicLooper to be configured. Refer to [arkrow/PyMusicLooper](https://github.com/arkrow/PyMusicLooper/blob/master/README.md) or point 5 in this guide.
      - You can batch-select songs for "Deep Match". The engine will find the best loop positions. Double-click an entry in the "Leaderboard" to preview and select. If a song hasn't been matched yet, clicking the leaderboard will trigger the matching process first.
      - *Tested Tip*: Deep matching isn't always 100% accurate; manual fine-tuning might still be needed.
