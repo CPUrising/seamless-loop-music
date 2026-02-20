@@ -226,10 +226,35 @@ namespace seamless_loop_music
                 {
                     // 平滑策略：如果刚 Seek 不久，强制使用基于时间的推算值
                     double secondsSinceSeek = (DateTime.Now - _seekTime).TotalSeconds;
-                    if (secondsSinceSeek < 3.0)
+                    if (secondsSinceSeek < 6.0)
                     {
                         double estimatedSamples = _seekTargetSample + (secondsSinceSeek * _audioStream.WaveFormat.SampleRate);
-                         // 换算成时间
+                        
+                        // 处理循环回绕：如果平滑推算值超过了 LoopEnd，应该显示为折返后的值
+                        // 注意：这里简单起见，如果超过 End，就减去 Loop 长度
+                        // (LoopStream.LoopStartPosition / BlockAlign)
+                        if (_loopEndSample > 0 && estimatedSamples > _loopEndSample)
+                        {
+                             long loopLength = _loopEndSample - _loopStartSample;
+                             if (loopLength > 0)
+                             {
+                                 long overshoot = (long)estimatedSamples - _loopEndSample;
+                                 estimatedSamples = _loopStartSample + (overshoot % loopLength);
+                             }
+                        }
+                        // 如果 LoopEnd 没设（或者为0代表文件尾），且超过了 TotalSamples，也应该回绕
+                        else if ((_loopEndSample <= 0) && estimatedSamples > _totalSamples)
+                        {
+                             // 此时 LoopEnd = TotalSamples
+                             // LoopStart = _loopStartSample
+                             long loopLength = _totalSamples - _loopStartSample;
+                             if (loopLength > 0)
+                             {
+                                 long overshoot = (long)estimatedSamples - _totalSamples;
+                                 estimatedSamples = _loopStartSample + (overshoot % loopLength);
+                             }
+                        }
+
                         return TimeSpan.FromSeconds(estimatedSamples / _audioStream.WaveFormat.SampleRate);
                     }
 
