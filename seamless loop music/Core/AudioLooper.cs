@@ -224,6 +224,15 @@ namespace seamless_loop_music
             {
                 if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
                 {
+                    // 平滑策略：如果刚 Seek 不久，强制使用基于时间的推算值
+                    double secondsSinceSeek = (DateTime.Now - _seekTime).TotalSeconds;
+                    if (secondsSinceSeek < 3.0)
+                    {
+                        double estimatedSamples = _seekTargetSample + (secondsSinceSeek * _audioStream.WaveFormat.SampleRate);
+                         // 换算成时间
+                        return TimeSpan.FromSeconds(estimatedSamples / _audioStream.WaveFormat.SampleRate);
+                    }
+
                     // 修正：实际播放进度 = 已读取并填充的位置 - 还在缓冲区没被硬件吃掉的字节
                     long actualPos = _loopStream.Position - _bufferedProvider.BufferedBytes;
                     if (actualPos < 0) actualPos = 0;
@@ -251,20 +260,32 @@ namespace seamless_loop_music
             }
         }
 
+        private DateTime _seekTime = DateTime.MinValue;
+        private long _seekTargetSample = 0;
+        private readonly object _streamLock = new object();
+
         public void SeekToSample(long sample)
         {
             if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
             {
-                _isSeeking = true;
-                _bufferedProvider.ClearBuffer(); 
+                lock (_streamLock) // 抢占锁，确保此时后台没有在 Read
+                {
+                    _isSeeking = true;
+                    _bufferedProvider.ClearBuffer(); 
 
-                long position = sample * _audioStream.WaveFormat.BlockAlign;
-                if (position < 0) position = 0;
-                long totalLen = _loopStream.Length;
-                if (position > totalLen) position = totalLen;
-                
-                _loopStream.Position = position;
-                _isSeeking = false;
+                    long position = sample * _audioStream.WaveFormat.BlockAlign;
+                    if (position < 0) position = 0;
+                    long totalLen = _loopStream.Length;
+                    if (position > totalLen) position = totalLen;
+                    
+                    _loopStream.Position = position;
+
+                    // 记录 Seek 状态，用于平滑 UI 显示
+                    _seekTargetSample = sample;
+                    _seekTime = DateTime.Now;
+
+                    _isSeeking = false;
+                }
             }
         }
 

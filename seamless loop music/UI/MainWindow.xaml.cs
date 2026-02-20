@@ -748,8 +748,20 @@ namespace seamless_loop_music
             _playerService.SaveCurrentTrack(); // 立即保存
             
             if (long.TryParse(txtLoopEndSample.Text, out long end) && long.TryParse(txtLoopSample.Text, out long start)) {
+                
+                // 关键修复：如果 end 为 0，表示“文件末尾”，此时需要用总长度来计算跳转点
+                long actualEnd = end;
+                if (actualEnd <= 0)
+                {
+                     // 尝试获取总采样数
+                     long totalSamples = (long)(_playerService.TotalTime.TotalSeconds * _playerService.SampleRate);
+                     if (totalSamples > 0) actualEnd = totalSamples;
+                }
+
                 long previewOffset = _playerService.SampleRate * 3;
-                _playerService.SeekToSample(Math.Max(start, end - previewOffset));
+                long target = Math.Max(start, actualEnd - previewOffset); // 确保不早于 Start
+                
+                _playerService.SeekToSample(target);
                 _playerService.Play(); 
             }
         }

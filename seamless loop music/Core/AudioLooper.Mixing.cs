@@ -53,7 +53,16 @@ namespace seamless_loop_music
                     {
                         try 
                         {
-                            int read = _loopStream.Read(readBuffer, 0, readBuffer.Length);
+                            int read = 0;
+                            lock (_streamLock)
+                            {
+                                // 获取锁之后还要再检查一次，防止刚才有人要Seek
+                                if (_loopStream != null && !_isSeeking) 
+                                {
+                                    read = _loopStream.Read(readBuffer, 0, readBuffer.Length);
+                                }
+                            }
+                            
                             if (read > 0)
                             {
                                 _bufferedProvider.AddSamples(readBuffer, 0, read);
