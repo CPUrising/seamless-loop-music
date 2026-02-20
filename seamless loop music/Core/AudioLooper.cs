@@ -140,7 +140,7 @@ namespace seamless_loop_music
                 // --- 异步缓冲系统配置 ---
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
                 {
-                    BufferDuration = TimeSpan.FromSeconds(10), // 扩容到 10 秒，抗干扰能力 MAX
+                    BufferDuration = TimeSpan.FromSeconds(5), // 调整为 5秒，在抗干扰与实时性之间寻找平衡
                     DiscardOnBufferOverflow = true
                 };
 
@@ -226,7 +226,7 @@ namespace seamless_loop_music
                 {
                     // 平滑策略：如果刚 Seek 不久，强制使用基于时间的推算值
                     double secondsSinceSeek = (DateTime.Now - _seekTime).TotalSeconds;
-                    if (secondsSinceSeek < 6.0)
+                    if (secondsSinceSeek < 4.0)
                     {
                         double estimatedSamples = _seekTargetSample + (secondsSinceSeek * _audioStream.WaveFormat.SampleRate);
                         
