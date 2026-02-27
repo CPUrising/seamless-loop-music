@@ -528,7 +528,10 @@ namespace seamless_loop_music
         }
 
         private void lstPlaylist_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
-            if (lstPlaylist.SelectedIndex != -1) PlayTrack(lstPlaylist.SelectedIndex);
+            if (lstPlaylist.SelectedItem is MusicTrack track) {
+                int index = _currentTracks.IndexOf(track);
+                if (index != -1) PlayTrack(index);
+            }
         }
 
         private void miRenameTrack_Click(object sender, RoutedEventArgs e) {
@@ -724,10 +727,13 @@ namespace seamless_loop_music
         }
 
         private void PlayTrack(int index) {
-            if (index < 0 || index >= _playlist.Count) return;
+            if (index < 0 || index >= _currentTracks.Count) return;
             _currentTrackIndex = index;
-            string filePath = _playlist[index];
-            lstPlaylist.SelectedIndex = index;
+            var track = _currentTracks[index];
+            string filePath = track.FilePath;
+            
+            lstPlaylist.SelectedItem = track;
+            lstPlaylist.ScrollIntoView(track);
             txtFilePath.Text = filePath;
             
             _playerService.LoadTrack(filePath);
