@@ -14,6 +14,9 @@ namespace seamless_loop_music.Models
         private long _loopStart;
         private long _loopEnd;
         private long _totalSamples;
+        private string _artist;
+        private string _album;
+        private string _albumArtist;
 
         public int Id 
         { 
@@ -46,6 +49,24 @@ namespace seamless_loop_music.Models
         { 
             get => _totalSamples; 
             set { _totalSamples = value; OnPropertyChanged(); } 
+        }
+
+        public string Artist 
+        { 
+            get => _artist; 
+            set { _artist = value; OnPropertyChanged(); } 
+        }
+
+        public string Album 
+        { 
+            get => _album; 
+            set { _album = value; OnPropertyChanged(); } 
+        }
+
+        public string AlbumArtist 
+        { 
+            get => _albumArtist; 
+            set { _albumArtist = value; OnPropertyChanged(); } 
         }
 
         public DateTime LastModified { get; set; } = DateTime.Now;

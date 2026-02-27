@@ -53,6 +53,9 @@ namespace seamless_loop_music.Data
                         DisplayName TEXT,
                         LoopStart INTEGER NOT NULL,
                         LoopEnd INTEGER NOT NULL,
+                        Artist TEXT,
+                        Album TEXT,
+                        AlbumArtist TEXT,
                         LastModified DATETIME DEFAULT CURRENT_TIMESTAMP,
                         UNIQUE(FileName, TotalSamples)
                     );";
@@ -145,7 +148,25 @@ namespace seamless_loop_music.Data
                     }
                     if (!hasSort) db.Execute("ALTER TABLE Playlists ADD COLUMN SortOrder INTEGER DEFAULT 0;");
                 }
+
+                // 检查并添加元数据字段
+                CheckAndAddColumn(db, "LoopPoints", "Artist", "TEXT");
+                CheckAndAddColumn(db, "LoopPoints", "Album", "TEXT");
+                CheckAndAddColumn(db, "LoopPoints", "AlbumArtist", "TEXT");
             }
+        }
+
+        private void CheckAndAddColumn(IDbConnection db, string tableName, string columnName, string columnType)
+        {
+            using (var reader = ((SQLiteConnection)db).ExecuteReader($"PRAGMA table_info({tableName})"))
+            {
+                while (reader.Read())
+                {
+                    if (reader["name"].ToString().Equals(columnName, StringComparison.OrdinalIgnoreCase))
+                        return;
+                }
+            }
+            db.Execute($"ALTER TABLE {tableName} ADD COLUMN {columnName} {columnType};");
         }
 
         /// <summary>
@@ -170,7 +191,7 @@ namespace seamless_loop_music.Data
             {
                 // 确保包含 FilePath 字段
                 var track = db.QueryFirstOrDefault<MusicTrack>(
-                    "SELECT Id, FileName, FilePath, TotalSamples, DisplayName, LoopStart, LoopEnd, LastModified, LoopCandidatesJson FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
+                    "SELECT Id, FileName, FilePath, TotalSamples, DisplayName, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
                     new { FileName = fileName, Total = totalSamples });
 
                 if (track != null) {
@@ -208,6 +229,9 @@ namespace seamless_loop_music.Data
                             FilePath = @FilePath,
                             LoopStart = @LoopStart, 
                             LoopEnd = @LoopEnd, 
+                            Artist = @Artist,
+                            Album = @Album,
+                            AlbumArtist = @AlbumArtist,
                             LastModified = @LastModified,
                             LoopCandidatesJson = @LoopCandidatesJson
                         WHERE Id = @Id;";
@@ -221,9 +245,9 @@ namespace seamless_loop_music.Data
                     // 鉴于我们现在的逻辑是 Update-First，这里用 INSERT 即可。
                     string sql = @"
                         INSERT INTO LoopPoints 
-                        (FileName, FilePath, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified, LoopCandidatesJson)
+                        (FileName, FilePath, DisplayName, LoopStart, LoopEnd, TotalSamples, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson)
                         VALUES 
-                        (@FileName, @FilePath, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified, @LoopCandidatesJson);
+                        (@FileName, @FilePath, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson);
                         SELECT last_insert_rowid();";
                     
                     try {
@@ -256,9 +280,9 @@ namespace seamless_loop_music.Data
                 {
                     string sql = @"
                         INSERT OR REPLACE INTO LoopPoints 
-                        (FileName, FilePath, DisplayName, LoopStart, LoopEnd, TotalSamples, LastModified, LoopCandidatesJson)
+                        (FileName, FilePath, DisplayName, LoopStart, LoopEnd, TotalSamples, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson)
                         VALUES 
-                        (@FileName, @FilePath, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @LastModified, @LoopCandidatesJson);";
+                        (@FileName, @FilePath, @DisplayName, @LoopStart, @LoopEnd, @TotalSamples, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson);";
                     db.Execute(sql, tracks, transaction: trans);
                     trans.Commit();
                 }
@@ -326,20 +350,23 @@ namespace seamless_loop_music.Data
                             if (existing == null)
                             {
                                 track.Id = (int)connection.QuerySingle<long>(
-                                    @"INSERT INTO LoopPoints (FileName, FilePath, TotalSamples, DisplayName, LoopStart, LoopEnd, LastModified, LoopCandidatesJson) 
-                                      VALUES (@FileName, @FilePath, @TotalSamples, @DisplayName, @LoopStart, @LoopEnd, @LastModified, @LoopCandidatesJson);
+                                    @"INSERT INTO LoopPoints (FileName, FilePath, TotalSamples, DisplayName, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson) 
+                                      VALUES (@FileName, @FilePath, @TotalSamples, @DisplayName, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson);
                                       SELECT last_insert_rowid();", track, transaction);
                                 trackId = track.Id;
                             }
                             else
                             {
                                 trackId = existing.Id;
-                                // Update FilePath if changed
-                                if (existing.FilePath != track.FilePath)
-                                {
-                                    connection.Execute("UPDATE LoopPoints SET FilePath = @FilePath WHERE Id = @Id", 
-                                        new { track.FilePath, Id = trackId }, transaction);
-                                }
+                                // Update metadata if changed
+                                connection.Execute(@"
+                                    UPDATE LoopPoints 
+                                    SET FilePath = @FilePath, 
+                                        Artist = @Artist, 
+                                        Album = @Album, 
+                                        AlbumArtist = @AlbumArtist 
+                                    WHERE Id = @Id", 
+                                    new { track.FilePath, track.Artist, track.Album, track.AlbumArtist, Id = trackId }, transaction);
                             }
 
                             // 2. Add to Playlist if not exists
@@ -399,7 +426,7 @@ namespace seamless_loop_music.Data
             {
                 // 明确选取 s.FilePath
                 string sql = @"
-                    SELECT s.Id, s.FileName, s.FilePath, s.TotalSamples, s.DisplayName, s.LoopStart, s.LoopEnd, s.LastModified, s.LoopCandidatesJson, pi.SortOrder 
+                    SELECT s.Id, s.FileName, s.FilePath, s.TotalSamples, s.DisplayName, s.LoopStart, s.LoopEnd, s.Artist, s.Album, s.AlbumArtist, s.LastModified, s.LoopCandidatesJson, pi.SortOrder 
                     FROM LoopPoints s
                     JOIN PlaylistItems pi ON s.Id = pi.SongId
                     WHERE pi.PlaylistId = @Pid

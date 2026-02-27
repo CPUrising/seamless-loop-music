@@ -170,12 +170,15 @@ namespace seamless_loop_music
                 // 必须通过文件路径精确查找，防止快速切歌时索引错位
                 foreach (var item in lstPlaylist.Items) {
                     if (item is MusicTrack listTrack && listTrack.FilePath == track.FilePath) {
-                        listTrack.Id = track.Id; // 同步 ID 很重要
+                        listTrack.Id = track.Id; 
                         listTrack.DisplayName = track.DisplayName;
                         listTrack.LoopStart = track.LoopStart;
                         listTrack.LoopEnd = track.LoopEnd;
+                        listTrack.Artist = track.Artist;
+                        listTrack.Album = track.Album;
+                        listTrack.AlbumArtist = track.AlbumArtist;
                         listTrack.TotalSamples = track.TotalSamples;
-                        break; // 找到了就停（假设列表里没有重复路径）
+                        break; 
                     }
                 }
                 lstPlaylist.Items.Refresh();
@@ -1158,15 +1161,30 @@ namespace seamless_loop_music
             if (lblAudioInfo == null) return;
             bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             
-            long total = _playerService?.CurrentTrack?.TotalSamples ?? 0;
+            var track = _playerService?.CurrentTrack;
+            long total = track?.TotalSamples ?? 0;
             int rate = _playerService?.SampleRate ?? 44100;
 
             if (total == 0) {
                  lblAudioInfo.Text = LocalizationService.Instance["AudioInfoInit"];
             } else {
-                lblAudioInfo.Text = isZh ? 
-                    $"音频信息：Total {total} | 采样率 {rate} Hz" : 
-                    $"Audio Info: Total {total} Samples | Rate: {rate} Hz";
+                string info = isZh ? 
+                    $"音频信息: {total} Samples | 采样率: {rate} Hz" : 
+                    $"Audio Info: {total} Samples | Rate: {rate} Hz";
+
+                // 如果有元数据，另起一行显示
+                if (track != null && (!string.IsNullOrEmpty(track.Artist) || !string.IsNullOrEmpty(track.Album)))
+                {
+                    string metadata = "";
+                    if (!string.IsNullOrEmpty(track.Artist)) metadata += (isZh ? "艺术家: " : "Artist: ") + track.Artist;
+                    if (!string.IsNullOrEmpty(track.AlbumArtist) && track.AlbumArtist != track.Artist) 
+                        metadata += " (" + (isZh ? "专辑艺术家: " : "Album Artist: ") + track.AlbumArtist + ")";
+                    if (!string.IsNullOrEmpty(track.Album)) metadata += " | " + (isZh ? "专辑: " : "Album: ") + track.Album;
+                    
+                    info += "\n" + metadata;
+                }
+
+                lblAudioInfo.Text = info;
             }
         }
 

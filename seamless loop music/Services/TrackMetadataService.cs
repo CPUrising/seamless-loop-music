@@ -67,6 +67,9 @@ namespace seamless_loop_music.Services
                 TotalSamples = totalSamples 
             };
 
+            // 填充物理文件元数据 (TagLib)
+            FillMetadataFromFile(currentTrack);
+
             if (dbTrack != null)
             {
                 currentTrack.Id = dbTrack.Id;
@@ -95,6 +98,34 @@ namespace seamless_loop_music.Services
             }
 
             return currentTrack;
+        }
+
+        private void FillMetadataFromFile(MusicTrack track)
+        {
+            try
+            {
+                if (!File.Exists(track.FilePath)) return;
+
+                using (var file = TagLib.File.Create(track.FilePath))
+                {
+                    if (file.Tag != null)
+                    {
+                        track.Artist = file.Tag.FirstPerformer;
+                        track.Album = file.Tag.Album;
+                        track.AlbumArtist = file.Tag.FirstAlbumArtist;
+
+                        // 如果之前没有设置过显示名称，尝试用标题
+                        if (string.IsNullOrEmpty(track.DisplayName) && !string.IsNullOrEmpty(file.Tag.Title))
+                        {
+                            track.DisplayName = file.Tag.Title;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("TagLib Read Error: " + ex.Message);
+            }
         }
 
         public void SaveTrack(MusicTrack track)

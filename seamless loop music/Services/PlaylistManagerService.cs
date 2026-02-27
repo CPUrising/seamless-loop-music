@@ -109,6 +109,7 @@ namespace seamless_loop_music.Services
                             DisplayName = Path.GetFileNameWithoutExtension(f),
                             LastModified = DateTime.Now
                         };
+                        FillMetadata(track);
                         tracksToAdd.Add(track);
                     }
                     catch { /* 忽略损坏文件 */ }
@@ -271,7 +272,7 @@ namespace seamless_loop_music.Services
                             
                             if (existingTrack == null || existingTrack.TotalSamples != totalSamples)
                             {
-                                tracksToSave.Add(new MusicTrack 
+                                var track = new MusicTrack 
                                 { 
                                     Id = existingTrack?.Id ?? 0, 
                                     FilePath = f, 
@@ -281,7 +282,9 @@ namespace seamless_loop_music.Services
                                     LoopStart = loopStart,
                                     DisplayName = existingTrack?.DisplayName ?? Path.GetFileNameWithoutExtension(f),
                                     LastModified = DateTime.Now
-                                });
+                                };
+                                FillMetadata(track);
+                                tracksToSave.Add(track);
                             }
                         } 
                         catch { }
@@ -384,5 +387,31 @@ namespace seamless_loop_music.Services
         public void UpdatePlaylistsSortOrder(List<int> playlistIds) => _dbHelper.UpdatePlaylistsSortOrder(playlistIds);
 
         public void UpdateTracksSortOrder(int playlistId, List<int> songIds) => _dbHelper.UpdateTracksSortOrder(playlistId, songIds);
+
+        private void FillMetadata(MusicTrack track)
+        {
+            try
+            {
+                if (!File.Exists(track.FilePath)) return;
+
+                using (var file = TagLib.File.Create(track.FilePath))
+                {
+                    if (file.Tag != null)
+                    {
+                        track.Artist = file.Tag.FirstPerformer;
+                        track.Album = file.Tag.Album;
+                        track.AlbumArtist = file.Tag.FirstAlbumArtist;
+
+                        // 仅当没有现有显示名称或显示名称仍是文件名时，才尝试用标题更新
+                        if (string.IsNullOrEmpty(track.DisplayName) || track.DisplayName == Path.GetFileNameWithoutExtension(track.FilePath))
+                        {
+                            if (!string.IsNullOrEmpty(file.Tag.Title))
+                                track.DisplayName = file.Tag.Title;
+                        }
+                    }
+                }
+            }
+            catch { }
+        }
     }
 }
