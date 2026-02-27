@@ -14,6 +14,7 @@ using System.Windows.Media;
 using System.Windows.Input;
 using seamless_loop_music.UI;
 using System.Threading.Tasks;
+using System.Windows.Data;
 
 namespace seamless_loop_music
 {
@@ -47,6 +48,8 @@ namespace seamless_loop_music
         private DateTime _lastSeekTime = DateTime.MinValue; 
         private DispatcherTimer _tmrUpdate;
         private Point _dragStartPoint;
+        private ListCollectionView _playlistView;
+        private ObservableCollection<MusicTrack> _currentTracks = new ObservableCollection<MusicTrack>();
 
         public MainWindow()
         {
@@ -181,7 +184,7 @@ namespace seamless_loop_music
                         break; 
                     }
                 }
-                lstPlaylist.Items.Refresh();
+                _playlistView?.Refresh();
 
                 _isUpdatingUI = false;
                 UpdateSecLabels(); // 计算秒数显示
@@ -342,7 +345,7 @@ namespace seamless_loop_music
                     _playerService.DeletePlaylist(folder.Id);
                     _playlists.Remove(folder);
                 }
-                lstPlaylist.Items.Clear();
+                _currentTracks.Clear();
                 txtFilePath.Text = LocalizationService.Instance["NoFileSelected"];
                 lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "已批量删除 {0} 个歌单。" : "Deleted {0} playlists.", selectedFolders.Count);
             }
@@ -432,20 +435,34 @@ namespace seamless_loop_music
                 var tracks = _playerService.LoadPlaylistFromDb(playlistId);
                 
                 _playlist.Clear();
-                lstPlaylist.Items.Clear();
+                lstPlaylist.ItemsSource = null;
+                _currentTracks.Clear();
                 
                 int missingCount = 0;
                 foreach (var track in tracks) {
                     bool exists = File.Exists(track.FilePath);
                     if (!exists) {
                         missingCount++;
-                        // 如果文件丢了，在显示名上打个标记，但不影响数据库数据
                         track.DisplayName = (LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") ? "[文件丢失] " : "[Missing] ") + (track.DisplayName ?? track.FileName);
                     }
                     
                     _playlist.Add(track.FilePath);
-                    lstPlaylist.Items.Add(track);
+                    _currentTracks.Add(track);
                 }
+                
+                _playlistView = new ListCollectionView(_currentTracks);
+                
+                // 智能分组逻辑：
+                // 如果是“文件夹关联”歌单，通常用户希望看到文件夹原貌，不强制分组
+                // 如果是“虚拟歌单”或混合歌单，按艺术家分组
+                if (lstPlaylists.SelectedItem is PlaylistFolder folder && !folder.IsFolderLinked)
+                {
+                    _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Artist)));
+                }
+                // 或者统一按艺术家分组，cpu大人如果觉得乱可以关掉
+                // _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Artist)));
+
+                lstPlaylist.ItemsSource = _playlistView;
                 
                 _playerService.Playlist = tracks;
                 
@@ -464,7 +481,8 @@ namespace seamless_loop_music
                 if (!Directory.Exists(path)) return;
                 
                 _playlist.Clear(); 
-                lstPlaylist.Items.Clear();
+                lstPlaylist.ItemsSource = null;
+                _currentTracks.Clear();
                 var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
                     .Where(s => s.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || 
                                 s.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || 
@@ -492,11 +510,14 @@ namespace seamless_loop_music
                         });
                     }
 
-                    lstPlaylist.Items.Add(track); 
+                    _currentTracks.Add(track); 
                 }
 
+                _playlistView = new ListCollectionView(_currentTracks);
+                lstPlaylist.ItemsSource = _playlistView;
+
                 // 同步歌单给 Service
-                _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+                _playerService.Playlist = _currentTracks.ToList();
 
                 if (notify) {
                     lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "成功导入 {0} 首歌曲！" : "Imported {0} tracks!", files.Count);
@@ -543,7 +564,7 @@ namespace seamless_loop_music
                         }
                     }
                     
-                    lstPlaylist.Items.Refresh();
+                    _playlistView?.Refresh();
                 }
             }
         }
@@ -613,6 +634,26 @@ namespace seamless_loop_music
              }
         }
 
+        private void miGroupByArtist_Click(object sender, RoutedEventArgs e)
+        {
+            if (_playlistView == null) return;
+            _playlistView.GroupDescriptions.Clear();
+            _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Artist)));
+        }
+
+        private void miGroupByAlbum_Click(object sender, RoutedEventArgs e)
+        {
+            if (_playlistView == null) return;
+            _playlistView.GroupDescriptions.Clear();
+            _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Album)));
+        }
+
+        private void miNoGrouping_Click(object sender, RoutedEventArgs e)
+        {
+            if (_playlistView == null) return;
+            _playlistView.GroupDescriptions.Clear();
+        }
+
         private void miOpenFolder_Click(object sender, RoutedEventArgs e)
         {
             if (lstPlaylist.SelectedItem is MusicTrack track && File.Exists(track.FilePath))
@@ -631,9 +672,9 @@ namespace seamless_loop_music
                     foreach (var t in tracksToRemove)
                     {
                         _playerService.RemoveTrackFromPlaylist(folder.Id, t.Id);
-                        lstPlaylist.Items.Remove(t); 
+                        _currentTracks.Remove(t); 
                     }
-                    _playerService.Playlist = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+                    _playerService.Playlist = _currentTracks.ToList();
                     LoadPlaylists(); // 更新数量
                 }
                 else
@@ -641,8 +682,9 @@ namespace seamless_loop_music
                     // 只是从当前播放列表移除（非数据库歌单模式）
                     foreach (var t in tracksToRemove)
                     {
-                        lstPlaylist.Items.Remove(t);
+                        _currentTracks.Remove(t);
                     }
+                    _playerService.Playlist = _currentTracks.ToList();
                 }
             }
         }
@@ -675,7 +717,7 @@ namespace seamless_loop_music
                         lblStatus.Text = LocalizationService.Instance["BatchDone"];
 
                         // 刷新一下列表显示，防止数据变了 UI 没动
-                        lstPlaylist.Items.Refresh();
+                        _playlistView?.Refresh();
                         UpdateLoopUI(); // 如果当前播放的正是在批量列表里，更新 UI
                     });
                 });
@@ -1154,7 +1196,7 @@ namespace seamless_loop_music
             }
 
             // Refresh the track list to update any "[Missing]" tags
-            lstPlaylist.Items.Refresh();
+            _playlistView?.Refresh();
         }
 
         private void UpdateAudioInfoText() {
@@ -1263,19 +1305,19 @@ namespace seamless_loop_music
 
             if (droppedData != null && target != null && droppedData != target)
             {
-                int oldIndex = lstPlaylist.Items.IndexOf(droppedData);
-                int newIndex = lstPlaylist.Items.IndexOf(target);
+                int oldIndex = _currentTracks.IndexOf(droppedData);
+                int newIndex = _currentTracks.IndexOf(target);
 
                 if (oldIndex == -1 || newIndex == -1) return;
 
                 // UI 更新
-                lstPlaylist.Items.RemoveAt(oldIndex);
-                lstPlaylist.Items.Insert(newIndex, droppedData);
+                _currentTracks.RemoveAt(oldIndex);
+                _currentTracks.Insert(newIndex, droppedData);
                 _playlist.RemoveAt(oldIndex);
                 _playlist.Insert(newIndex, droppedData.FilePath);
 
                 // Service 同步
-                var tracks = lstPlaylist.Items.Cast<MusicTrack>().ToList();
+                var tracks = _currentTracks.ToList();
                 _playerService.Playlist = tracks;
 
                 // 数据库持久化

@@ -95,9 +95,25 @@
                         <TextBlock Text="{Binding Title}" Padding="2" />
                     </DataTemplate>
                 </ListBox.ItemTemplate>
+                <ListBox.GroupStyle>
+                    <GroupStyle>
+                        <GroupStyle.HeaderTemplate>
+                            <DataTemplate>
+                                <Border Background="#313244" Margin="0,5,0,0" Padding="5,2" CornerRadius="3">
+                                    <TextBlock Text="{Binding Name}" Foreground="#FAB387" FontWeight="Bold" FontSize="11"/>
+                                </Border>
+                            </DataTemplate>
+                        </GroupStyle.HeaderTemplate>
+                    </GroupStyle>
+                </ListBox.GroupStyle>
                 <ListBox.ContextMenu>
                     <ContextMenu Opened="lstTrackList_ContextMenuOpened">
                         <MenuItem x:Name="miAddToPlaylist" Header="{Binding [MenuAddToPlaylist], Source={StaticResource Loc}}"/>
+                        <MenuItem Header="{Binding [MenuGroupBy], Source={StaticResource Loc}, FallbackValue='Group By...'}">
+                            <MenuItem Header="{Binding [MenuArtist], Source={StaticResource Loc}, FallbackValue='Artist'}" Click="miGroupByArtist_Click"/>
+                            <MenuItem Header="{Binding [MenuAlbum], Source={StaticResource Loc}, FallbackValue='Album'}" Click="miGroupByAlbum_Click"/>
+                            <MenuItem Header="{Binding [MenuNoGrouping], Source={StaticResource Loc}, FallbackValue='None'}" Click="miNoGrouping_Click"/>
+                        </MenuItem>
                         <Separator/>
                         <MenuItem x:Name="miBatchPyLoop" Header="{Binding [MenuBatchPyLoop], Source={StaticResource Loc}}" Click="miBatchPyLoop_Click"/>
                         <MenuItem x:Name="miRenameTrack" Header="{Binding [MenuRenameAlias], Source={StaticResource Loc}}" Click="miRenameTrack_Click"/>
