@@ -2,6 +2,7 @@ using NAudio.Wave;
 using NAudio.Vorbis;
 using System;
 using System.IO;
+using System.Threading;
 
 namespace seamless_loop_music
 {
@@ -224,44 +225,37 @@ namespace seamless_loop_music
             {
                 if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
                 {
-                    // 平滑策略：如果刚 Seek 不久，强制使用基于时间的推算值
-                    double secondsSinceSeek = (DateTime.Now - _seekTime).TotalSeconds;
-                    if (secondsSinceSeek < 4.0)
+                    // 修正：实际播放进度 = 上次Seek目标 + 实际已播放的采样数
+                    // 实际已播放层：(从上次定位填入缓冲区的总字节数 - 在缓冲区等待播放的字节数)
+                    // 放弃直接使用流 Position，防止在循环边界由于底层瞬间跳转而导致的回退
+                    long playedBytes = Interlocked.Read(ref _totalBytesReadSinceSeek) - _bufferedProvider.BufferedBytes;
+                    if (playedBytes < 0) playedBytes = 0;
+                    
+                    long playedSamples = playedBytes / _audioStream.WaveFormat.BlockAlign;
+                    long currentSample = _seekTargetSample + playedSamples;
+                    
+                    // 处理循环回绕现象：当前估算采样数超过循环结束点必定折返
+                    if (_loopEndSample > 0 && currentSample >= _loopEndSample)
                     {
-                        double estimatedSamples = _seekTargetSample + (secondsSinceSeek * _audioStream.WaveFormat.SampleRate);
-                        
-                        // 处理循环回绕：如果平滑推算值超过了 LoopEnd，应该显示为折返后的值
-                        // 注意：这里简单起见，如果超过 End，就减去 Loop 长度
-                        // (LoopStream.LoopStartPosition / BlockAlign)
-                        if (_loopEndSample > 0 && estimatedSamples > _loopEndSample)
-                        {
-                             long loopLength = _loopEndSample - _loopStartSample;
-                             if (loopLength > 0)
-                             {
-                                 long overshoot = (long)estimatedSamples - _loopEndSample;
-                                 estimatedSamples = _loopStartSample + (overshoot % loopLength);
-                             }
-                        }
-                        // 如果 LoopEnd 没设（或者为0代表文件尾），且超过了 TotalSamples，也应该回绕
-                        else if ((_loopEndSample <= 0) && estimatedSamples > _totalSamples)
-                        {
-                             // 此时 LoopEnd = TotalSamples
-                             // LoopStart = _loopStartSample
-                             long loopLength = _totalSamples - _loopStartSample;
-                             if (loopLength > 0)
-                             {
-                                 long overshoot = (long)estimatedSamples - _totalSamples;
-                                 estimatedSamples = _loopStartSample + (overshoot % loopLength);
-                             }
-                        }
-
-                        return TimeSpan.FromSeconds(estimatedSamples / _audioStream.WaveFormat.SampleRate);
+                         long loopLength = _loopEndSample - _loopStartSample;
+                         if (loopLength > 0)
+                         {
+                             long overshoot = currentSample - _loopEndSample;
+                             currentSample = _loopStartSample + (overshoot % loopLength);
+                         }
+                    }
+                    else if (_loopEndSample <= 0 && currentSample >= _totalSamples)
+                    {
+                         // 代表一直播到文件末尾才跳回的边界情况
+                         long loopLength = _totalSamples - _loopStartSample;
+                         if (loopLength > 0)
+                         {
+                             long overshoot = currentSample - _totalSamples;
+                             currentSample = _loopStartSample + (overshoot % loopLength);
+                         }
                     }
 
-                    // 修正：实际播放进度 = 已读取并填充的位置 - 还在缓冲区没被硬件吃掉的字节
-                    long actualPos = _loopStream.Position - _bufferedProvider.BufferedBytes;
-                    if (actualPos < 0) actualPos = 0;
-                    return TimeSpan.FromSeconds((double)actualPos / _audioStream.WaveFormat.AverageBytesPerSecond);
+                    return TimeSpan.FromSeconds((double)currentSample / _audioStream.WaveFormat.SampleRate);
                 }
                 return TimeSpan.Zero;
             }
@@ -287,6 +281,7 @@ namespace seamless_loop_music
 
         private DateTime _seekTime = DateTime.MinValue;
         private long _seekTargetSample = 0;
+        private long _totalBytesReadSinceSeek = 0;
         private readonly object _streamLock = new object();
 
         public void SeekToSample(long sample)
@@ -297,6 +292,7 @@ namespace seamless_loop_music
                 {
                     _isSeeking = true;
                     _bufferedProvider.ClearBuffer(); 
+                    Interlocked.Exchange(ref _totalBytesReadSinceSeek, 0);
 
                     long position = sample * _audioStream.WaveFormat.BlockAlign;
                     if (position < 0) position = 0;

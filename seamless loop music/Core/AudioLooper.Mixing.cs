@@ -66,6 +66,7 @@ namespace seamless_loop_music
                             if (read > 0)
                             {
                                 _bufferedProvider.AddSamples(readBuffer, 0, read);
+                                Interlocked.Add(ref _totalBytesReadSinceSeek, read);
                             }
                             else 
                             {
