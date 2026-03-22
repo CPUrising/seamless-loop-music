@@ -29,11 +29,28 @@ namespace seamless_loop_music.UI.ViewModels
             // 订阅服务事件
             _playerService.OnTrackLoaded += OnTrackLoaded;
             _playerService.OnStatusMessage += msg => StatusMessage = msg;
+            _playerService.OnLoopPointsChanged += (start, end) => 
+            {
+                Application.Current.Dispatcher.Invoke(() => 
+                {
+                    _isUpdatingInternally = true;
+                    LoopStartSample = start.ToString();
+                    LoopEndSample = end.ToString();
+                    _isUpdatingInternally = false;
+                    UpdateSecLabels();
+                });
+            };
 
             // 初始值
             MatchWindowSize = _playerService.MatchWindowSize;
             SearchRadius = _playerService.MatchSearchRadius;
             UpdateModeText();
+
+            // 检查初始状态：如果 Service 已经加载了音轨，手动触发一次同步
+            if (_playerService.CurrentTrack != null)
+            {
+                OnTrackLoaded(_playerService.CurrentTrack);
+            }
         }
 
         #region 属性
@@ -283,13 +300,59 @@ namespace seamless_loop_music.UI.ViewModels
             LoopEndSample = _playerService.LoopEndSample.ToString();
         }
 
+        private async System.Threading.Tasks.Task<bool> EnsurePyMusicLooperReadyAsync()
+        {
+            int status = await _playerService.CheckPyMusicLooperStatusAsync();
+            if (status == 0) return true; // Ready
+
+            if (status == 2)
+            {
+                MessageBox.Show(LocalizationService.Instance["MsgNoUv"], "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                return false;
+            }
+
+            // status == 1, Needs manual setup
+            MessageBox.Show(LocalizationService.Instance["PromptDownloadPymusiclooper"], 
+                            LocalizationService.Instance["TitleDownloadNeeded"], 
+                            MessageBoxButton.OK, MessageBoxImage.Information);
+                                         
+            return false;
+        }
+
         private async void ExecutePyRanking()
         {
             ApplyLocalSettingsToService();
-            // 注意：这里需要考虑如何调起 LoopListWindow
-            // 暂时抛出事件或通过某个 UI 服务
-            // 这里我们假设以后可以通过一个特定的方案解决，目前先打印日志或汇报状态
-            StatusMessage = "PyRanking logic integration needed...";
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
+
+            if (!await EnsurePyMusicLooperReadyAsync()) return;
+
+            StatusMessage = isZh ? "正在计算前10个循环点..." : "Fetching top 10 loops...";
+            
+            try 
+            {
+                var candidates = await _playerService.GetLoopCandidatesAsync();
+                if (candidates.Count == 0)
+                {
+                    MessageBox.Show(isZh ? "未找到循环点。" : "No loops found.");
+                }
+                else
+                {
+                    // 在 ViewModel 中直接 New Window 虽不完美，但在当前重构阶段是最高效的迁移方式
+                    Application.Current.Dispatcher.Invoke(() => {
+                        var win = new seamless_loop_music.UI.LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
+                        win.Owner = Application.Current.MainWindow;
+                        win.Show();
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("PyRanking Error: " + ex.Message);
+            }
+            finally
+            {
+                StatusMessage = LocalizationService.Instance["StatusReady"];
+            }
         }
 
         private void ExecuteApplyLoop()

@@ -49,6 +49,12 @@ namespace seamless_loop_music.Services
         public event Action<PlaybackState> OnPlayStateChanged;
         public event Action<string> OnStatusMessage; // 统一的消息通知
         public event Action<int> OnIndexChanged;   // 通知 UI 更新选中项
+        public event Action<long, long> OnLoopPointsChanged;
+
+        private void NotifyLoopPointsChanged()
+        {
+            OnLoopPointsChanged?.Invoke(LoopStartSample, LoopEndSample);
+        }
 
         public PlayerService(IDatabaseHelper dbHelper, IPlaylistManagerService playlistManager)
         {
@@ -277,6 +283,7 @@ namespace seamless_loop_music.Services
             _audioLooper.SetLoopEndSample(CurrentTrack.LoopEnd);
 
             SaveCurrentTrack();
+            NotifyLoopPointsChanged(); // Added notification
             OnTrackLoaded?.Invoke(CurrentTrack);
             OnStatusMessage?.Invoke("Restored to original A/B boundary.");
         }
@@ -308,7 +315,9 @@ namespace seamless_loop_music.Services
                 // 3. 立即保存
                 SaveCurrentTrack();
                 
+                
                 OnStatusMessage?.Invoke($"Smart Match Applied: Start={newStart}, End={newEnd}");
+                NotifyLoopPointsChanged(); // Added notification
                 
                 // 4. 通知调用者 (UI) 刷新
                 onComplete?.Invoke();
@@ -434,6 +443,7 @@ namespace seamless_loop_music.Services
                 _audioLooper.SetLoopEndSample(end);
                 
                 SaveCurrentTrack();
+                NotifyLoopPointsChanged(); // Added notification
                 OnTrackLoaded?.Invoke(CurrentTrack);
                 
                 OnStatusMessage?.Invoke($"Loop Applied: {start} - {end}");
@@ -542,8 +552,8 @@ namespace seamless_loop_music.Services
         public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
         public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
 
-        public void SetLoopStart(long sample) => _audioLooper.SetLoopStartSample(sample);
-        public void SetLoopEnd(long sample) => _audioLooper.SetLoopEndSample(sample);
+        public void SetLoopStart(long sample) { _audioLooper.SetLoopStartSample(sample); NotifyLoopPointsChanged(); }
+        public void SetLoopEnd(long sample) { _audioLooper.SetLoopEndSample(sample); NotifyLoopPointsChanged(); }
 
         public void ImportTracks(IEnumerable<MusicTrack> tracks)
         {
