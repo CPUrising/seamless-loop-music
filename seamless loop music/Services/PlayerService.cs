@@ -107,7 +107,7 @@ namespace seamless_loop_music.Services
                 // 关键修复：使用 Task.Run 异步切换，避免在音频读取线程中直接调用 Stop/Dispose 导致死锁
                 System.Threading.Tasks.Task.Run(() => {
                     OnStatusMessage?.Invoke($"Loop limit reached ({LoopLimit}), switching to next...");
-                    NextTrack();
+                    Next();
                 });
             }
         }
@@ -117,7 +117,7 @@ namespace seamless_loop_music.Services
         /// <summary>
         /// 切换到下一首
         /// </summary>
-        public void NextTrack()
+        public void Next()
         {
             string path = _playbackQueue.GetNextTrackPath();
             if (path != null) LoadTrack(path, true);
@@ -126,7 +126,7 @@ namespace seamless_loop_music.Services
         /// <summary>
         /// 切换到上一首
         /// </summary>
-        public void PreviousTrack()
+        public void Previous()
         {
             string path = _playbackQueue.GetPreviousTrackPath();
             if (path != null) LoadTrack(path, true);
@@ -161,7 +161,7 @@ namespace seamless_loop_music.Services
                 // 如果是自动播放模式，尝试跳过
                 if (CurrentMode != PlayMode.SingleLoop)
                 {
-                    System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => NextTrack());
+                    System.Threading.Tasks.Task.Delay(1000).ContinueWith(_ => Next());
                 }
                 return;
             }
@@ -528,7 +528,7 @@ namespace seamless_loop_music.Services
         public void Stop() => _audioLooper.Stop();
         public void Seek(double percent) => _audioLooper.Seek(percent);
         public void SeekToSample(long sample) => _audioLooper.SeekToSample(sample);
-        public void SetVolume(float volume) => _audioLooper.Volume = volume;
+        public float Volume { get => _audioLooper.Volume; set => _audioLooper.Volume = value; }
 
         // --- 属性透传 ---
         

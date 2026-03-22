@@ -24,6 +24,7 @@ namespace seamless_loop_music.Services
         int SampleRate { get; }
         double MatchWindowSize { get; set; }
         double MatchSearchRadius { get; set; }
+        float Volume { get; set; }
 
         // 事件
         event Action<MusicTrack> OnTrackLoaded;
@@ -37,13 +38,12 @@ namespace seamless_loop_music.Services
         void Stop();
         void Seek(double percent);
         void SeekToSample(long sample);
-        void SetVolume(float volume);
 
         // 曲目管理
         void LoadTrack(string filePath, bool autoPlay = false);
         void PlayAtIndex(int index);
-        void NextTrack();
-        void PreviousTrack();
+        void Next();
+        void Previous();
         void SaveCurrentTrack();
         void RenameCurrentTrack(string newName);
 

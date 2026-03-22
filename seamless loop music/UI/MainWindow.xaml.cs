@@ -26,12 +26,7 @@ namespace seamless_loop_music
     {
         private readonly IPlayerService _playerService;
         
-        private List<string> _playlist = new List<string>();
-        private int _currentTrackIndex = -1;
-
-
-        private List<string> _recentFolders = new List<string>(); 
-        private ObservableCollection<PlaylistFolder> _playlists = new ObservableCollection<PlaylistFolder>();
+        // 数据集合已迁移到各组件的 ViewModel
 
         private string _dataDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data");
         private string _configPath;
@@ -42,13 +37,11 @@ namespace seamless_loop_music
         private string _lastLoadedFilePath = "";
         private string _lastPlaylistPath = ""; 
         private double _globalVolume = 80; 
+        private List<string> _recentFolders = new List<string>();
 
         private bool _isUpdatingUI = false;
-        private bool _isDraggingProgress = false;
         private DateTime _lastSeekTime = DateTime.MinValue; 
-        private Point _dragStartPoint;
-        private ListCollectionView _playlistView;
-        private ObservableCollection<MusicTrack> _currentTracks = new ObservableCollection<MusicTrack>();
+        // 视图绑定已迁移
 
         public MainWindow(IPlayerService playerService)
         {
@@ -79,19 +72,10 @@ namespace seamless_loop_music
             _playerService.OnStatusMessage += msg => Dispatcher.Invoke(() => {
                 lblStatus.Text = msg; // 汇报进度，让 cpu 大人知道我在努力工作
             });
-            _playerService.OnIndexChanged += (index) => Dispatcher.Invoke(() => {
-                if (lstPlaylist.SelectedIndex != index) {
-                    _isUpdatingUI = true;
-                    lstPlaylist.SelectedIndex = index;
-                    lstPlaylist.ScrollIntoView(lstPlaylist.SelectedItem);
-                    _isUpdatingUI = false;
-                }
-            });
             
-            // 定时器已移动到 PlaybackControlBarViewModel
+            // 索引同步逻辑已由 PlaylistSidebar 处理
             
             LoadConfig(); // 仅负责迁移旧数据
-            LoadPlaylists();
             
             try {
                 ApplyLanguage(); 
@@ -102,40 +86,13 @@ namespace seamless_loop_music
             UpdateAudioInfoText();
             UpdateButtons(PlaybackState.Stopped);
             
-            lstPlaylists.ItemsSource = _playlists;
-
-            // 加载设置
-            // 初始音量同步由子组件 ViewModel 处理
-
-            UpdateModeUI(); // 初始化模式按钮文字
-
-            // 自动选中第一个歌单
-            if (lstPlaylists.Items.Count > 0) lstPlaylists.SelectedIndex = 0;
-
-            // 自动加载上次使用的歌单
-            if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
-                // 尝试按 ID 匹配，如果失败（比如旧配置文件存的是路径），再按路径/名称匹配
-                var folder = _playlists.FirstOrDefault(p => p.Id.ToString() == _lastPlaylistPath) 
-                          ?? _playlists.FirstOrDefault(p => p.Path == _lastPlaylistPath || p.Name == _lastPlaylistPath);
-                
-                if (folder != null) {
-                    lstPlaylists.SelectedItem = folder;
-                    // LoadPlaylistFromDb 将在 SelectionChanged 中被触发
-                }
-            }
+            // 数据同步已由各组件 ViewModel 处理
 
             // 自动加载上次播放的文件
             if (!string.IsNullOrEmpty(_lastLoadedFilePath) && File.Exists(_lastLoadedFilePath)) {
                 try {
                     txtFilePath.Text = _lastLoadedFilePath;
                     _playerService.LoadTrack(_lastLoadedFilePath);
-                    
-                    int idx = _playlist.IndexOf(_lastLoadedFilePath);
-                    if (idx != -1) {
-                        _currentTrackIndex = idx;
-                        lstPlaylist.SelectedIndex = idx;
-                        lstPlaylist.ScrollIntoView(lstPlaylist.SelectedItem); 
-                    }
                 } catch { }
             }
 
@@ -159,22 +116,7 @@ namespace seamless_loop_music
                 btnResetAB.IsEnabled = _playerService.IsABMode;
                 lblStatus.Text = $"{LocalizationService.Instance["StatusPlaying"]}: {track.Title}";
                 
-                // 整理：如果列表里也有这个 Track，更新列表项显示
-                // 必须通过文件路径精确查找，防止快速切歌时索引错位
-                foreach (var item in lstPlaylist.Items) {
-                    if (item is MusicTrack listTrack && listTrack.FilePath == track.FilePath) {
-                        listTrack.Id = track.Id; 
-                        listTrack.DisplayName = track.DisplayName;
-                        listTrack.LoopStart = track.LoopStart;
-                        listTrack.LoopEnd = track.LoopEnd;
-                        listTrack.Artist = track.Artist;
-                        listTrack.Album = track.Album;
-                        listTrack.AlbumArtist = track.AlbumArtist;
-                        listTrack.TotalSamples = track.TotalSamples;
-                        break; 
-                    }
-                }
-                _playlistView?.Refresh();
+                // 信息更新已通过 DataContext 同步
 
                 _isUpdatingUI = false;
                 UpdateSecLabels(); // 计算秒数显示
@@ -185,529 +127,7 @@ namespace seamless_loop_music
             // 此逻辑已移动到子组件 ViewModel
         }
 
-        private async void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
-            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
-            
-            // 1. 询问是“新建空歌单”还是“导入文件夹”
-            var choice = MessageBox.Show(
-                LocalizationService.Instance["PromptNewPlaylist"],
-                LocalizationService.Instance["TitleNewPlaylist"],
-                MessageBoxButton.YesNoCancel,
-                MessageBoxImage.Question);
-
-            if (choice == MessageBoxResult.Cancel) return;
-
-            string folderName = "";
-            string folderPath = null;
-            bool isFolder = (choice == MessageBoxResult.No);
-
-            if (isFolder) {
-                var picker = new FolderPicker();
-                if (picker.ShowDialog(this)) {
-                    folderPath = picker.ResultPath;
-                    folderName = Path.GetFileName(folderPath);
-                    if (string.IsNullOrEmpty(folderName)) folderName = folderPath;
-                } else return;
-            } else {
-                folderName = Microsoft.VisualBasic.Interaction.InputBox(
-                    LocalizationService.Instance["PromptEnterPlaylistName"],
-                    LocalizationService.Instance["TitleNewVirtualPlaylist"],
-                    LocalizationService.Instance["TitleNewPlaylist"]);
-                if (string.IsNullOrEmpty(folderName)) return;
-            }
-
-            // 2. 数据库建档
-            int newId = _playerService.CreatePlaylist(folderName, folderPath, isLinked: isFolder);
-            
-            // 3. 刷新 UI
-            LoadPlaylists();
-            
-            // 选中新歌单
-            var newItem = _playlists.FirstOrDefault(p => p.Id == newId);
-            if (newItem != null) lstPlaylists.SelectedItem = newItem;
-
-            // 4. 如果是文件夹，启动后台扫描同步
-            if (isFolder && !string.IsNullOrEmpty(folderPath)) {
-                lblStatus.Text = LocalizationService.Instance["StatusScanning"];
-                await _playerService.AddFolderToPlaylist(newId, folderPath);
-                // 扫描完刷新一下当前显示的歌曲列表
-                LoadPlaylistFromDb(newId);
-            }
-            // 5. 更新列表
-            LoadPlaylists();
-        }
-
-        private void lstPlaylists_SelectionChanged(object sender, SelectionChangedEventArgs e) {
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                LoadPlaylistFromDb(folder.Id);
-            }
-        }
-
-
-        private void miRenamePlaylist_Click(object sender, RoutedEventArgs e) {
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                string newName = Microsoft.VisualBasic.Interaction.InputBox(
-                    LocalizationService.Instance["PromptEnterPlaylistName"], 
-                    LocalizationService.Instance["MenuRename"], 
-                    folder.Name);
-                if (!string.IsNullOrEmpty(newName)) {
-                    folder.Name = newName;
-                    _playerService.RenamePlaylist(folder.Id, newName);
-                    lstPlaylists.Items.Refresh();
-                }
-            }
-        }
-
-        private void miManageFolders_Click(object sender, RoutedEventArgs e)
-        {
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder)
-            {
-                var mgr = new UI.FolderManagerWindow(_playerService, folder.Id, folder.Name);
-                mgr.Owner = this;
-                mgr.ShowDialog();
-                
-                // 窗口关闭后，刷新一下当前列表，以防内容变动
-                LoadPlaylists();
-                LoadPlaylistFromDb(folder.Id);
-            }
-        }
-
-        private async void miRefreshPlaylist_Click(object sender, RoutedEventArgs e) {
-            var selectedFolders = lstPlaylists.SelectedItems.Cast<PlaylistFolder>()
-                                    .Where(f => f.IsFolderLinked).ToList();
-            if (selectedFolders.Count == 0) return;
-
-            int count = 0;
-
-            foreach (var folder in selectedFolders)
-            {
-                count++;
-                lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "正在批量刷新 ({0}/{1}): {2}..." : "Batch Refreshing ({0}/{1}): {2}...", count, selectedFolders.Count, folder.Name);
-                
-                await _playerService.RefreshPlaylist(folder.Id);
-            }
-            
-            // 全部完成后更新 UI
-            LoadPlaylists();
-            
-            // 如果当前选中的文件夹中有正在显示的，重载它
-            if (lstPlaylists.SelectedItem is PlaylistFolder current)
-            {
-                LoadPlaylistFromDb(current.Id);
-            }
-            
-            lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "已完成 {0} 个歌单的批量刷新。" : "Batch refresh of {0} playlists completed.", selectedFolders.Count);
-        }
-
-        private void miDeletePlaylist_Click(object sender, RoutedEventArgs e) {
-            var selectedFolders = lstPlaylists.SelectedItems.Cast<PlaylistFolder>().ToList();
-            if (selectedFolders.Count == 0) return;
-
-            string msg = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "确定要从库中移除这 {0} 个歌单吗？(磁盘文件不会被删除)" : "Are you sure to remove {0} playlists? (Source files won't be deleted)", selectedFolders.Count);
-            
-            if (MessageBox.Show(msg, LocalizationService.Instance["TitleDelete"], MessageBoxButton.YesNo, MessageBoxImage.Warning) == MessageBoxResult.Yes) {
-                foreach (var folder in selectedFolders)
-                {
-                    _playerService.DeletePlaylist(folder.Id);
-                    _playlists.Remove(folder);
-                }
-                _currentTracks.Clear();
-                txtFilePath.Text = LocalizationService.Instance["NoFileSelected"];
-                lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "已批量删除 {0} 个歌单。" : "Deleted {0} playlists.", selectedFolders.Count);
-            }
-        }
-
-        private void lstPlaylists_ContextMenuOpened(object sender, RoutedEventArgs e)
-        {
-            var cm = sender as ContextMenu;
-            if (cm == null) return;
-            
-            var selectedItems = lstPlaylists.SelectedItems.Cast<PlaylistFolder>().ToList();
-            bool hasSelection = selectedItems.Count > 0;
-            bool singleSelection = selectedItems.Count == 1;
-
-            bool anyFolderBased = selectedItems.Any(f => f.IsFolderLinked);
-            bool anyVirtual = selectedItems.Any(f => !f.IsFolderLinked);
-
-            // 设置可见性
-            miRefreshPlaylist.Visibility = anyFolderBased ? Visibility.Visible : Visibility.Collapsed;
-            miAddSong.Visibility = (singleSelection && anyVirtual) ? Visibility.Visible : Visibility.Collapsed;
-            
-            // 重命名只支持单选
-            miRenamePlaylist.Visibility = singleSelection ? Visibility.Visible : Visibility.Collapsed;
-            miManageFolders.Visibility = (singleSelection && anyFolderBased) ? Visibility.Visible : Visibility.Collapsed;
-            miDeletePlaylist.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
-
-            // 如果没选中任何项，全部崩坏
-            if (!hasSelection)
-            {
-                miRefreshPlaylist.Visibility = Visibility.Collapsed;
-                miAddSong.Visibility = Visibility.Collapsed; 
-                miRenamePlaylist.Visibility = Visibility.Collapsed;
-                miManageFolders.Visibility = Visibility.Collapsed;
-                miDeletePlaylist.Visibility = Visibility.Collapsed;
-            }
-        }
-
-        private async void miAddSong_Click(object sender, RoutedEventArgs e)
-        {
-            if (lstPlaylists.SelectedItem is PlaylistFolder folder && !folder.IsFolderLinked)
-            {
-                var dialog = new OpenFileDialog
-                {
-                    Multiselect = true,
-                    Filter = "Audio Files|*.mp3;*.wav;*.ogg;*.flac;*.m4a;*.wma|All Files|*.*"
-                };
-
-                if (dialog.ShowDialog() == true)
-                {
-                    await _playerService.AddFilesToPlaylist(folder.Id, dialog.FileNames);
-                    
-                    // 刷新及显示
-                    LoadPlaylists(); // 更新数量
-                    LoadPlaylistFromDb(folder.Id); // 更新列表
-                     
-                    lblStatus.Text = LocalizationService.Instance["StatusDone"];
-                }
-            }
-        }
-
-
-        private void LoadPlaylists() {
-            try {
-                // 保存当前选中的 ID，以便刷新后恢复
-                var selectedId = (lstPlaylists.SelectedItem as PlaylistFolder)?.Id;
-                
-                _playlists.Clear();
-                var list = _playerService.GetAllPlaylists();
-                foreach (var p in list) {
-                    _playlists.Add(p);
-                }
-                
-                // 恢复选中
-                if (selectedId != null) {
-                    var item = _playlists.FirstOrDefault(p => p.Id == selectedId);
-                    if (item != null) lstPlaylists.SelectedItem = item;
-                }
-            } catch {}
-        }
-
-        private void SavePlaylists() {
-            // 已交给数据库实时保存，这里保持空壳或废弃
-        }
-
-        public void LoadPlaylistFromDb(int playlistId) {
-            try {
-                var tracks = _playerService.LoadPlaylistFromDb(playlistId);
-                
-                _playlist.Clear();
-                lstPlaylist.ItemsSource = null;
-                _currentTracks.Clear();
-                
-                int missingCount = 0;
-                foreach (var track in tracks) {
-                    bool exists = File.Exists(track.FilePath);
-                    if (!exists) {
-                        missingCount++;
-                        track.DisplayName = (LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") ? "[文件丢失] " : "[Missing] ") + (track.DisplayName ?? track.FileName);
-                    }
-                    
-                    _playlist.Add(track.FilePath);
-                    _currentTracks.Add(track);
-                }
-                
-                _playlistView = new ListCollectionView(_currentTracks);
-                
-                // 智能分组逻辑：
-                // 如果是“文件夹关联”歌单，通常用户希望看到文件夹原貌，不强制分组
-                // 如果是“虚拟歌单”或混合歌单，按艺术家分组
-                if (lstPlaylists.SelectedItem is PlaylistFolder folder && !folder.IsFolderLinked)
-                {
-                    _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Artist)));
-                }
-                // 或者统一按艺术家分组，cpu大人如果觉得乱可以关掉
-                // _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Artist)));
-
-                lstPlaylist.ItemsSource = _playlistView;
-                
-                _playerService.Playlist = tracks;
-                
-                if (missingCount > 0) {
-                    lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "加载了 {0} 首歌曲，其中 {1} 首文件路径无效。" : "Loaded {0} tracks ({1} files missing).", tracks.Count, missingCount);
-                } else {
-                    lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "成功加载 {0} 首歌曲" : "Successfully loaded {0} tracks", tracks.Count);
-                }
-            } catch (Exception ex) {
-                MessageBox.Show("加载歌单失败: " + ex.Message);
-            }
-        }
-
-        public void LoadPlaylist(string path, bool notify = true) {
-            try {
-                if (!Directory.Exists(path)) return;
-                
-                _playlist.Clear(); 
-                lstPlaylist.ItemsSource = null;
-                _currentTracks.Clear();
-                var files = Directory.GetFiles(path, "*.*", SearchOption.AllDirectories)
-                    .Where(s => s.EndsWith(".wav", StringComparison.OrdinalIgnoreCase) || 
-                                s.EndsWith(".mp3", StringComparison.OrdinalIgnoreCase) || 
-                                s.EndsWith(".ogg", StringComparison.OrdinalIgnoreCase)).ToList();
-                
-                foreach (var f in files) { 
-                    _playlist.Add(f); 
-                    var fileName = Path.GetFileName(f);
-                    
-                    // 委托 Service 快速查别名/配置
-                    var track = _playerService.GetStoredTrackInfo(f);
-                    
-                    if (track == null) {
-                        // 如果是全新的歌曲，创建一个占位符
-                        track = new MusicTrack { FilePath = f, FileName = fileName };
-                        
-                        // 启动一个后台任务去预扫描采样数并入库，这样右键操作才有 ID 支撑
-                        System.Threading.Tasks.Task.Run(() => {
-                            long samples = _playerService.GetTotalSamples(f);
-                            if (samples > 0) {
-                                track.TotalSamples = samples;
-                                track.LoopEnd = samples;
-                                _playerService.UpdateOfflineTrack(track);
-                            }
-                        });
-                    }
-
-                    _currentTracks.Add(track); 
-                }
-
-                _playlistView = new ListCollectionView(_currentTracks);
-                lstPlaylist.ItemsSource = _playlistView;
-
-                // 同步歌单给 Service
-                _playerService.Playlist = _currentTracks.ToList();
-
-                if (notify) {
-                    lblStatus.Text = string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "成功导入 {0} 首歌曲！" : "Imported {0} tracks!", files.Count);
-                }
-            } catch (Exception ex) {
-                MessageBox.Show("加载列表失败: " + ex.Message);
-            }
-        }
-
-        private void lstPlaylist_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e) {
-            if (lstPlaylist.SelectedItem is MusicTrack track) {
-                int index = _currentTracks.IndexOf(track);
-                if (index != -1) PlayTrack(index);
-            }
-        }
-
-        private void miRenameTrack_Click(object sender, RoutedEventArgs e) {
-            if (lstPlaylist.SelectedItem is MusicTrack track) {
-                string newName = Microsoft.VisualBasic.Interaction.InputBox(
-                    string.Format(LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh") == true ? "给 '{0}' 起个别名：" : "Set alias for '{0}':", track.FileName),
-                    LocalizationService.Instance["MenuRenameAlias"],
-                    track.DisplayName ?? track.Title);
-                
-                if (!string.IsNullOrEmpty(newName)) {
-                    track.DisplayName = newName;
-                    
-                    // 如果正在播放这首歌，通知 Service 更新并入库
-                    if (_playerService.CurrentTrack != null && _playerService.CurrentTrack.FilePath == track.FilePath) {
-                        _playerService.RenameCurrentTrack(newName);
-                    } else {
-                        // 如果没在播放，利用 Service 提供的离线工具补全并保存
-                        if (track.TotalSamples <= 0) {
-                            track.TotalSamples = _playerService.GetTotalSamples(track.FilePath);
-                            track.LoopEnd = track.TotalSamples; // 默认全曲
-                        }
-                        
-                        // 2. 只有拿到采样数，才能入库
-                        if (track.TotalSamples > 0) {
-                            // 先查户口（合并旧配置，防止覆盖）
-                            var stored = _playerService.GetStoredTrackInfo(track.FilePath);
-                            if (stored != null) {
-                                track.Id = stored.Id;
-                                track.LoopStart = stored.LoopStart;
-                                track.LoopEnd = (stored.LoopEnd <= 0) ? track.TotalSamples : stored.LoopEnd;
-                            }
-                            _playerService.UpdateOfflineTrack(track);
-                        }
-                    }
-                    
-                    _playlistView?.Refresh();
-                }
-            }
-        }
-
-
-
-        private void lstTrackList_ContextMenuOpened(object sender, RoutedEventArgs e)
-        {
-            var cm = sender as ContextMenu;
-            if (cm == null) return;
-            
-            bool hasSelection = lstPlaylist.SelectedItems.Count > 0;
-            
-            // 找到占位符菜单项 "miAddToPlaylist"
-            // 注意：因为我们是动态向 ContextMenu 填充的，直接找 x:Name 可能需要遍历 Items
-            // 为了简单，我们每次清空再重建这一部分，或者利用 Tag 标记
-            
-            // 但其实 XAML 里已经定义了 miAddToPlaylist，我们只需操作它的 Items
-            if (miAddToPlaylist != null)
-            {
-                miAddToPlaylist.Visibility = hasSelection ? Visibility.Visible : Visibility.Collapsed;
-                miAddToPlaylist.Items.Clear();
-                miAddToPlaylist.Header = LocalizationService.Instance["MenuAddToPlaylist"];
-                
-                if (hasSelection)
-                {
-                    // 获取所有【手动维护】的歌单
-                    var manualPlaylists = _playerService.GetAllPlaylists().Where(p => !p.IsFolderLinked).ToList();
-                    
-                    if (manualPlaylists.Count == 0)
-                    {
-                        var emptyItem = new MenuItem { Header = LocalizationService.Instance["NoPlaylists"], IsEnabled = false };
-                        miAddToPlaylist.Items.Add(emptyItem);
-                    }
-                    else
-                    {
-                        foreach (var p in manualPlaylists)
-                        {
-                            var item = new MenuItem { Header = p.Name, Tag = p.Id };
-                            item.Click += MiAddToSpecificPlaylist_Click;
-                            miAddToPlaylist.Items.Add(item);
-                        }
-                    }
-                }
-            }
-        }
-
-        private void MiAddToSpecificPlaylist_Click(object sender, RoutedEventArgs e)
-        {
-             if (sender is MenuItem item && item.Tag is int playlistId)
-             {
-                 var tracks = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
-                 if (tracks.Count == 0) return;
-                 
-                 _playerService.AddTracksToPlaylist(playlistId, tracks);
-                 
-                  lblStatus.Text = string.Format(LocalizationService.Instance["AddedToPlaylist"], tracks.Count);
-                 
-                 // 如果左侧正好显示的是这个目标歌单，更新一下它的数量显示
-                 var pItem = _playlists.FirstOrDefault(p => p.Id == playlistId);
-                 if (pItem != null) 
-                 {
-                     // 为了更新数量，最简单的是重载列表，但会闪烁
-                     // 这里我们简单调用 LoadPlaylists 更新所有数量
-                     LoadPlaylists();
-                 }
-             }
-        }
-
-        private void miGroupByArtist_Click(object sender, RoutedEventArgs e)
-        {
-            if (_playlistView == null) return;
-            _playlistView.GroupDescriptions.Clear();
-            _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Artist)));
-        }
-
-        private void miGroupByAlbum_Click(object sender, RoutedEventArgs e)
-        {
-            if (_playlistView == null) return;
-            _playlistView.GroupDescriptions.Clear();
-            _playlistView.GroupDescriptions.Add(new PropertyGroupDescription(nameof(MusicTrack.Album)));
-        }
-
-        private void miNoGrouping_Click(object sender, RoutedEventArgs e)
-        {
-            if (_playlistView == null) return;
-            _playlistView.GroupDescriptions.Clear();
-        }
-
-        private void miOpenFolder_Click(object sender, RoutedEventArgs e)
-        {
-            if (lstPlaylist.SelectedItem is MusicTrack track && File.Exists(track.FilePath))
-            {
-                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{track.FilePath}\"");
-            }
-        }
-
-        private void miRemoveFromList_Click(object sender, RoutedEventArgs e)
-        {
-            if (lstPlaylist.SelectedItem is MusicTrack track)
-            {
-                var tracksToRemove = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
-                if (lstPlaylists.SelectedItem is PlaylistFolder folder)
-                {
-                    foreach (var t in tracksToRemove)
-                    {
-                        _playerService.RemoveTrackFromPlaylist(folder.Id, t.Id);
-                        _currentTracks.Remove(t); 
-                    }
-                    _playerService.Playlist = _currentTracks.ToList();
-                    LoadPlaylists(); // 更新数量
-                }
-                else
-                {
-                    // 只是从当前播放列表移除（非数据库歌单模式）
-                    foreach (var t in tracksToRemove)
-                    {
-                        _currentTracks.Remove(t);
-                    }
-                    _playerService.Playlist = _currentTracks.ToList();
-                }
-            }
-        }
-
-        private async void miBatchPyLoop_Click(object sender, RoutedEventArgs e)
-        {
-            var tracks = lstPlaylist.SelectedItems.Cast<MusicTrack>().ToList();
-            if (tracks.Count == 0) return;
-
-            var confirm = MessageBox.Show(
-                string.Format(LocalizationService.Instance["BatchAnalysisConfirm"], tracks.Count),
-                LocalizationService.Instance["BatchAnalysisTitle"],
-                MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-            if (confirm != MessageBoxResult.Yes) return;
-
-            if (!await EnsurePyMusicLooperReadyAsync()) return;
-
-            // 禁用界面上相关的按钮防止冲突（可选，但安全）
-
-
-            await _playerService.BatchSmartMatchLoopExternalAsync(tracks, 
-                (current, total, fileName) => {
-                    Dispatcher.Invoke(() => {
-                        lblStatus.Text = string.Format(LocalizationService.Instance["BatchProgress"], current, total, fileName);
-                    });
-                },
-                () => {
-                    Dispatcher.Invoke(() => {
-                        lblStatus.Text = LocalizationService.Instance["BatchDone"];
-
-                        // 刷新一下列表显示，防止数据变了 UI 没动
-                        _playlistView?.Refresh();
-                        UpdateLoopUI(); // 如果当前播放的正是在批量列表里，更新 UI
-                    });
-                });
-        }
-
-        private void PlayTrack(int index) {
-            if (index < 0 || index >= _currentTracks.Count) return;
-            _currentTrackIndex = index;
-            var track = _currentTracks[index];
-            string filePath = track.FilePath;
-            
-            lstPlaylist.SelectedItem = track;
-            lstPlaylist.ScrollIntoView(track);
-            txtFilePath.Text = filePath;
-            
-            _playerService.LoadTrack(filePath);
-            _playerService.Play();
-        }
-
-        // 播放与重放逻辑已迁移到 PlaybackControlBarViewModel
-        // 切歌逻辑已迁移到 PlaybackControlBarViewModel
+        // 侧边栏所有相关业务逻辑已迁移到 PlaylistSidebarViewModel
 
         private void btnPlayMode_Click(object sender, RoutedEventArgs e)
         {
@@ -924,7 +344,6 @@ namespace seamless_loop_music
                 }
             }
             UpdateSecLabels(); 
-            if (btnPlay != null) btnPlay.IsEnabled = !string.IsNullOrEmpty(txtFilePath.Text) && !string.IsNullOrEmpty(txtLoopSample.Text); 
         }
         
         private void txtLoopEndSample_TextChanged(object sender, TextChangedEventArgs e) {
@@ -1097,10 +516,7 @@ namespace seamless_loop_music
                     lines.Add($"LastFile={txtFilePath.Text}");
                 }
                 
-                if (lstPlaylists.SelectedItem is PlaylistFolder folder) {
-                    lines.Add($"LastPlaylist={folder.Id}");
-                }
-                else if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
+                if (!string.IsNullOrEmpty(_lastPlaylistPath)) {
                     lines.Add($"LastPlaylist={_lastPlaylistPath}");
                 }
 
@@ -1138,8 +554,7 @@ namespace seamless_loop_music
                  lblStatus.Text = $"{LocalizationService.Instance["StatusPlaying"]}: {trackName}";
             }
 
-            // Refresh the track list to update any "[Missing]" tags
-            _playlistView?.Refresh();
+            // Refresh localization if needed
         }
 
         private void UpdateAudioInfoText() {
@@ -1179,145 +594,6 @@ namespace seamless_loop_music
             SaveSettings(); 
             _playerService?.Dispose();
             base.OnClosed(e);
-        }
-        private void lstPlaylists_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _dragStartPoint = e.GetPosition(null);
-        }
-
-        private void lstPlaylists_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                Point position = e.GetPosition(null);
-                if (Math.Abs(position.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(position.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    ListBox listBox = sender as ListBox;
-                    PlaylistFolder folder = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as PlaylistFolder;
-                    if (folder != null)
-                    {
-                        DragDrop.DoDragDrop(listBox, folder, DragDropEffects.Move);
-                    }
-                }
-            }
-        }
-
-        private void lstPlaylists_Drop(object sender, DragEventArgs e)
-        {
-            PlaylistFolder droppedData = e.Data.GetData(typeof(PlaylistFolder)) as PlaylistFolder;
-            PlaylistFolder target = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as PlaylistFolder;
-
-            if (droppedData != null && target != null && droppedData != target)
-            {
-                int oldIndex = _playlists.IndexOf(droppedData);
-                int newIndex = _playlists.IndexOf(target);
-
-                _playlists.Move(oldIndex, newIndex);
-                _playerService.UpdatePlaylistsSortOrder(_playlists.Select(p => p.Id).ToList());
-            }
-        }
-
-        private void lstPlaylist_PreviewMouseLeftButtonDown(object sender, MouseButtonEventArgs e)
-        {
-            _dragStartPoint = e.GetPosition(null);
-        }
-
-        private void lstPlaylist_MouseMove(object sender, MouseEventArgs e)
-        {
-            if (e.LeftButton == MouseButtonState.Pressed)
-            {
-                Point position = e.GetPosition(null);
-                if (Math.Abs(position.X - _dragStartPoint.X) > SystemParameters.MinimumHorizontalDragDistance ||
-                    Math.Abs(position.Y - _dragStartPoint.Y) > SystemParameters.MinimumVerticalDragDistance)
-                {
-                    ListBox listBox = sender as ListBox;
-                    MusicTrack track = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as MusicTrack;
-                    if (track != null)
-                    {
-                        DragDrop.DoDragDrop(listBox, track, DragDropEffects.Move);
-                    }
-                }
-            }
-        }
-
-        private void lstPlaylist_Drop(object sender, DragEventArgs e)
-        {
-            MusicTrack droppedData = e.Data.GetData(typeof(MusicTrack)) as MusicTrack;
-            MusicTrack target = FindParent<ListBoxItem>((DependencyObject)e.OriginalSource)?.DataContext as MusicTrack;
-
-            if (droppedData != null && target != null && droppedData != target)
-            {
-                int oldIndex = _currentTracks.IndexOf(droppedData);
-                int newIndex = _currentTracks.IndexOf(target);
-
-                if (oldIndex == -1 || newIndex == -1) return;
-
-                // UI 更新
-                _currentTracks.RemoveAt(oldIndex);
-                _currentTracks.Insert(newIndex, droppedData);
-                _playlist.RemoveAt(oldIndex);
-                _playlist.Insert(newIndex, droppedData.FilePath);
-
-                // Service 同步
-                var tracks = _currentTracks.ToList();
-                _playerService.Playlist = tracks;
-
-                // 数据库持久化
-                if (lstPlaylists.SelectedItem is PlaylistFolder folder)
-                {
-                    _playerService.UpdateTracksSortOrder(folder.Id, tracks.Select(t => t.Id).ToList());
-                }
-            }
-        }
-
-        private void ListBox_DragOver(object sender, DragEventArgs e)
-        {
-            if (sender is ListBox listBox)
-            {
-                var scrollViewer = FindVisualChild<ScrollViewer>(listBox);
-                if (scrollViewer != null)
-                {
-                    double tolerance = 30;
-                    double verticalPos = e.GetPosition(listBox).Y;
-
-                    if (verticalPos < tolerance)
-                    {
-                        scrollViewer.LineUp();
-                    }
-                    else if (verticalPos > listBox.ActualHeight - tolerance)
-                    {
-                        scrollViewer.LineDown();
-                    }
-                }
-            }
-        }
-
-        private static T FindParent<T>(DependencyObject child) where T : DependencyObject
-        {
-            DependencyObject parentObject = VisualTreeHelper.GetParent(child);
-            if (parentObject == null) return null;
-            T parent = parentObject as T;
-            if (parent != null) parent = (T)parentObject; // 冗余检查，修正逻辑
-            if (parent != null) return parent;
-            return FindParent<T>(parentObject);
-        }
-
-        private static T FindVisualChild<T>(DependencyObject obj) where T : DependencyObject
-        {
-            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(obj); i++)
-            {
-                DependencyObject child = VisualTreeHelper.GetChild(obj, i);
-                if (child != null && child is T)
-                    return (T)child;
-                else
-                {
-                    T childOfChild = FindVisualChild<T>(child);
-                    if (childOfChild != null)
-                        return childOfChild;
-                }
-            }
-            return null;
         }
     }
 }

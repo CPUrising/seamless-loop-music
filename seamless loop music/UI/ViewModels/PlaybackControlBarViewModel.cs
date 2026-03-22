@@ -1,3 +1,4 @@
+using NAudio.Wave;
 using Prism.Commands;
 using Prism.Mvvm;
 using seamless_loop_music.Services;
