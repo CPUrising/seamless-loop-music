@@ -1,0 +1,185 @@
+<UserControl x:Class="seamless_loop_music.UI.Views.LoopWorkspace"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <Style x:Key="SideButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Padding" Value="10,8"/>
+            <Setter Property="Margin" Value="0,5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="5">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="#45475A"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+        <Style TargetType="TextBox">
+            <Setter Property="Background" Value="#181825"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0,0,0,1"/>
+            <Setter Property="BorderBrush" Value="#45475A"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="CaretBrush" Value="#89B4FA"/>
+            <Setter Property="VerticalContentAlignment" Value="Center"/>
+        </Style>
+    </UserControl.Resources>
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header: File Info -->
+        <StackPanel Grid.Row="0" Margin="0,0,0,10">
+            <TextBlock Text="{Binding [FilePathTitle], Source={StaticResource Loc}}" FontSize="12" Foreground="#A6ADC8"/>
+            <TextBox Text="{Binding FilePath, Mode=OneWay}" 
+                     FontSize="14" FontWeight="Bold" Margin="-2,2,0,10" 
+                     Background="Transparent" Foreground="#CDD6F4" BorderThickness="0" Padding="0"
+                     IsReadOnly="True" TextWrapping="NoWrap" Cursor="IBeam"/>
+
+            <Border Background="#313244" CornerRadius="5" Padding="10">
+                <StackPanel>
+                    <TextBlock Text="{Binding StatusMessage}" Foreground="#89B4FA" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding AudioInfo}" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+
+        <!-- Center: Loop Workspace -->
+        <Grid Grid.Row="1" VerticalAlignment="Center">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+
+                <!-- Start Point -->
+                <StackPanel Grid.Column="0" Margin="0,0,10,0">
+                    <Border Background="#181825" CornerRadius="10" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [LoopStartLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#89B4FA" Margin="0,0,0,10"/>
+                            <TextBox Text="{Binding LoopStartSample, UpdateSourceTrigger=PropertyChanged}" 
+                                     TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#89B4FA" 
+                                     BorderBrush="#89B4FA" BorderThickness="0,0,0,2" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding LoopStartSec, UpdateSourceTrigger=PropertyChanged}" 
+                                     Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12"/>
+
+                            <UniformGrid Columns="2" Margin="0,15,0,0">
+                                <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Command="{Binding AdjustCommand}" CommandParameter="Start:Min" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                                <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Command="{Binding AdjustCommand}" CommandParameter="Start:Max" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                            </UniformGrid>
+
+                            <UniformGrid Columns="4" Margin="0,5,0,0">
+                                <Button Content="-5s" Command="{Binding AdjustCommand}" CommandParameter="Start:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="-1s" Command="{Binding AdjustCommand}" CommandParameter="Start:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+1s" Command="{Binding AdjustCommand}" CommandParameter="Start:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+5s" Command="{Binding AdjustCommand}" CommandParameter="Start:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+
+                                <Button Content="-0.1s" Command="{Binding AdjustCommand}" CommandParameter="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="-0.01s" Command="{Binding AdjustCommand}" CommandParameter="Start:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+0.01s" Command="{Binding AdjustCommand}" CommandParameter="Start:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+0.1s" Command="{Binding AdjustCommand}" CommandParameter="Start:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+
+                <!-- End Point -->
+                <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                    <Border Background="#181825" CornerRadius="10" Padding="15">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [LoopEndLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
+                            <TextBox Text="{Binding LoopEndSample, UpdateSourceTrigger=PropertyChanged}" 
+                                     TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#F38BA8" 
+                                     BorderBrush="#F38BA8" BorderThickness="0,0,0,2" Margin="0,0,0,5"/>
+                            <TextBox Text="{Binding LoopEndSec, UpdateSourceTrigger=PropertyChanged}" 
+                                     Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12"/>
+
+                            <UniformGrid Columns="2" Margin="0,15,0,0">
+                                <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Command="{Binding AdjustCommand}" CommandParameter="End:Min" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                                <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Command="{Binding AdjustCommand}" CommandParameter="End:Max" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
+                            </UniformGrid>
+
+                            <UniformGrid Columns="4" Margin="0,5,0,0">
+                                <Button Content="-5s" Command="{Binding AdjustCommand}" CommandParameter="End:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="-1s" Command="{Binding AdjustCommand}" CommandParameter="End:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+1s" Command="{Binding AdjustCommand}" CommandParameter="End:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+5s" Command="{Binding AdjustCommand}" CommandParameter="End:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+
+                                <Button Content="-0.1s" Command="{Binding AdjustCommand}" CommandParameter="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="-0.01s" Command="{Binding AdjustCommand}" CommandParameter="End:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+0.01s" Command="{Binding AdjustCommand}" CommandParameter="End:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                                <Button Content="+0.1s" Command="{Binding AdjustCommand}" CommandParameter="End:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
+                            </UniformGrid>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Grid>
+
+            <StackPanel Grid.Row="1" Margin="0,10,0,0">
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
+                    <Button Content="{Binding PlayModeText}" Command="{Binding ChangePlayModeCommand}" Style="{StaticResource SideButtonStyle}" Width="100" Margin="0,0,15,0"/>
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding [LabelLoop], Source={StaticResource Loc}}" VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="0,0,5,0"/>
+                        <TextBox Width="35" Text="{Binding LoopLimit, UpdateSourceTrigger=PropertyChanged}" Height="25" TextAlignment="Center" Background="#181825"/>
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                    <Button Content="{Binding [MatchStart], Source={StaticResource Loc}}" Command="{Binding SmartMatchReverseCommand}" Width="90" Height="36"
+                            Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
+                            ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
+                    <Button Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Command="{Binding SmartMatchForwardCommand}" Width="90" Height="36"
+                            Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
+                            ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
+                    <Button Content="{Binding [ResetAB], Source={StaticResource Loc}}" Command="{Binding ResetABCommand}" Width="90" Height="36"
+                            Background="#F5C2E7" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
+                            ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
+                    <Button Content="{Binding [PyRanking], Source={StaticResource Loc}}" Command="{Binding PyRankingCommand}" Width="90" Height="36"
+                            Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
+                            ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
+                    <Button Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Command="{Binding ApplyLoopCommand}" Width="110" Height="36"
+                            Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"/>
+                </StackPanel>
+
+                <Grid Width="360" HorizontalAlignment="Center" Margin="0,8,0,0">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="4">
+                        <TextBlock Text="{Binding MatchWindowTitle}" FontSize="10" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
+                        <Slider Minimum="1" Maximum="10" Value="{Binding MatchWindowSize}" TickFrequency="0.5" IsSnapToTickEnabled="True" Height="25"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" Margin="4">
+                        <TextBlock Text="{Binding SearchRadiusTitle}" FontSize="10" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
+                        <Slider Minimum="1" Maximum="20" Value="{Binding SearchRadius}" TickFrequency="1" IsSnapToTickEnabled="True" Height="25"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</UserControl>

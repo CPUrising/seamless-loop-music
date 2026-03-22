@@ -47,151 +47,18 @@
         <!-- Playlist Sidebar (Modularized) -->
         <views:PlaylistSidebar Grid.Column="0" Margin="0,0,10,0"/>
 
-        <!-- Main Area -->
+        <!-- Main Area (Including Header, LoopWorkspace and PlaybackControls) -->
         <Grid Grid.Column="1">
             <Grid.RowDefinitions>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
 
-            <!-- Header: File Info -->
-            <StackPanel Grid.Row="0" Margin="0,0,0,10">
-                <TextBlock x:Name="lblFilePath" Text="{Binding [FilePathTitle], Source={StaticResource Loc}}" FontSize="12" Foreground="#A6ADC8"/>
-                <TextBox x:Name="txtFilePath" Text="{Binding [NoFileSelected], Source={StaticResource Loc}, Mode=OneWay}" 
-                         FontSize="14" FontWeight="Bold" Margin="-2,2,0,10" 
-                         Background="Transparent" Foreground="#CDD6F4" BorderThickness="0" Padding="0"
-                         IsReadOnly="True" TextWrapping="NoWrap" Cursor="IBeam"/>
-
-                <Border Background="#313244" CornerRadius="5" Padding="10">
-                    <StackPanel>
-                        <TextBlock x:Name="lblStatus" Text="{Binding [StatusReady], Source={StaticResource Loc}}" Foreground="#89B4FA" FontWeight="Bold"/>
-                        <TextBlock x:Name="lblAudioInfo" Text="{Binding [AudioInfoInit], Source={StaticResource Loc}}" FontSize="11" Foreground="#BAC2DE" Margin="0,5,0,0"/>
-                    </StackPanel>
-                </Border>
-            </StackPanel>
-
-            <!-- Center: Loop Workspace -->
-            <Grid Grid.Row="1" VerticalAlignment="Center">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
-                
-                <Grid Grid.Row="0">
-                    <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="*"/>
-                        <ColumnDefinition Width="*"/>
-                    </Grid.ColumnDefinitions>
-
-                    <!-- Start Point -->
-                    <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                        <Border Background="#181825" CornerRadius="10" Padding="15">
-                            <StackPanel>
-                                <TextBlock x:Name="lblLoopStart" Text="{Binding [LoopStartLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#89B4FA" Margin="0,0,0,10"/>
-                                <TextBox x:Name="txtLoopSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#89B4FA" 
-                                         BorderBrush="#89B4FA" BorderThickness="0,0,0,2" Margin="0,0,0,5"
-                                         TextChanged="txtLoopSample_TextChanged"/>
-                                <TextBox x:Name="txtLoopStartSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopStartSec_TextChanged"/>
-
-                                    <UniformGrid Columns="2" Margin="0,15,0,0">
-                                        <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Click="Adjust_Click" Tag="Start:Min" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
-                                        <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Click="Adjust_Click" Tag="Start:Max" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
-                                    </UniformGrid>
-                                    
-                                    <UniformGrid Columns="4" Margin="0,5,0,0">
-                                        <Button Content="-5s" Click="Adjust_Click" Tag="Start:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="-1s" Click="Adjust_Click" Tag="Start:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+1s" Click="Adjust_Click" Tag="Start:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+5s" Click="Adjust_Click" Tag="Start:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        
-                                        <Button Content="-0.1s" Click="Adjust_Click" Tag="Start:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="-0.01s" Click="Adjust_Click" Tag="Start:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+0.01s" Click="Adjust_Click" Tag="Start:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+0.1s" Click="Adjust_Click" Tag="Start:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    </UniformGrid>
-                                </StackPanel>
-                            </Border>
-                        </StackPanel>
-
-                        <!-- End Point -->
-                        <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                            <Border Background="#181825" CornerRadius="10" Padding="15">
-                                <StackPanel>
-                                    <TextBlock x:Name="lblLoopEnd" Text="{Binding [LoopEndLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="#F38BA8" Margin="0,0,0,10"/>
-                                    <TextBox x:Name="txtLoopEndSample" Text="0" TextAlignment="Center" FontSize="18" FontWeight="Bold" Foreground="#F38BA8" 
-                                             BorderBrush="#F38BA8" BorderThickness="0,0,0,2" Margin="0,0,0,5"
-                                             TextChanged="txtLoopEndSample_TextChanged"/>
-                                    <TextBox x:Name="txtLoopEndSec" Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="12" TextChanged="txtLoopEndSec_TextChanged"/>
-
-                                    <UniformGrid Columns="2" Margin="0,15,0,0">
-                                        <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Click="Adjust_Click" Tag="End:Min" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
-                                        <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Click="Adjust_Click" Tag="End:Max" Style="{StaticResource SideButtonStyle}" Margin="2" Background="#45475A"/>
-                                    </UniformGrid>
-
-                                    <UniformGrid Columns="4" Margin="0,5,0,0">
-                                        <Button Content="-5s" Click="Adjust_Click" Tag="End:-5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="-1s" Click="Adjust_Click" Tag="End:-1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+1s" Click="Adjust_Click" Tag="End:1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+5s" Click="Adjust_Click" Tag="End:5" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        
-                                        <Button Content="-0.1s" Click="Adjust_Click" Tag="End:-0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="-0.01s" Click="Adjust_Click" Tag="End:-0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+0.01s" Click="Adjust_Click" Tag="End:0.01" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                        <Button Content="+0.1s" Click="Adjust_Click" Tag="End:0.1" Style="{StaticResource SideButtonStyle}" Margin="2"/>
-                                    </UniformGrid>
-                            </StackPanel>
-                        </Border>
-                    </StackPanel>
-                </Grid>
-
-                <StackPanel Grid.Row="1" Margin="0,10,0,0">
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,8">
-                        <Button x:Name="btnPlayMode" Content="{Binding [ModeSingle], Source={StaticResource Loc}}" Style="{StaticResource SideButtonStyle}" Width="100" Click="btnPlayMode_Click" Margin="0,0,15,0"/>
-                        <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                            <TextBlock Text="{Binding [LabelLoop], Source={StaticResource Loc}}" VerticalAlignment="Center" FontSize="12" Opacity="0.7" Margin="0,0,5,0"/>
-                            <TextBox x:Name="txtLoopLimit" Width="35" Text="1" Height="25" TextAlignment="Center" TextChanged="txtLoopLimit_TextChanged" Background="#181825"/>
-                        </StackPanel>
-                    </StackPanel>
-
-                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                        <Button x:Name="btnSmartMatch" Content="{Binding [MatchStart], Source={StaticResource Loc}}" Width="90" Height="36"
-                                Background="#89DCEB" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
-                                Click="btnSmartMatch_Click" ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnSmartMatchForward" Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Width="90" Height="36"
-                                Background="#94E2D5" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
-                                Click="btnSmartMatchForward_Click" ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnResetAB" Content="{Binding [ResetAB], Source={StaticResource Loc}}" Width="90" Height="36"
-                                Background="#F5C2E7" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
-                                Click="btnResetAB_Click" ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnPyList" Content="{Binding [PyRanking], Source={StaticResource Loc}}" Width="90" Height="36"
-                                Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
-                                Click="btnPyList_Click" ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
-                        <Button x:Name="btnApplyLoop" Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Width="110" Height="36"
-                                Background="#FAB387" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" FontWeight="Bold"
-                                Click="btnApplyLoop_Click"/>
-                    </StackPanel>
-
-                    <Grid Width="360" HorizontalAlignment="Center" Margin="0,8,0,0">
-                        <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="*"/>
-                            <ColumnDefinition Width="*"/>
-                        </Grid.ColumnDefinitions>
-                        <StackPanel Grid.Column="0" Margin="4">
-                            <TextBlock x:Name="lblMatchWindow" Text="匹配长度: 1.0s" FontSize="10" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
-                            <Slider x:Name="sldMatchWindow" Minimum="1" Maximum="10" Value="1.0" TickFrequency="0.5" IsSnapToTickEnabled="True" ValueChanged="sldMatchParams_ValueChanged" Height="25"/>
-                        </StackPanel>
-                        <StackPanel Grid.Column="1" Margin="4">
-                            <TextBlock x:Name="lblSearchRadius" Text="搜索半径: 5.0s" FontSize="10" Foreground="#A6ADC8" HorizontalAlignment="Center"/>
-                            <Slider x:Name="sldSearchRadius" Minimum="1" Maximum="20" Value="5.0" TickFrequency="1" IsSnapToTickEnabled="True" ValueChanged="sldMatchParams_ValueChanged" Height="25"/>
-                        </StackPanel>
-                    </Grid>
-                </StackPanel>
-            </Grid>
+            <!-- Core Workspace -->
+            <views:LoopWorkspace Grid.Row="0"/>
 
             <!-- Bottom Bar: Playback Controls (Modularized) -->
-            <views:PlaybackControlBar Grid.Row="2" Grid.RowSpan="2" Margin="0,15,0,0"/>
+            <views:PlaybackControlBar Grid.Row="1" Margin="0,15,0,0"/>
         </Grid>
     </Grid>
 </Window>
