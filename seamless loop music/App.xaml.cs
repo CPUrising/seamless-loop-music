@@ -3,77 +3,47 @@ using System.Diagnostics;
 using System.Runtime.InteropServices;
 using System.Threading;
 using System.Windows;
+using Prism.Unity;
+using Prism.Ioc;
+using seamless_loop_music.Services;
+using seamless_loop_music.Data;
+using seamless_loop_music.UI;
 
 namespace seamless_loop_music
 {
-    public partial class App : Application
+    public partial class App : PrismApplication
     {
-        private static Mutex _mutex;
-
-        // 引入 Windows API
-        [DllImport("user32.dll")]
-        private static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        private static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-
-        private const int SW_RESTORE = 9;
-
         protected override void OnStartup(StartupEventArgs e)
         {
-            // 禁止双开逻辑
-            _mutex = new Mutex(true, "SeamlessLoopMusic_SingleInstance_Mutex", out bool isNewInstance);
-            if (!isNewInstance)
-            {
-                // 如果发现已有实例，尝试唤醒它
-                BringExistingInstanceToFront();
-                Current.Shutdown();
-                return;
-            }
-
+            // 全局异常处理
             AppDomain.CurrentDomain.UnhandledException += (s, args) =>
-                MessageBox.Show("Fatal Error: " + ((Exception)args.ExceptionObject).Message, "AppDomain Error");
+                LogException((Exception)args.ExceptionObject, "Fatal Domain Error");
 
             DispatcherUnhandledException += (s, args) =>
             {
-                MessageBox.Show("UI Error: " + args.Exception.Message + "\n" + args.Exception.ToString(), "WPF Error");
+                LogException(args.Exception, "UI Dispatcher Error");
                 args.Handled = true;
             };
 
             base.OnStartup(e);
         }
 
-        private void BringExistingInstanceToFront()
+        private void LogException(Exception ex, string title)
         {
-            Process currentProcess = Process.GetCurrentProcess();
-            foreach (Process process in Process.GetProcessesByName(currentProcess.ProcessName))
-            {
-                // 确保找到的是另一个进程，而不是自己
-                if (process.Id != currentProcess.Id)
-                {
-                    IntPtr hWnd = process.MainWindowHandle;
-                    if (hWnd != IntPtr.Zero)
-                    {
-                        // 1. 如果窗口是最小化的，恢复它
-                        ShowWindow(hWnd, SW_RESTORE);
-                        // 2. 将窗口置于最前端
-                        SetForegroundWindow(hWnd);
-                    }
-                    break;
-                }
-            }
+            MessageBox.Show($"{title}:\n{ex.Message}\n\n{ex.StackTrace}", "Seamless Loop Music Error");
         }
 
-        protected override void OnExit(ExitEventArgs e)
+        protected override Window CreateShell()
         {
-            if (_mutex != null)
-            {
-                try { _mutex.ReleaseMutex(); } catch { }
-                _mutex.Dispose();
-            }
-            base.OnExit(e);
+            return Container.Resolve<MainWindow>();
+        }
+
+        protected override void RegisterTypes(IContainerRegistry containerRegistry)
+        {
+            // 核心服务注册 (单例)
+            containerRegistry.RegisterSingleton<IDatabaseHelper, DatabaseHelper>();
+            containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
+            containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
         }
     }
 }
-
-

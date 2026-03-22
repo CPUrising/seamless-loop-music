@@ -24,12 +24,12 @@ namespace seamless_loop_music.Services
     /// 核心播放业务逻辑服务
     /// 把 MainWindow 从繁重的 Audio+DB 协调工作中解放出来
     /// </summary>
-    public class PlayerService : IDisposable
+    public class PlayerService : IPlayerService, IDisposable
     {
         private readonly AudioLooper _audioLooper;
-        private readonly DatabaseHelper _dbHelper;
+        private readonly IDatabaseHelper _dbHelper;
         private readonly LoopAnalysisService _loopAnalysisService;
-        private readonly PlaylistManagerService _playlistManager;
+        private readonly IPlaylistManagerService _playlistManager;
         private readonly PlaybackQueueService _playbackQueue;
         private readonly TrackMetadataService _trackMetadata;
         private readonly Random _random = new Random();
@@ -50,10 +50,12 @@ namespace seamless_loop_music.Services
         public event Action<string> OnStatusMessage; // 统一的消息通知
         public event Action<int> OnIndexChanged;   // 通知 UI 更新选中项
 
-        public PlayerService()
+        public PlayerService(IDatabaseHelper dbHelper, IPlaylistManagerService playlistManager)
         {
+            _dbHelper = dbHelper;
+            _playlistManager = playlistManager;
+            
             _audioLooper = new AudioLooper();
-            _dbHelper = new DatabaseHelper();
             _loopAnalysisService = new LoopAnalysisService();
             _loopAnalysisService.OnStatusMessage += msg => {
                 string localized = msg;
@@ -63,7 +65,7 @@ namespace seamless_loop_music.Services
                 }
                 OnStatusMessage?.Invoke(localized);
             };
-            _playlistManager = new PlaylistManagerService(_dbHelper);
+            
             _playlistManager.OnStatusMessage = msg => OnStatusMessage?.Invoke(msg);
             _playbackQueue = new PlaybackQueueService();
             _playbackQueue.OnIndexChanged += idx => OnIndexChanged?.Invoke(idx);

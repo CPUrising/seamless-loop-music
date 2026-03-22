@@ -9,7 +9,7 @@ using seamless_loop_music.Models;
 
 namespace seamless_loop_music.Data
 {
-    public class DatabaseHelper
+    public class DatabaseHelper : IDatabaseHelper
     {
         private readonly string _dbPath;
         private readonly string _connectionString;

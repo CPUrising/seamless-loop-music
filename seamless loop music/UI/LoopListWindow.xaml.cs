@@ -8,7 +8,7 @@ namespace seamless_loop_music.UI
 {
     public partial class LoopListWindow : Window
     {
-        private PlayerService _playerService;
+        private IPlayerService _playerService;
         private List<LoopCandidate> _candidates;
         private System.Func<System.Threading.Tasks.Task<bool>> _checker;
         
@@ -30,7 +30,7 @@ namespace seamless_loop_music.UI
             }
         }
 
-        public LoopListWindow(List<LoopCandidate> candidates, PlayerService service, System.Func<System.Threading.Tasks.Task<bool>> checker = null)
+        public LoopListWindow(List<LoopCandidate> candidates, IPlayerService service, System.Func<System.Threading.Tasks.Task<bool>> checker = null)
         {
             InitializeComponent();
             _playerService = service;

@@ -9,11 +9,11 @@ namespace seamless_loop_music.UI
 {
     public partial class FolderManagerWindow : Window
     {
-        private readonly PlayerService _playerService;
+        private readonly IPlayerService _playerService;
         private readonly int _playlistId;
         private readonly string _playlistName;
 
-        public FolderManagerWindow(PlayerService service, int playlistId, string playlistName)
+        public FolderManagerWindow(IPlayerService service, int playlistId, string playlistName)
         {
             InitializeComponent();
             _playerService = service;

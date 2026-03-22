@@ -12,9 +12,9 @@ namespace seamless_loop_music.Services
     /// </summary>
     public class TrackMetadataService
     {
-        private readonly DatabaseHelper _dbHelper;
+        private readonly IDatabaseHelper _dbHelper;
 
-        public TrackMetadataService(DatabaseHelper dbHelper)
+        public TrackMetadataService(IDatabaseHelper dbHelper)
         {
             _dbHelper = dbHelper;
         }

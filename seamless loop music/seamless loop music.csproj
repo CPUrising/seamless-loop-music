@@ -17,6 +17,8 @@
 
   <ItemGroup>
     <PackageReference Include="Dapper" Version="2.1.66" />
+    <PackageReference Include="MaterialDesignThemes" Version="5.3.1" />
+    <PackageReference Include="Prism.Unity" Version="8.1.97" />
     <PackageReference Include="System.Data.SQLite.Core" Version="1.0.119" />
     <Reference Include="Microsoft.VisualBasic" />
     <PackageReference Include="NAudio" Version="2.2.1" />

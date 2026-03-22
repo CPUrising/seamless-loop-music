@@ -14,14 +14,14 @@ namespace seamless_loop_music.Services
     /// 歌单管理服务
     /// 负责所有与歌单增删改查、文件夹扫描、文件入库相关的逻辑
     /// </summary>
-    public class PlaylistManagerService
+    public class PlaylistManagerService : IPlaylistManagerService
     {
-        private readonly DatabaseHelper _dbHelper;
+        private readonly IDatabaseHelper _dbHelper;
         
         // 外部注入通知回调
-        public Action<string> OnStatusMessage;
+        public Action<string> OnStatusMessage { get; set; }
 
-        public PlaylistManagerService(DatabaseHelper dbHelper)
+        public PlaylistManagerService(IDatabaseHelper dbHelper)
         {
             _dbHelper = dbHelper;
         }

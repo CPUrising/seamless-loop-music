@@ -24,7 +24,7 @@ namespace seamless_loop_music
     /// </summary>
     public partial class MainWindow : Window
     {
-        private readonly PlayerService _playerService;
+        private readonly IPlayerService _playerService;
         
         private List<string> _playlist = new List<string>();
         private int _currentTrackIndex = -1;
@@ -46,12 +46,11 @@ namespace seamless_loop_music
         private bool _isUpdatingUI = false;
         private bool _isDraggingProgress = false;
         private DateTime _lastSeekTime = DateTime.MinValue; 
-        private DispatcherTimer _tmrUpdate;
         private Point _dragStartPoint;
         private ListCollectionView _playlistView;
         private ObservableCollection<MusicTrack> _currentTracks = new ObservableCollection<MusicTrack>();
 
-        public MainWindow()
+        public MainWindow(IPlayerService playerService)
         {
             // 0. 初始化数据目录与路径
             if (!Directory.Exists(_dataDir)) Directory.CreateDirectory(_dataDir);
@@ -59,13 +58,20 @@ namespace seamless_loop_music
             _configPath = Path.Combine(_dataDir, "loop_config.csv");
             _settingsPath = Path.Combine(_dataDir, "settings.conf");
 
+            // 确保目录规范存在
+            foreach (var dir in new[] { "UI/Views", "UI/ViewModels", "UI/Themes", "UI/Controls" })
+            {
+                var fullPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, dir);
+                if (!Directory.Exists(fullPath)) Directory.CreateDirectory(fullPath);
+            }
+
             // 1. Load settings FIRST
             LoadSettings(); 
             
             InitializeComponent();
             
-            // 2. 聘请音乐总监
-            _playerService = new PlayerService();
+            // 2. 聘请音乐总监 (由 DI 容器提供)
+            _playerService = playerService;
 
             // 3. 订阅总监的信号
             _playerService.OnTrackLoaded += OnTrackLoaded;
@@ -82,22 +88,7 @@ namespace seamless_loop_music
                 }
             });
             
-            // 初始化定时器
-            _tmrUpdate = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(100) };
-            _tmrUpdate.Tick += (s, e) => {
-                if (_isDraggingProgress || (DateTime.Now - _lastSeekTime).TotalSeconds < 0.2) return;
-                
-                var current = _playerService.CurrentTime;
-                var total = _playerService.TotalTime;
-                
-                lblTime.Text = $"{current:mm\\:ss} / {total:mm\\:ss}";
-                
-                if (total.TotalMilliseconds > 0) {
-                    _isUpdatingUI = true; 
-                    trkProgress.Value = (current.TotalMilliseconds / total.TotalMilliseconds) * trkProgress.Maximum;
-                    _isUpdatingUI = false;
-                }
-            };
+            // 定时器已移动到 PlaybackControlBarViewModel
             
             LoadConfig(); // 仅负责迁移旧数据
             LoadPlaylists();
@@ -114,8 +105,7 @@ namespace seamless_loop_music
             lstPlaylists.ItemsSource = _playlists;
 
             // 加载设置
-            trkVolume.Value = _globalVolume;
-            _playerService.SetVolume((float)(_globalVolume / 100.0));
+            // 初始音量同步由子组件 ViewModel 处理
 
             UpdateModeUI(); // 初始化模式按钮文字
 
@@ -192,31 +182,7 @@ namespace seamless_loop_music
         }
 
         private void UpdateButtons(PlaybackState state) {
-            bool hasFile = !string.IsNullOrEmpty(txtFilePath.Text);
-            btnPlay.IsEnabled = hasFile;
-
-            if (state == PlaybackState.Playing) {
-                btnPlay.Content = LocalizationService.Instance["Pause"];
-                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(249, 226, 175)); // Yellowish
-                _tmrUpdate.Start(); 
-
-                string trackName = Path.GetFileNameWithoutExtension(txtFilePath.Text);
-                if (_playerService.CurrentTrack != null) trackName = _playerService.CurrentTrack.Title;
-                lblStatus.Text = $"{LocalizationService.Instance["StatusPlaying"]}: {trackName}";
-            } else {
-                btnPlay.Content = LocalizationService.Instance["Play"];
-                btnPlay.Background = new System.Windows.Media.SolidColorBrush(System.Windows.Media.Color.FromRgb(166, 227, 161)); // Green
-                if (state == PlaybackState.Paused) {
-                    _tmrUpdate.Stop(); 
-                    lblStatus.Text = LocalizationService.Instance["StatusPaused"];
-                } else { 
-                    _tmrUpdate.Stop(); 
-                    lblStatus.Text = LocalizationService.Instance["StatusReady"]; 
-                    trkProgress.Value = 0; 
-                    lblTime.Text = "00:00 / 00:00";
-                }
-            }
-            btnStop.IsEnabled = btnPrev.IsEnabled = btnNext.IsEnabled = hasFile;
+            // 此逻辑已移动到子组件 ViewModel
         }
 
         private async void btnAddPlaylist_Click(object sender, RoutedEventArgs e) {
@@ -740,22 +706,8 @@ namespace seamless_loop_music
             _playerService.Play();
         }
 
-        private void btnPlay_Click(object sender, RoutedEventArgs e) {
-            if (_playerService.PlaybackState == PlaybackState.Playing) {
-                _playerService.Pause();
-            } else {
-                _playerService.Play();
-            }
-        }
-        
-        private void btnReplay_Click(object sender, RoutedEventArgs e) { 
-            if (!string.IsNullOrEmpty(txtFilePath.Text)) { 
-                _playerService.Play(); 
-                _playerService.SeekToSample(0); 
-            } 
-        }
-        private void btnPrev_Click(object sender, RoutedEventArgs e) => _playerService.PreviousTrack();
-        private void btnNext_Click(object sender, RoutedEventArgs e) => _playerService.NextTrack();
+        // 播放与重放逻辑已迁移到 PlaybackControlBarViewModel
+        // 切歌逻辑已迁移到 PlaybackControlBarViewModel
 
         private void btnPlayMode_Click(object sender, RoutedEventArgs e)
         {
@@ -1026,22 +978,9 @@ namespace seamless_loop_music
             }
         }
 
-        private void trkProgress_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (!_isUpdatingUI && !_isDraggingProgress) {
-                _lastSeekTime = DateTime.Now;
-                _playerService.Seek(e.NewValue / trkProgress.Maximum);
-            }
-        }
+        // 进度更新已迁移到 PlaybackControlBarViewModel
 
-        private void trkProgress_DragStarted(object sender, System.Windows.Controls.Primitives.DragStartedEventArgs e) {
-            _isDraggingProgress = true;
-        }
-        
-        private void trkProgress_DragCompleted(object sender, System.Windows.Controls.Primitives.DragCompletedEventArgs e) {
-            _lastSeekTime = DateTime.Now;
-            _playerService.Seek(trkProgress.Value / trkProgress.Maximum);
-            _isDraggingProgress = false; 
-        }
+        // 进度拖动已迁移到 PlaybackControlBarViewModel
 
         private void sldMatchParams_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
@@ -1062,9 +1001,7 @@ namespace seamless_loop_music
                 lblSearchRadius.Text = string.Format(LocalizationService.Instance["LabelSearchRadius"], sldSearchRadius.Value);
         }
 
-        private void trkVolume_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e) {
-            if (_playerService != null) _playerService.SetVolume((float)e.NewValue / 100f);
-        }
+        // 音量调节已迁移到 PlaybackControlBarViewModel
 
         private void btnSwitchLang_Click(object sender, RoutedEventArgs e) {
             _currentLang = (_currentLang == "en-US") ? "zh-CN" : "en-US";
@@ -1167,7 +1104,7 @@ namespace seamless_loop_music
                     lines.Add($"LastPlaylist={_lastPlaylistPath}");
                 }
 
-                lines.Add($"Volume={trkVolume.Value}");
+                lines.Add($"Volume={_playerService.Volume * 100}");
                 lines.Add($"MatchWindow={sldMatchWindow.Value}");
                 lines.Add($"SearchRadius={sldSearchRadius.Value}");
 
