@@ -36,6 +36,7 @@ namespace seamless_loop_music
         public event Action<PlaybackState> OnPlayStateChanged; 
         public event Action<long, int> OnAudioLoaded;
         public event Action OnLoopCycleCompleted;
+        public event Action<TimeSpan> OnPositionChanged;
 
         private string _currentFilePath; 
         private string _partBFilePath;   
@@ -258,6 +259,16 @@ namespace seamless_loop_music
                     return TimeSpan.FromSeconds((double)currentSample / _audioStream.WaveFormat.SampleRate);
                 }
                 return TimeSpan.Zero;
+            }
+        }
+
+        private DateTime _lastPositionNotifyTime = DateTime.MinValue;
+        private void CheckAndNotifyPosition()
+        {
+            if (OnPositionChanged != null && (DateTime.Now - _lastPositionNotifyTime).TotalMilliseconds >= 100)
+            {
+                _lastPositionNotifyTime = DateTime.Now;
+                OnPositionChanged.Invoke(CurrentTime);
             }
         }
 

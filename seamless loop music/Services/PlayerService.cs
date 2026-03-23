@@ -50,6 +50,7 @@ namespace seamless_loop_music.Services
         public event Action<string> OnStatusMessage; // 统一的消息通知
         public event Action<int> OnIndexChanged;   // 通知 UI 更新选中项
         public event Action<long, long> OnLoopPointsChanged;
+        public event Action<TimeSpan> OnPositionChanged;
 
         private void NotifyLoopPointsChanged()
         {
@@ -80,6 +81,7 @@ namespace seamless_loop_music.Services
             // 转发底层事件
             _audioLooper.OnPlayStateChanged += state => OnPlayStateChanged?.Invoke(state);
             _audioLooper.OnStatusChanged += msg => OnStatusMessage?.Invoke(msg);
+            _audioLooper.OnPositionChanged += pos => OnPositionChanged?.Invoke(pos);
             
             // 核心加载回调：当音频加载完成，立即进行数据库匹配和数据组装
             _audioLooper.OnAudioLoaded += HandleAudioLoaded;

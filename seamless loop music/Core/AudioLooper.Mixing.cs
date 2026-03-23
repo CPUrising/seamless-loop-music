@@ -81,6 +81,9 @@ namespace seamless_loop_music
                         // 粮草极其充足，休息一会儿
                         Thread.Sleep(50);
                     }
+
+                    // 无论是否休息，都检查一下进度通知
+                    CheckAndNotifyPosition();
                 }
             }
             catch (ThreadAbortException) { }

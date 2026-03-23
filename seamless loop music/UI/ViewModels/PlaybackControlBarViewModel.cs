@@ -12,7 +12,13 @@ namespace seamless_loop_music.UI.ViewModels
     public class PlaybackControlBarViewModel : BindableBase
     {
         private readonly IPlayerService _playerService;
-        private DispatcherTimer _timer;
+        
+        private bool _isDragging;
+        public bool IsDragging
+        {
+            get => _isDragging;
+            set => SetProperty(ref _isDragging, value);
+        }
 
         private string _timeDisplay = "00:00 / 00:00";
         public string TimeDisplay
@@ -52,6 +58,7 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand StopCommand { get; }
         public DelegateCommand PrevCommand { get; }
         public DelegateCommand NextCommand { get; }
+        public DelegateCommand<double?> SeekCommand { get; }
 
         public PlaybackControlBarViewModel(IPlayerService playerService)
         {
@@ -61,13 +68,11 @@ namespace seamless_loop_music.UI.ViewModels
             StopCommand = new DelegateCommand(ExecuteStop);
             PrevCommand = new DelegateCommand(ExecutePrev);
             NextCommand = new DelegateCommand(ExecuteNext);
+            SeekCommand = new DelegateCommand<double?>(ExecuteSeek);
 
             _playerService.OnPlayStateChanged += OnPlayStateChanged;
+            _playerService.OnPositionChanged += OnPositionChanged;
             
-            _timer = new DispatcherTimer { Interval = TimeSpan.FromMilliseconds(200) };
-            _timer.Tick += (s, e) => UpdateProgress();
-            _timer.Start();
-
             // 初始化音量
             VolumeValue = _playerService.Volume * 100;
         }
@@ -97,22 +102,48 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnPlayStateChanged(PlaybackState state)
         {
-            PlayButtonContent = state == PlaybackState.Playing ? 
-                LocalizationService.Instance["Pause"] : LocalizationService.Instance["Play"];
+            Application.Current?.Dispatcher?.Invoke(() => {
+                PlayButtonContent = state == PlaybackState.Playing ? 
+                    LocalizationService.Instance["Pause"] : LocalizationService.Instance["Play"];
+            });
         }
 
-        private void UpdateProgress()
+        private void OnPositionChanged(TimeSpan currentTime)
         {
-            if (_playerService.TotalTime.TotalSeconds > 0)
+            if (IsDragging) return;
+
+            Application.Current?.Dispatcher?.BeginInvoke(new Action(() => {
+                UpdateDisplay(currentTime, _playerService.TotalTime);
+            }));
+        }
+
+        private void ExecuteSeek(double? percentValue)
+        {
+            if (percentValue.HasValue)
             {
-                ProgressValue = (_playerService.CurrentTime.TotalSeconds / _playerService.TotalTime.TotalSeconds) * 1000;
-                TimeDisplay = $"{_playerService.CurrentTime:mm\\:ss} / {_playerService.TotalTime:mm\\:ss}";
+                // UI 传过来的是 0-1000 的值
+                _playerService.Seek(percentValue.Value / 1000.0);
+            }
+        }
+
+        private void UpdateDisplay(TimeSpan current, TimeSpan total)
+        {
+            if (total.TotalSeconds > 0)
+            {
+                ProgressValue = (current.TotalSeconds / total.TotalSeconds) * 1000;
+                TimeDisplay = $"{current:mm\\:ss} / {total:mm\\:ss}";
             }
             else
             {
                 ProgressValue = 0;
                 TimeDisplay = "00:00 / 00:00";
             }
+        }
+
+        // 兼容性保留，但逻辑已拆分
+        private void UpdateProgress() 
+        {
+             UpdateDisplay(_playerService.CurrentTime, _playerService.TotalTime);
         }
     }
 }
