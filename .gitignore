@@ -375,3 +375,7 @@ playlists.conf
 build_log.txt
 build_log_en.txt
 build_log_en_ps.txt
+
+# Development Documents
+progress/
+
