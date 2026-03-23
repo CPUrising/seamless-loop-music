@@ -19,7 +19,8 @@
             <TextBlock Text="{Binding TimeDisplay}" HorizontalAlignment="Right" FontSize="18" FontWeight="Light" Foreground="#CDD6F4"/>
             <TextBlock Text="{Binding TimeDisplay}" HorizontalAlignment="Right" FontSize="18" FontWeight="Light" Foreground="#CDD6F4"/>
             <Slider x:Name="ProgressBar" Value="{Binding ProgressValue}" Maximum="1000" IsMoveToPointEnabled="True" Margin="0,5,0,0"
-                    Thumb.DragStarted="ProgressBar_DragStarted" Thumb.DragCompleted="ProgressBar_DragCompleted"/>
+                    Thumb.DragStarted="ProgressBar_DragStarted" Thumb.DragCompleted="ProgressBar_DragCompleted"
+                    ValueChanged="ProgressBar_ValueChanged"/>
         </StackPanel>
 
         <!-- Bottom Bar: Playback Controls -->
@@ -28,7 +29,7 @@
                 <Button Content="&lt;&lt;" Command="{Binding PrevCommand}" Width="60" Margin="5"/>
                 <Button Content="{Binding PlayButtonContent}" Command="{Binding PlayCommand}" Width="110" Height="45" Margin="15,5" 
                         FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
-                <Button Content="Stop" Command="{Binding StopCommand}" Width="75" Margin="5"/>
+
                 <Button Content="&gt;&gt;" Command="{Binding NextCommand}" Width="60" Margin="15,5,5,5"/>
             </StackPanel>
 

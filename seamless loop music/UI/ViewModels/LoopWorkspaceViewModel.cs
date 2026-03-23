@@ -247,7 +247,7 @@ namespace seamless_loop_music.UI.ViewModels
             string value = parts[1];  // Min / Max / number
 
             long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
-            long current = 0;
+            long current;
             
             if (type == "Start") long.TryParse(LoopStartSample, out current);
             else long.TryParse(LoopEndSample, out current);
@@ -339,7 +339,7 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     // 在 ViewModel 中直接 New Window 虽不完美，但在当前重构阶段是最高效的迁移方式
                     Application.Current.Dispatcher.Invoke(() => {
-                        var win = new seamless_loop_music.UI.LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
+                        var win = new LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
                         win.Owner = Application.Current.MainWindow;
                         win.Show();
                     });

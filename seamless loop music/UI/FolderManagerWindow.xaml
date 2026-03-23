@@ -36,7 +36,7 @@
                         </Grid.ColumnDefinitions>
                         <TextBlock Text="{Binding}" VerticalAlignment="Center" Margin="5"/>
                         <Button Grid.Column="1" Content="Remove" Width="60" Height="22" Margin="10,0,0,0" 
-                                Click="btnRemove_Click" Tag="{Binding}" FontSize="11"/>
+                                Click="BtnRemove_Click" Tag="{Binding}" FontSize="11"/>
                     </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
@@ -45,11 +45,11 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
             <Button x:Name="btnAdd" Content="+ Add Folder" Width="120" 
                     Style="{StaticResource WPFAccentButtonStyle}"
-                    Click="btnAdd_Click" Margin="0,0,10,0" />
+                    Click="BtnAdd_Click" Margin="0,0,10,0" />
             
             <Button x:Name="btnClose" Content="Close" Width="75" 
                     Style="{StaticResource WPFButtonStyle}"
-                    Click="btnClose_Click"/>
+                    Click="BtnClose_Click"/>
         </StackPanel>
     </Grid>
 </Window>

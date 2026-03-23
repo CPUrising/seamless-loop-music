@@ -20,6 +20,13 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _isDragging, value);
         }
 
+        private bool _isUpdating;
+        public bool IsUpdating
+        {
+            get => _isUpdating;
+            set => SetProperty(ref _isUpdating, value);
+        }
+
         private string _timeDisplay = "00:00 / 00:00";
         public string TimeDisplay
         {
@@ -55,7 +62,6 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         public DelegateCommand PlayCommand { get; }
-        public DelegateCommand StopCommand { get; }
         public DelegateCommand PrevCommand { get; }
         public DelegateCommand NextCommand { get; }
         public DelegateCommand<double?> SeekCommand { get; }
@@ -65,16 +71,24 @@ namespace seamless_loop_music.UI.ViewModels
             _playerService = playerService;
 
             PlayCommand = new DelegateCommand(ExecutePlay);
-            StopCommand = new DelegateCommand(ExecuteStop);
             PrevCommand = new DelegateCommand(ExecutePrev);
             NextCommand = new DelegateCommand(ExecuteNext);
             SeekCommand = new DelegateCommand<double?>(ExecuteSeek);
 
             _playerService.OnPlayStateChanged += OnPlayStateChanged;
             _playerService.OnPositionChanged += OnPositionChanged;
+            _playerService.OnTrackLoaded += OnTrackLoaded;
             
             // 初始化音量
             VolumeValue = _playerService.Volume * 100;
+        }
+
+        private void OnTrackLoaded(MusicTrack track)
+        {
+            Application.Current?.Dispatcher?.Invoke(() => {
+                // 核心修复：切歌时强制归零
+                UpdateDisplay(TimeSpan.Zero, _playerService.TotalTime);
+            });
         }
 
         private void ExecutePlay()
@@ -85,10 +99,7 @@ namespace seamless_loop_music.UI.ViewModels
                 _playerService.Play();
         }
 
-        private void ExecuteStop()
-        {
-            _playerService.Stop();
-        }
+
 
         private void ExecutePrev()
         {
@@ -132,22 +143,25 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void UpdateDisplay(TimeSpan current, TimeSpan total)
         {
-            if (total.TotalSeconds > 0)
+            IsUpdating = true; // 标记开始更新，防止 ValueChanged 误判为用户点击
+            try
             {
-                ProgressValue = (current.TotalSeconds / total.TotalSeconds) * 1000;
-                TimeDisplay = $"{current:mm\\:ss} / {total:mm\\:ss}";
+                if (total.TotalSeconds > 0)
+                {
+                    ProgressValue = (current.TotalSeconds / total.TotalSeconds) * 1000;
+                    TimeDisplay = $"{current:mm\\:ss} / {total:mm\\:ss}";
+                }
+                else
+                {
+                    ProgressValue = 0;
+                    TimeDisplay = "00:00 / 00:00";
+                }
             }
-            else
+            finally
             {
-                ProgressValue = 0;
-                TimeDisplay = "00:00 / 00:00";
+                IsUpdating = false;
             }
         }
 
-        // 兼容性保留，但逻辑已拆分
-        private void UpdateProgress() 
-        {
-             UpdateDisplay(_playerService.CurrentTime, _playerService.TotalTime);
-        }
     }
 }

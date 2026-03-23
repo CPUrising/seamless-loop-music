@@ -39,7 +39,7 @@ namespace seamless_loop_music.UI
             lstFolders.ItemsSource = folders;
         }
 
-        private async void btnAdd_Click(object sender, RoutedEventArgs e)
+        private async void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
             var picker = new FolderPicker();
             if (picker.ShowDialog(this))
@@ -49,7 +49,7 @@ namespace seamless_loop_music.UI
             }
         }
 
-        private async void btnRemove_Click(object sender, RoutedEventArgs e)
+        private async void BtnRemove_Click(object sender, RoutedEventArgs e)
         {
             if (sender is Button btn && btn.Tag is string path)
             {
@@ -68,7 +68,7 @@ namespace seamless_loop_music.UI
             }
         }
 
-        private void btnClose_Click(object sender, RoutedEventArgs e)
+        private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
         }

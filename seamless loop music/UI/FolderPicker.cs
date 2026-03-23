@@ -3,7 +3,7 @@ using System.Runtime.InteropServices;
 using System.Windows;
 using System.Windows.Interop;
 
-namespace seamless_loop_music
+namespace seamless_loop_music.UI
 {
     /// <summary>
     /// 基于 Windows COM 接口实现的现代文件夹选择器

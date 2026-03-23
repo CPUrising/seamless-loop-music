@@ -303,7 +303,7 @@ namespace seamless_loop_music
         private DateTime _seekTime = DateTime.MinValue;
         private long _seekTargetSample = 0;
         private long _totalBytesReadSinceSeek = 0;
-        private readonly object _streamLock = new object();
+        private readonly object _streamLock = new();
 
         public void SeekToSample(long sample)
         {
@@ -341,6 +341,11 @@ namespace seamless_loop_music
             _bufferedProvider = null;
             _wavePlayer = null;
             _audioStream = null;
+
+            // 核心修复：彻底重置进度追踪相关的内部状态，确保新歌加载后计算准确
+            _seekTargetSample = 0;
+            _isSeeking = false;
+            Interlocked.Exchange(ref _totalBytesReadSinceSeek, 0);
         }
 
         public void Dispose()
