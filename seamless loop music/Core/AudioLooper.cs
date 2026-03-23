@@ -20,6 +20,7 @@ namespace seamless_loop_music
         private BufferedWaveProvider _bufferedProvider;
         private System.Threading.CancellationTokenSource _fillerCts;
         private volatile bool _isSeeking = false;
+        public bool IsSeeking => _isSeeking;
 
         // 匹配长度配置 (秒)
         public double MatchWindowSize { get; set; } = 1.0; 
@@ -316,7 +317,8 @@ namespace seamless_loop_music
                     _seekTargetSample = sample;
                     _seekTime = DateTime.Now;
 
-                    _isSeeking = false;
+                    // 注意：这里不再立即将 _isSeeking 设为 false
+                    // 我们让后台填充线程在填入第一批数据后再将其释放
                 }
             }
         }

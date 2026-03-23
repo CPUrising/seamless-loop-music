@@ -41,8 +41,27 @@ namespace seamless_loop_music
                 {
                     if (_isSeeking) 
                     {
-                        Thread.Sleep(10);
-                        continue;
+                        // 如果正在寻求中且流已就位（由 SeekToSample 设置），则进行第一次填充
+                        if (_loopStream != null && _bufferedProvider != null)
+                        {
+                            lock (_streamLock)
+                            {
+                                int firstRead = _loopStream.Read(readBuffer, 0, readBuffer.Length);
+                                if (firstRead > 0)
+                                {
+                                    _bufferedProvider.AddSamples(readBuffer, 0, firstRead);
+                                    Interlocked.Add(ref _totalBytesReadSinceSeek, firstRead);
+                                    // 填充成功，解除锁定
+                                    _isSeeking = false;
+                                }
+                            }
+                        }
+                        
+                        if (_isSeeking) // 如果还没填充成功，继续等待
+                        {
+                            Thread.Sleep(10);
+                            continue;
+                        }
                     }
 
                     if (_bufferedProvider == null || _loopStream == null) break;

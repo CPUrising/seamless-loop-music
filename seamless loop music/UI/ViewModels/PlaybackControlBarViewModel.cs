@@ -110,9 +110,13 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnPositionChanged(TimeSpan currentTime)
         {
-            if (IsDragging) return;
+            // 核心修复：如果正在拖拽，或者底层引擎正在执行 Seek（还没填充完新数据），则无视此更新
+            if (IsDragging || _playerService.IsSeeking) return;
 
             Application.Current?.Dispatcher?.BeginInvoke(new Action(() => {
+                // 在异步回调开始时再次确认，防止队列积压导致的旧事件生效
+                if (IsDragging || _playerService.IsSeeking) return;
+
                 UpdateDisplay(currentTime, _playerService.TotalTime);
             }));
         }

@@ -43,7 +43,8 @@ namespace seamless_loop_music.Services
         private bool _isConcatenatedLoad = false; // 标记当前加载是否为 A+B 物理合体模式
 
         public MusicTrack CurrentTrack { get; private set; }
-        public bool IsABMode => _isConcatenatedLoad; // 是否处于 A+B 物理合体模式
+        public bool IsABMode => _isConcatenatedLoad; 
+        public bool IsSeeking => _audioLooper.IsSeeking;
 
         public event Action<MusicTrack> OnTrackLoaded;
         public event Action<PlaybackState> OnPlayStateChanged;

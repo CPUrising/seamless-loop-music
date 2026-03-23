@@ -15,6 +15,7 @@ namespace seamless_loop_music.Services
         int LoopLimit { get; set; }
         MusicTrack CurrentTrack { get; }
         bool IsABMode { get; }
+        bool IsSeeking { get; }
         
         PlaybackState PlaybackState { get; }
         TimeSpan CurrentTime { get; }

@@ -23,8 +23,8 @@ namespace seamless_loop_music.UI.Views
         {
             if (DataContext is PlaybackControlBarViewModel vm)
             {
-                vm.IsDragging = false;
                 vm.SeekCommand.Execute(ProgressBar.Value);
+                vm.IsDragging = false;
             }
         }
     }
