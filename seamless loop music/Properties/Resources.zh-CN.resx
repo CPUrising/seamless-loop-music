@@ -344,4 +344,10 @@ uvx pymusiclooper --version
   <data name="LabelSearchRadius" xml:space="preserve">
     <value>搜索半径: {0:F1}s</value>
   </data>
+  <data name="PlaybackErrorOccurred" xml:space="preserve">
+    <value>播放过程中发生错误</value>
+  </data>
+  <data name="PlaybackFailed" xml:space="preserve">
+    <value>多次尝试后播放依然失败</value>
+  </data>
 </root>

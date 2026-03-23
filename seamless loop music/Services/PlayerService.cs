@@ -52,6 +52,10 @@ namespace seamless_loop_music.Services
         public event Action<int> OnIndexChanged;   // 通知 UI 更新选中项
         public event Action<long, long> OnLoopPointsChanged;
         public event Action<TimeSpan> OnPositionChanged;
+        public event Action<string, bool> OnPlaybackError;
+        
+        private int _playbackRetryCount = 0;
+        private const int MaxPlaybackRetries = 3;
 
         private void NotifyLoopPointsChanged()
         {
@@ -83,6 +87,7 @@ namespace seamless_loop_music.Services
             _audioLooper.OnPlayStateChanged += state => OnPlayStateChanged?.Invoke(state);
             _audioLooper.OnStatusChanged += msg => OnStatusMessage?.Invoke(msg);
             _audioLooper.OnPositionChanged += pos => OnPositionChanged?.Invoke(pos);
+            _audioLooper.OnPlaybackError += HandlePlaybackError;
             
             // 核心加载回调：当音频加载完成，立即进行数据库匹配和数据组装
             _audioLooper.OnAudioLoaded += HandleAudioLoaded;
@@ -104,6 +109,33 @@ namespace seamless_loop_music.Services
         public async Task<int> CheckPyMusicLooperStatusAsync()
         {
             return await _loopAnalysisService.CheckEnvironmentAsync();
+        }
+
+        private async void HandlePlaybackError(Exception ex)
+        {
+            // 如果已经在重试，或者还没达到最大重试次数
+            if (_playbackRetryCount < MaxPlaybackRetries)
+            {
+                _playbackRetryCount++;
+                string msg = $"[Retry {_playbackRetryCount}/{MaxPlaybackRetries}] {LocalizationService.Instance["PlaybackErrorOccurred"]}: {ex.Message}";
+                OnStatusMessage?.Invoke(msg);
+                OnPlaybackError?.Invoke(msg, true);
+
+                // 稍微等待后尝试恢复
+                await Task.Delay(2000); 
+                
+                // 尝试重新开始播放
+                System.Threading.Tasks.Task.Run(() => {
+                    Play();
+                });
+            }
+            else
+            {
+                string msg = $"[Critical] {LocalizationService.Instance["PlaybackFailed"]}: {ex.Message}";
+                OnStatusMessage?.Invoke(msg);
+                OnPlaybackError?.Invoke(msg, false);
+                _playbackRetryCount = 0; // 彻底失败后重置，等待用户手动操作
+            }
         }
 
         private void HandleLoopCycleCompleted()
@@ -191,7 +223,11 @@ namespace seamless_loop_music.Services
             if (_isConcatenatedLoad) _audioLooper.LoadAudio(filePath, partB);
             else _audioLooper.LoadAudio(filePath);
 
-            if (autoPlay) Play();
+            if (autoPlay) 
+            {
+                _playbackRetryCount = 0; // 手动切歌或加载时重置重试计数
+                Play();
+            }
         }
 
 

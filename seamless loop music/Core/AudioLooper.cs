@@ -38,6 +38,7 @@ namespace seamless_loop_music
         public event Action<long, int> OnAudioLoaded;
         public event Action OnLoopCycleCompleted;
         public event Action<TimeSpan> OnPositionChanged;
+        public event Action<Exception> OnPlaybackError;
 
         private string _currentFilePath; 
         private string _partBFilePath;   
@@ -158,6 +159,14 @@ namespace seamless_loop_music
                 _wavePlayer.PlaybackStopped += (s, e) =>
                 {
                     if (_isLoading) return;
+                    
+                    // 核心稳健性改进：捕获底层异常
+                    if (e.Exception != null)
+                    {
+                        OnPlaybackError?.Invoke(e.Exception);
+                        OnStatusChanged?.Invoke($"[Critical Error]: {e.Exception.Message}");
+                    }
+                    
                     if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
                     {
                         OnPlayStateChanged?.Invoke(PlaybackState.Stopped);

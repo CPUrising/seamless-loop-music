@@ -34,6 +34,7 @@ namespace seamless_loop_music.Services
         event Action<int> OnIndexChanged;   
         event Action<long, long> OnLoopPointsChanged;
         event Action<TimeSpan> OnPositionChanged;
+        event Action<string, bool> OnPlaybackError;
 
         // 播放控制
         void Play();

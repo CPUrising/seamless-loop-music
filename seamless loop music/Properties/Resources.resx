@@ -344,4 +344,10 @@ Then restart this feature.</value>
   <data name="LabelSearchRadius" xml:space="preserve">
     <value>Search Radius: {0:F1}s</value>
   </data>
+  <data name="PlaybackErrorOccurred" xml:space="preserve">
+    <value>A playback error occurred</value>
+  </data>
+  <data name="PlaybackFailed" xml:space="preserve">
+    <value>Playback failed after multiple retries</value>
+  </data>
 </root>
