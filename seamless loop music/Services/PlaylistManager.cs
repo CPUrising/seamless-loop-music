@@ -1,18 +1,21 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
-using seamless_loop_music.Models;
 using seamless_loop_music.Data.Repositories;
+using seamless_loop_music.Models;
 
 namespace seamless_loop_music.Services
 {
     public class PlaylistManager : IPlaylistManager
     {
         private readonly IPlaylistRepository _playlistRepository;
+        private readonly ITrackRepository _trackRepository;
 
-        public PlaylistManager(IPlaylistRepository playlistRepository)
+        public PlaylistManager(IPlaylistRepository playlistRepository, ITrackRepository trackRepository)
         {
             _playlistRepository = playlistRepository;
+            _trackRepository = trackRepository;
         }
 
         public async Task<List<Playlist>> GetAllPlaylistsAsync()
@@ -22,24 +25,24 @@ namespace seamless_loop_music.Services
 
         public async Task<Playlist> CreatePlaylistAsync(string name)
         {
-            var playlist = new Playlist { Name = name, CreatedAt = DateTime.Now };
-            await _playlistRepository.AddAsync(playlist);
-            return playlist;
+            int id = _playlistRepository.Add(name);
+            var playlists = await _playlistRepository.GetAllAsync();
+            return playlists.FirstOrDefault(p => p.Id == id);
         }
 
         public async Task DeletePlaylistAsync(int playlistId)
         {
-            await _playlistRepository.DeleteAsync(playlistId);
+            await Task.Run(() => _playlistRepository.Delete(playlistId));
         }
 
         public async Task AddTrackToPlaylistAsync(int playlistId, MusicTrack track)
         {
-            await _playlistRepository.AddTrackToPlaylistAsync(playlistId, track.Id);
+            await Task.Run(() => _playlistRepository.AddTrack(playlistId, track.Id));
         }
 
         public async Task RemoveTrackFromPlaylistAsync(int playlistId, int trackId)
         {
-            await _playlistRepository.RemoveTrackFromPlaylistAsync(playlistId, trackId);
+            await Task.Run(() => _playlistRepository.RemoveTrack(playlistId, trackId));
         }
 
         public async Task<List<MusicTrack>> GetTracksInPlaylistAsync(int playlistId)

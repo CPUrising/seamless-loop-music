@@ -30,3 +30,4 @@ namespace seamless_loop_music.Services
         Task<(long Start, long End)> FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart);
     }
 }
+

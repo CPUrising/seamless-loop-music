@@ -2,8 +2,6 @@ using System;
 using System.Collections.Generic;
 using System.Data;
 using System.IO;
-using System.Linq;
-using System.Threading.Tasks;
 using Dapper;
 using seamless_loop_music.Models;
 
@@ -24,7 +22,7 @@ namespace seamless_loop_music.Data.Repositories
             using (var db = GetConnection())
             {
                 var result = await db.QueryAsync<MusicTrack>("SELECT * FROM LoopPoints");
-                return result.ToList();
+                return result.AsList();
             }
         }
 
@@ -82,6 +80,7 @@ namespace seamless_loop_music.Data.Repositories
                     } 
                     catch 
                     {
+                        // Handle potential conflicts (unique constraint)
                         var existing = GetByFingerprint(track.FileName, track.TotalSamples);
                         if (existing != null) 
                         {
@@ -110,7 +109,6 @@ namespace seamless_loop_music.Data.Repositories
                 }
             }
         }
-
         public void UpdateLoopPoints(int trackId, long start, long end)
         {
             using (var db = GetConnection())
@@ -121,3 +119,4 @@ namespace seamless_loop_music.Data.Repositories
         }
     }
 }
+

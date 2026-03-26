@@ -15,3 +15,4 @@ namespace seamless_loop_music.Services
         Task<List<MusicTrack>> GetTracksInPlaylistAsync(int playlistId);
     }
 }
+

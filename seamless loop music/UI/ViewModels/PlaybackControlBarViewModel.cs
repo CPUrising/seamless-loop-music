@@ -1,168 +1,92 @@
-using NAudio.Wave;
-using Prism.Commands;
-using Prism.Mvvm;
-using seamless_loop_music.Services;
-using seamless_loop_music.Models;
 using System;
-using System.Windows;
 using System.Windows.Threading;
+using Prism.Commands;
+using Prism.Events;
+using Prism.Mvvm;
+using seamless_loop_music.Models;
+using seamless_loop_music.Services;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.UI.ViewModels
 {
     public class PlaybackControlBarViewModel : BindableBase
     {
         private readonly IPlaybackService _playbackService;
-        
-        private bool _isDragging;
-        public bool IsDragging
+        private readonly IEventAggregator _eventAggregator;
+
+        private MusicTrack _currentTrack;
+        public MusicTrack CurrentTrack
         {
-            get => _isDragging;
-            set => SetProperty(ref _isDragging, value);
+            get => _currentTrack;
+            set => SetProperty(ref _currentTrack, value);
         }
 
-        private bool _isUpdating;
-        public bool IsUpdating
+        private string _playState;
+        public string PlayState
         {
-            get => _isUpdating;
-            set => SetProperty(ref _isUpdating, value);
+            get => _playState;
+            set => SetProperty(ref _playState, value);
         }
 
-        private string _timeDisplay = "00:00 / 00:00";
-        public string TimeDisplay
+        private string _currentTimeStr = "00:00";
+        public string CurrentTimeStr
         {
-            get => _timeDisplay;
-            set => SetProperty(ref _timeDisplay, value);
+            get => _currentTimeStr;
+            set => SetProperty(ref _currentTimeStr, value);
         }
 
-        private double _progressValue;
-        public double ProgressValue
+        private string _totalTimeStr = "00:00";
+        public string TotalTimeStr
         {
-            get => _progressValue;
-            set => SetProperty(ref _progressValue, value);
+            get => _totalTimeStr;
+            set => SetProperty(ref _totalTimeStr, value);
         }
 
-        private double _volumeValue = 80;
-        public double VolumeValue
+        private double _progress;
+        public double Progress
         {
-            get => _volumeValue;
-            set 
-            {
-                if (SetProperty(ref _volumeValue, value))
-                {
-                    _playbackService.Volume = (float)value / 100f;
-                }
-            }
+            get => _progress;
+            set => SetProperty(ref _progress, value);
         }
 
-        private string _playButtonContent = "Play";
-        public string PlayButtonContent
-        {
-            get => _playButtonContent;
-            set => SetProperty(ref _playButtonContent, value);
-        }
-
-        public DelegateCommand PlayCommand { get; }
-        public DelegateCommand PrevCommand { get; }
+        public DelegateCommand PlayPauseCommand { get; }
+        public DelegateCommand StopCommand { get; }
+        public DelegateCommand PreviousCommand { get; }
         public DelegateCommand NextCommand { get; }
-        public DelegateCommand<double?> SeekCommand { get; }
 
-        public PlaybackControlBarViewModel(IPlaybackService playbackService)
+        public PlaybackControlBarViewModel(IPlaybackService playbackService, IEventAggregator eventAggregator)
         {
             _playbackService = playbackService;
+            _eventAggregator = eventAggregator;
 
-            PlayCommand = new DelegateCommand(ExecutePlay);
-            PrevCommand = new DelegateCommand(ExecutePrev);
-            NextCommand = new DelegateCommand(ExecuteNext);
-            SeekCommand = new DelegateCommand<double?>(ExecuteSeek);
+            PlayPauseCommand = new DelegateCommand(OnPlayPause);
+            StopCommand = new DelegateCommand(() => _playbackService.Stop());
+            PreviousCommand = new DelegateCommand(() => { /* TODO */ });
+            NextCommand = new DelegateCommand(() => { /* TODO */ });
 
-            _playbackService.StateChanged += OnPlayStateChanged;
+            _playbackService.TrackChanged += track => CurrentTrack = track;
+            _playbackService.StateChanged += state => PlayState = state.ToString();
             _playbackService.PositionChanged += OnPositionChanged;
-            _playbackService.TrackChanged += OnTrackLoaded;
-            
-            // 初始化音量
-            VolumeValue = _playbackService.Volume * 100;
+
+            _eventAggregator.GetEvent<TrackLoadedEvent>().Subscribe(track => CurrentTrack = track);
         }
 
-        private void OnTrackLoaded(MusicTrack track)
+        private void OnPlayPause()
         {
-            Application.Current?.Dispatcher?.Invoke(() => {
-                // 核心修复：切歌时强制归零
-                UpdateDisplay(TimeSpan.Zero, _playbackService.TotalTime);
-            });
-        }
-
-        private void ExecutePlay()
-        {
-            if (_playbackService.PlaybackState == PlaybackState.Playing)
+            if (_playbackService.PlaybackState == NAudio.Wave.PlaybackState.Playing)
                 _playbackService.Pause();
             else
                 _playbackService.Play();
         }
 
-
-
-        private void ExecutePrev()
+        private void OnPositionChanged(TimeSpan position)
         {
-            // TODO: 通过 IPlaybackService 或 QueueService 实现上一首
+            CurrentTimeStr = position.ToString(@"mm\:ss");
+            var total = _playbackService.TotalTime;
+            TotalTimeStr = total.ToString(@"mm\:ss");
+
+            if (total.TotalSeconds > 0)
+                Progress = position.TotalSeconds / total.TotalSeconds * 100;
         }
-
-        private void ExecuteNext()
-        {
-            // TODO: 通过 IPlaybackService 或 QueueService 实现下一首
-        }
-
-        private void OnPlayStateChanged(PlaybackState state)
-        {
-            Application.Current?.Dispatcher?.Invoke(() => {
-                PlayButtonContent = state == PlaybackState.Playing ? 
-                    LocalizationService.Instance["Pause"] : LocalizationService.Instance["Play"];
-            });
-        }
-
-        private void OnPositionChanged(TimeSpan currentTime)
-        {
-            // 核心修复：如果正在拖拽，或者底层引擎正在执行 Seek（还没填充完新数据），则无视此更新
-            if (IsDragging || _playerService.IsSeeking) return;
-
-            Application.Current?.Dispatcher?.BeginInvoke(new Action(() => {
-                // 在异步回调开始时再次确认，防止队列积压导致的旧事件生效
-                if (IsDragging || _playerService.IsSeeking) return;
-
-                UpdateDisplay(currentTime, _playerService.TotalTime);
-            }));
-        }
-
-        private void ExecuteSeek(double? percentValue)
-        {
-            if (percentValue.HasValue)
-            {
-                // UI 传过来的是 0-1000 的值
-                double percent = percentValue.Value / 1000.0;
-                _playbackService.Seek(TimeSpan.FromSeconds(_playbackService.TotalTime.TotalSeconds * percent));
-            }
-        }
-
-        private void UpdateDisplay(TimeSpan current, TimeSpan total)
-        {
-            IsUpdating = true; // 标记开始更新，防止 ValueChanged 误判为用户点击
-            try
-            {
-                if (total.TotalSeconds > 0)
-                {
-                    ProgressValue = (current.TotalSeconds / total.TotalSeconds) * 1000;
-                    TimeDisplay = $"{current:mm\\:ss} / {total:mm\\:ss}";
-                }
-                else
-                {
-                    ProgressValue = 0;
-                    TimeDisplay = "00:00 / 00:00";
-                }
-            }
-            finally
-            {
-                IsUpdating = false;
-            }
-        }
-
     }
 }

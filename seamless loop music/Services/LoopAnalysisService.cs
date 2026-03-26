@@ -36,7 +36,7 @@ namespace seamless_loop_music.Services
             return await _pyMusicLooperWrapper.CheckEnvironmentAsync();
         }
 
-        // --- JSON Helpers (原 PlayerService.cs 内置无依赖版) ---
+        // --- JSON Helpers (�?PlayerService.cs 内置无依赖版) ---
 
         public string SerializeLoopCandidates(List<LoopCandidate> list)
         {
@@ -104,7 +104,7 @@ namespace seamless_loop_music.Services
         }
 
         /// <summary>
-        /// 获取 TOP 候选列表 (直接从 PyMusicLooper 获取，不涉及数据库缓存逻辑，那是 PlayerService 的事)
+        /// 获取 TOP 候选列�?(直接�?PyMusicLooper 获取，不涉及数据库缓存逻辑，那�?PlayerService 的事)
         /// </summary>
         public async Task<List<LoopCandidate>> FetchTopLoopCandidatesAsync(string filePath)
         {
@@ -112,3 +112,4 @@ namespace seamless_loop_music.Services
         }
     }
 }
+

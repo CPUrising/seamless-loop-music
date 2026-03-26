@@ -10,3 +10,4 @@ namespace seamless_loop_music.UI.Views
         }
     }
 }
+

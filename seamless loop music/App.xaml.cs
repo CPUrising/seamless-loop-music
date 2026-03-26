@@ -1,41 +1,23 @@
 using System;
-using System.Diagnostics;
-using System.Runtime.InteropServices;
-using System.Threading;
 using System.Windows;
 using Prism.Unity;
 using Prism.Ioc;
+using Prism.Modularity;
+using Prism.Regions;
 using seamless_loop_music.Services;
 using seamless_loop_music.Data;
 using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.UI;
 using seamless_loop_music.UI.Views;
-using Prism.Regions;
+using seamless_loop_music.UI.ViewModels;
 
 namespace seamless_loop_music
 {
+    /// <summary>
+    /// Interaction logic for App.xaml
+    /// </summary>
     public partial class App : PrismApplication
     {
-        protected override void OnStartup(StartupEventArgs e)
-        {
-            // 全局异常处理
-            AppDomain.CurrentDomain.UnhandledException += (s, args) =>
-                LogException((Exception)args.ExceptionObject, "Fatal Domain Error");
-
-            DispatcherUnhandledException += (s, args) =>
-            {
-                LogException(args.Exception, "UI Dispatcher Error");
-                args.Handled = true;
-            };
-
-            base.OnStartup(e);
-        }
-
-        private void LogException(Exception ex, string title)
-        {
-            MessageBox.Show($"{title}:\n{ex.Message}\n\n{ex.StackTrace}", "Seamless Loop Music Error");
-        }
-
         protected override Window CreateShell()
         {
             return Container.Resolve<MainWindow>();
@@ -43,34 +25,40 @@ namespace seamless_loop_music
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
-            // 数据层注册
+            // 基础数据访问
+            containerRegistry.RegisterSingleton<IDatabaseHelper, DatabaseHelper>();
             containerRegistry.RegisterSingleton<ITrackRepository, TrackRepository>();
             containerRegistry.RegisterSingleton<IPlaylistRepository, PlaylistRepository>();
 
-            // 服务层注册
-            containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
+            // 核心播放与逻辑服务 (New Architecture)
             containerRegistry.RegisterSingleton<IPlaybackService, PlaybackService>();
             containerRegistry.RegisterSingleton<IPlaylistManager, PlaylistManager>();
-            
-            // 兼容性保留 (逐步废弃)
-            containerRegistry.RegisterSingleton<IDatabaseHelper, DatabaseHelper>();
-            containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
-            containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
+            containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
 
-            // 视图注册 (用于导航)
-            containerRegistry.RegisterForNavigation<PlaylistSidebar>(); // 暂时继续使用原 Sidebar
-            containerRegistry.RegisterForNavigation<LibraryView>();
-            containerRegistry.RegisterForNavigation<DetailView>();
+            // 路由导航支持
+            containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
+            containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
+            
+            // 兼容性注册 (Legacy support for un-refactored windows)
+            containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
+            containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
         }
 
         protected override void OnInitialized()
         {
             base.OnInitialized();
 
-            // 初始化区域导航
+            // 初始导航到库视图
             var regionManager = Container.Resolve<IRegionManager>();
-            regionManager.RequestNavigate("SidebarRegion", nameof(PlaylistSidebar));
-            regionManager.RequestNavigate("MainContentRegion", nameof(LibraryView));
+            regionManager.RequestNavigate("MainContentRegion", "LibraryView");
+            
+            // 初始导航到侧边栏（假设 Sidebar 是一个 View）
+            // regionManager.RequestNavigate("SidebarRegion", "PlaylistSidebar"); 
+        }
+
+        protected override void ConfigureModuleCatalog(IModuleCatalog moduleCatalog)
+        {
+            // 如果有外部模块再配置
         }
     }
 }

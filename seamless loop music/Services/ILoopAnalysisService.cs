@@ -20,3 +20,4 @@ namespace seamless_loop_music.Services
         List<LoopCandidate> DeserializeLoopCandidates(string json);
     }
 }
+

@@ -40,3 +40,4 @@ namespace seamless_loop_music.UI.ViewModels
         public void OnNavigatedFrom(NavigationContext navigationContext) { }
     }
 }
+

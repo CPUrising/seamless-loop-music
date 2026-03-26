@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using System.Data;
 using System.Linq;
 using Dapper;
@@ -8,7 +9,7 @@ namespace seamless_loop_music.Data.Repositories
 {
     public class PlaylistRepository : BaseRepository, IPlaylistRepository
     {
-        public IEnumerable<PlaylistFolder> GetAll()
+        public async Task<List<Playlist>> GetAllAsync()
         {
             using (var db = GetConnection())
             {
@@ -23,7 +24,8 @@ namespace seamless_loop_music.Data.Repositories
                         (SELECT COUNT(1) FROM PlaylistItems pi WHERE pi.PlaylistId = p.Id) AS SongCount
                     FROM Playlists p
                     ORDER BY p.SortOrder ASC, p.CreatedAt DESC";
-                return db.Query<PlaylistFolder>(sql);
+                var result = await db.QueryAsync<Playlist>(sql);
+                return result.ToList();
             }
         }
 
@@ -72,7 +74,7 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
-        public IEnumerable<MusicTrack> GetTracks(int playlistId)
+        public async Task<List<MusicTrack>> GetTracksInPlaylistAsync(int playlistId)
         {
             using (var db = GetConnection())
             {
@@ -83,7 +85,8 @@ namespace seamless_loop_music.Data.Repositories
                     JOIN PlaylistItems pi ON s.Id = pi.SongId
                     WHERE pi.PlaylistId = @Pid
                     ORDER BY pi.SortOrder ASC";
-                return db.Query<MusicTrack>(sql, new { Pid = playlistId });
+                var result = await db.QueryAsync<MusicTrack>(sql, new { Pid = playlistId });
+                return result.ToList();
             }
         }
 
@@ -188,7 +191,7 @@ namespace seamless_loop_music.Data.Repositories
             using (var db = GetConnection())
             {
                 db.Execute(@"
-                    INSERT OR IGNORE INTO PlaylistFolders (PlaylistId, FolderPath) 
+                    INSERT OR IGNORE INTO Playlists (PlaylistId, FolderPath) 
                     VALUES (@Pid, @Path)", 
                     new { Pid = playlistId, Path = folderPath });
             }
@@ -198,7 +201,7 @@ namespace seamless_loop_music.Data.Repositories
         {
             using (var db = GetConnection())
             {
-                db.Execute("DELETE FROM PlaylistFolders WHERE PlaylistId = @Pid AND FolderPath = @Path", 
+                db.Execute("DELETE FROM Playlists WHERE PlaylistId = @Pid AND FolderPath = @Path", 
                     new { Pid = playlistId, Path = folderPath });
             }
         }
@@ -208,9 +211,10 @@ namespace seamless_loop_music.Data.Repositories
             using (var db = GetConnection())
             {
                 return db.Query<string>(
-                    "SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Pid ORDER BY AddedAt ASC", 
+                    "SELECT FolderPath FROM Playlists WHERE PlaylistId = @Pid ORDER BY AddedAt ASC", 
                     new { Pid = playlistId });
             }
         }
     }
 }
+

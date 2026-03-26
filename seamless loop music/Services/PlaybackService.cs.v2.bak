@@ -33,6 +33,7 @@ namespace seamless_loop_music.Services
             _eventAggregator = eventAggregator;
             _audioLooper = new AudioLooper();
 
+            // 转发事件到 Prism 消息总线和本地事件
             _audioLooper.OnPlayStateChanged += state =>
             {
                 _eventAggregator.GetEvent<PlaybackStateChangedEvent>().Publish(state);
@@ -79,6 +80,7 @@ namespace seamless_loop_music.Services
             {
                 CurrentTrack.LoopStart = startSample;
                 CurrentTrack.LoopEnd = endSample;
+                // 更新资源库
                 _trackRepository.UpdateLoopPoints(CurrentTrack.Id, startSample, endSample);
             }
             
