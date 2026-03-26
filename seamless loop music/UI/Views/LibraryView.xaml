@@ -1,0 +1,47 @@
+<UserControl x:Class="seamless_loop_music.UI.Views.LibraryView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
+             xmlns:local="clr-namespace:seamless_loop_music.UI.Views"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d" 
+             d:DesignHeight="450" d:DesignWidth="800">
+    <Grid Background="#1E1E2E">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Header / Search -->
+        <TextBlock Text="Music Library" FontSize="28" FontWeight="Bold" Foreground="#89B4FA" Margin="20,20,20,10"/>
+
+        <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="10"
+                 ItemsSource="{Binding Tracks}">
+            <ListBox.ItemsPanel>
+                <ItemsPanelTemplate>
+                    <WrapPanel Orientation="Horizontal"/>
+                </ItemsPanelTemplate>
+            </ListBox.ItemsPanel>
+            <ListBox.ItemTemplate>
+                <DataTemplate>
+                    <Button Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                            CommandParameter="{Binding}"
+                            Padding="0" BorderThickness="0" Background="Transparent"
+                            Margin="10">
+                        <Border Background="#313244" CornerRadius="10" Width="180" Height="220">
+                            <StackPanel>
+                                <Border CornerRadius="8" Background="#45475A" Width="160" Height="140" Margin="10">
+                                    <Path Data="M 12 1 Q 12 0 13 0 L 23 0 Q 24 0 24 1 L 24 23 Q 24 24 23 24 L 13 24 Q 12 24 12 23 Z" Fill="#89B4FA" Stretch="Uniform" Margin="40"/>
+                                </Border>
+                                <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis"/>
+                                <TextBlock Text="{Binding FileName}" Foreground="#A6ADC8" FontSize="11" TextAlignment="Center" Margin="10,2" TextTrimming="CharacterEllipsis"/>
+                            </StackPanel>
+                        </Border>
+                    </Button>
+                </DataTemplate>
+            </ListBox.ItemTemplate>
+        </ListBox>
+    </Grid>
+</UserControl>

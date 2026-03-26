@@ -88,60 +88,52 @@ namespace seamless_loop_music
         /// </summary>
         public int Read(byte[] buffer, int offset, int count)
         {
-            lock (_lockObject) // 加锁防止冲突
+            lock (_lockObject)
             {
-                // 确保读取的字节数是采样大小的整数倍
-                if (count % _bytesPerSample != 0)
-                {
-                    count = (count / _bytesPerSample) * _bytesPerSample;
-                }
+                // 确保读取的字节数是块大小的整数倍
+                count -= (count % _bytesPerSample);
+                if (count <= 0) return 0;
 
                 int totalBytesRead = 0;
 
                 while (totalBytesRead < count)
                 {
-                    // 计算剩余可读字节数 (相对于 LoopEnd)
                     long currentPos = _sourceStream.Position;
+                    
+                    // 核心逻辑：如果到达或超过循环点，立即跳回
                     if (currentPos >= LoopEndPosition)
                     {
-                        // 已经超过结束点了，立即跳回
                         SafeSetPosition(LoopStartPosition);
-                        currentPos = _sourceStream.Position; // 更新 currentPos!
-                        OnLoopCompleted?.Invoke(); 
+                        OnLoopCompleted?.Invoke();
+                        currentPos = _sourceStream.Position;
                     }
 
                     long remainingBytes = LoopEndPosition - currentPos;
-                    // 如果 remainingBytes <= 0，说明还在 LoopEnd 之后（虽然刚seek过），可能 Seek 到了奇怪的位置或者 LoopStart >= LoopEnd
-                    if (remainingBytes <= 0) 
-                    {
-                         // 强制归零以防死锁，或结束
-                         remainingBytes = 0; 
-                    }
+                    if (remainingBytes <= 0) break; // 防止死循环
 
                     int bytesToRead = (int)Math.Min(count - totalBytesRead, remainingBytes);
-
-                    if (bytesToRead > 0)
+                    // 再次确保 bytesToRead 也是块对齐的
+                    bytesToRead -= (bytesToRead % _bytesPerSample);
+                    
+                    if (bytesToRead <= 0)
                     {
-                        // 读取数据
-                        int bytesRead = _sourceStream.Read(buffer, offset + totalBytesRead, bytesToRead);
-                        
-                        if (bytesRead == 0) 
-                        {
-                            // 读不到数据了，跳回 LoopStart
-                            SafeSetPosition(LoopStartPosition);
-                            OnLoopCompleted?.Invoke(); 
-                            // 此时 currentPos 变了，继续循环
-                        }
-                        else 
-                        {
-                             totalBytesRead += bytesRead;
-                        }
+                        // 剩下的太小了，不够一个块，强制触发跳转
+                        SafeSetPosition(LoopStartPosition);
+                        OnLoopCompleted?.Invoke();
+                        continue;
+                    }
+
+                    int bytesRead = _sourceStream.Read(buffer, offset + totalBytesRead, bytesToRead);
+                    if (bytesRead == 0)
+                    {
+                        // 源流意外结束，尝试跳回
+                        SafeSetPosition(LoopStartPosition);
+                        OnLoopCompleted?.Invoke();
+                        if (_sourceStream.Position == currentPos) break; // 真的读不动了
                     }
                     else
                     {
-                        // 已到 LoopEnd，跳回 LoopStart
-                        SafeSetPosition(LoopStartPosition);
-                        OnLoopCompleted?.Invoke(); 
+                        totalBytesRead += bytesRead;
                     }
                 }
 
@@ -150,11 +142,12 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 安全设置位置
+        /// 安全设置位置 (确保 BlockAlign 对齐)
         /// </summary>
         private void SafeSetPosition(long targetPos)
         {
-            // 确保位置在合法范围内
+            // 确保对齐到采样块
+            targetPos -= (targetPos % _bytesPerSample);
             targetPos = Math.Max(0, Math.Min(targetPos, _sourceStream.Length));
             _sourceStream.Position = targetPos;
         }

@@ -11,7 +11,7 @@ namespace seamless_loop_music.UI.ViewModels
 {
     public class PlaybackControlBarViewModel : BindableBase
     {
-        private readonly IPlayerService _playerService;
+        private readonly IPlaybackService _playbackService;
         
         private bool _isDragging;
         public bool IsDragging
@@ -49,7 +49,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (SetProperty(ref _volumeValue, value))
                 {
-                    _playerService.Volume = (float)value / 100f;
+                    _playbackService.Volume = (float)value / 100f;
                 }
             }
         }
@@ -66,49 +66,49 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand NextCommand { get; }
         public DelegateCommand<double?> SeekCommand { get; }
 
-        public PlaybackControlBarViewModel(IPlayerService playerService)
+        public PlaybackControlBarViewModel(IPlaybackService playbackService)
         {
-            _playerService = playerService;
+            _playbackService = playbackService;
 
             PlayCommand = new DelegateCommand(ExecutePlay);
             PrevCommand = new DelegateCommand(ExecutePrev);
             NextCommand = new DelegateCommand(ExecuteNext);
             SeekCommand = new DelegateCommand<double?>(ExecuteSeek);
 
-            _playerService.OnPlayStateChanged += OnPlayStateChanged;
-            _playerService.OnPositionChanged += OnPositionChanged;
-            _playerService.OnTrackLoaded += OnTrackLoaded;
+            _playbackService.StateChanged += OnPlayStateChanged;
+            _playbackService.PositionChanged += OnPositionChanged;
+            _playbackService.TrackChanged += OnTrackLoaded;
             
             // 初始化音量
-            VolumeValue = _playerService.Volume * 100;
+            VolumeValue = _playbackService.Volume * 100;
         }
 
         private void OnTrackLoaded(MusicTrack track)
         {
             Application.Current?.Dispatcher?.Invoke(() => {
                 // 核心修复：切歌时强制归零
-                UpdateDisplay(TimeSpan.Zero, _playerService.TotalTime);
+                UpdateDisplay(TimeSpan.Zero, _playbackService.TotalTime);
             });
         }
 
         private void ExecutePlay()
         {
-            if (_playerService.PlaybackState == PlaybackState.Playing)
-                _playerService.Pause();
+            if (_playbackService.PlaybackState == PlaybackState.Playing)
+                _playbackService.Pause();
             else
-                _playerService.Play();
+                _playbackService.Play();
         }
 
 
 
         private void ExecutePrev()
         {
-            _playerService.Previous();
+            // TODO: 通过 IPlaybackService 或 QueueService 实现上一首
         }
 
         private void ExecuteNext()
         {
-            _playerService.Next();
+            // TODO: 通过 IPlaybackService 或 QueueService 实现下一首
         }
 
         private void OnPlayStateChanged(PlaybackState state)
@@ -137,7 +137,8 @@ namespace seamless_loop_music.UI.ViewModels
             if (percentValue.HasValue)
             {
                 // UI 传过来的是 0-1000 的值
-                _playerService.Seek(percentValue.Value / 1000.0);
+                double percent = percentValue.Value / 1000.0;
+                _playbackService.Seek(TimeSpan.FromSeconds(_playbackService.TotalTime.TotalSeconds * percent));
             }
         }
 

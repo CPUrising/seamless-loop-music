@@ -1,7 +1,9 @@
 using Prism.Commands;
+using Prism.Events;
 using Prism.Mvvm;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
+using seamless_loop_music.Events;
 using System;
 using System.Windows;
 using System.Windows.Threading;
@@ -10,12 +12,16 @@ namespace seamless_loop_music.UI.ViewModels
 {
     public class LoopWorkspaceViewModel : BindableBase
     {
-        private readonly IPlayerService _playerService;
+        private readonly IPlaybackService _playbackService;
+        private readonly ILoopAnalysisService _loopAnalysisService;
+        private readonly IEventAggregator _eventAggregator;
         private bool _isUpdatingInternally = false;
 
-        public LoopWorkspaceViewModel(IPlayerService playerService)
+        public LoopWorkspaceViewModel(IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, IEventAggregator eventAggregator)
         {
-            _playerService = playerService;
+            _playbackService = playbackService;
+            _loopAnalysisService = loopAnalysisService;
+            _eventAggregator = eventAggregator;
 
             // 命令初始化
             AdjustCommand = new DelegateCommand<string>(ExecuteAdjust);
@@ -27,29 +33,28 @@ namespace seamless_loop_music.UI.ViewModels
             ChangePlayModeCommand = new DelegateCommand(ExecuteChangePlayMode);
 
             // 订阅服务事件
-            _playerService.OnTrackLoaded += OnTrackLoaded;
-            _playerService.OnStatusMessage += msg => StatusMessage = msg;
-            _playerService.OnLoopPointsChanged += (start, end) => 
+            _eventAggregator.GetEvent<TrackLoadedEvent>().Subscribe(OnTrackLoaded);
+            _eventAggregator.GetEvent<LoopPointsChangedEvent>().Subscribe(points => 
             {
                 Application.Current.Dispatcher.Invoke(() => 
                 {
                     _isUpdatingInternally = true;
-                    LoopStartSample = start.ToString();
-                    LoopEndSample = end.ToString();
+                    LoopStartSample = points.Start.ToString();
+                    LoopEndSample = points.End.ToString();
                     _isUpdatingInternally = false;
                     UpdateSecLabels();
                 });
-            };
+            });
 
             // 初始值
-            MatchWindowSize = _playerService.MatchWindowSize;
-            SearchRadius = _playerService.MatchSearchRadius;
+            // MatchWindowSize = _playbackService.MatchWindowSize; // TODO: Move to AnalysisService
+            // SearchRadius = _playbackService.MatchSearchRadius;
             UpdateModeText();
 
             // 检查初始状态：如果 Service 已经加载了音轨，手动触发一次同步
-            if (_playerService.CurrentTrack != null)
+            if (_playbackService.CurrentTrack != null)
             {
-                OnTrackLoaded(_playerService.CurrentTrack);
+                OnTrackLoaded(_playbackService.CurrentTrack);
             }
         }
 
@@ -136,7 +141,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (SetProperty(ref _loopLimit, value))
                 {
-                    _playerService.LoopLimit = Math.Max(1, value);
+                    // TODO: Implement LoopLimit in PlaybackService if needed
                 }
             }
         }
@@ -148,7 +153,7 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _playModeText, value);
         }
 
-        public bool IsABMode => _playerService.IsABMode;
+        public bool IsABMode => false; // TODO: Implement in PlaybackService
 
         private double _matchWindowSize;
         public double MatchWindowSize
@@ -158,7 +163,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (SetProperty(ref _matchWindowSize, value))
                 {
-                    _playerService.MatchWindowSize = value;
+                    // _playbackService.MatchWindowSize = value; 
                     RaisePropertyChanged(nameof(MatchWindowTitle));
                 }
             }
@@ -172,7 +177,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (SetProperty(ref _searchRadius, value))
                 {
-                    _playerService.MatchSearchRadius = value;
+                    // _playbackService.MatchSearchRadius = value;
                     RaisePropertyChanged(nameof(SearchRadiusTitle));
                 }
             }
@@ -219,7 +224,7 @@ namespace seamless_loop_music.UI.ViewModels
         {
             bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             long total = track?.TotalSamples ?? 0;
-            int rate = _playerService.SampleRate;
+            int rate = _playbackService.SampleRate;
 
             string info = isZh ? 
                 $"音频信息: {total} Samples | 采样率: {rate} Hz" : 
@@ -246,7 +251,7 @@ namespace seamless_loop_music.UI.ViewModels
             string type = parts[0];   // Start / End
             string value = parts[1];  // Min / Max / number
 
-            long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
+            long total = _playbackService.CurrentTrack?.TotalSamples ?? 0;
             long current;
             
             if (type == "Start") long.TryParse(LoopStartSample, out current);
@@ -257,7 +262,7 @@ namespace seamless_loop_music.UI.ViewModels
             else if (value == "Max") target = total;
             else if (double.TryParse(value, out double deltaSec))
             {
-                long delta = (long)(_playerService.SampleRate * deltaSec);
+                long delta = (long)(_playbackService.SampleRate * deltaSec);
                 target = Math.Max(0, Math.Min(total, current + delta));
             }
 
@@ -265,44 +270,36 @@ namespace seamless_loop_music.UI.ViewModels
             else LoopEndSample = target.ToString();
         }
 
-        private void ExecuteSmartMatchReverse()
+        private async void ExecuteSmartMatchReverse()
         {
             ApplyLocalSettingsToService();
-            _playerService.SmartMatchLoopReverseAsync(() => 
-            {
-                Application.Current.Dispatcher.Invoke(() => 
-                {
-                    LoopStartSample = _playerService.LoopStartSample.ToString();
-                    LoopEndSample = _playerService.LoopEndSample.ToString();
-                    StatusMessage = LocalizationService.Instance["StatusDone"];
-                });
-            });
+            if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
+            
+            var result = await _playbackService.FindBestLoopPointsAsync(start, end, true);
+            LoopStartSample = result.Start.ToString();
+            LoopEndSample = result.End.ToString();
+            StatusMessage = LocalizationService.Instance["StatusDone"];
         }
 
-        private void ExecuteSmartMatchForward()
+        private async void ExecuteSmartMatchForward()
         {
             ApplyLocalSettingsToService();
-            _playerService.SmartMatchLoopForwardAsync(() => 
-            {
-                Application.Current.Dispatcher.Invoke(() => 
-                {
-                    LoopStartSample = _playerService.LoopStartSample.ToString();
-                    LoopEndSample = _playerService.LoopEndSample.ToString();
-                    StatusMessage = LocalizationService.Instance["StatusDone"];
-                });
-            });
+            if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
+            
+            var result = await _playbackService.FindBestLoopPointsAsync(start, end, false);
+            LoopStartSample = result.Start.ToString();
+            LoopEndSample = result.End.ToString();
+            StatusMessage = LocalizationService.Instance["StatusDone"];
         }
 
         private void ExecuteResetAB()
         {
-            _playerService.ResetABLoopPoints();
-            LoopStartSample = _playerService.LoopStartSample.ToString();
-            LoopEndSample = _playerService.LoopEndSample.ToString();
+            // TODO
         }
 
         private async System.Threading.Tasks.Task<bool> EnsurePyMusicLooperReadyAsync()
         {
-            int status = await _playerService.CheckPyMusicLooperStatusAsync();
+            int status = await _loopAnalysisService.CheckEnvironmentAsync();
             if (status == 0) return true; // Ready
 
             if (status == 2)
@@ -330,18 +327,17 @@ namespace seamless_loop_music.UI.ViewModels
             
             try 
             {
-                var candidates = await _playerService.GetLoopCandidatesAsync();
+                var candidates = await _loopAnalysisService.FetchTopLoopCandidatesAsync(_playbackService.CurrentTrack.FilePath);
                 if (candidates.Count == 0)
                 {
                     MessageBox.Show(isZh ? "未找到循环点。" : "No loops found.");
                 }
                 else
                 {
-                    // 在 ViewModel 中直接 New Window 虽不完美，但在当前重构阶段是最高效的迁移方式
                     Application.Current.Dispatcher.Invoke(() => {
-                        var win = new LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
-                        win.Owner = Application.Current.MainWindow;
-                        win.Show();
+                        // var win = new LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
+                        // win.Owner = Application.Current.MainWindow;
+                        // win.Show();
                     });
                 }
             }
@@ -358,49 +354,44 @@ namespace seamless_loop_music.UI.ViewModels
         private void ExecuteApplyLoop()
         {
             ApplyLocalSettingsToService();
-            _playerService.SaveCurrentTrack();
+            // _playbackService.SaveCurrentTrack(); // Auto-saved in SetLoopPoints
 
             if (long.TryParse(LoopEndSample, out long end) && long.TryParse(LoopStartSample, out long start))
             {
-                long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
-                long actualEnd = (end <= 0) ? total : end;
-                long previewOffset = _playerService.SampleRate * 3;
-                long target = Math.Max(start, actualEnd - previewOffset);
+                _playbackService.SetLoopPoints(start, end);
                 
-                _playerService.SeekToSample(target);
-                _playerService.Play();
+                long previewOffset = _playbackService.SampleRate * 3;
+                long target = end - previewOffset;
+                
+                _playbackService.SeekToSample(target);
+                _playbackService.Play();
             }
         }
 
         private void ExecuteChangePlayMode()
         {
-            var nextMode = (PlayMode)(((int)_playerService.CurrentMode + 1) % 3);
-            _playerService.CurrentMode = nextMode;
+            // TODO
             UpdateModeText();
         }
 
         private void UpdateModeText()
         {
-            switch (_playerService.CurrentMode)
-            {
-                case PlayMode.SingleLoop: PlayModeText = LocalizationService.Instance["ModeSingle"]; break;
-                case PlayMode.ListLoop: PlayModeText = LocalizationService.Instance["ModeList"]; break;
-                case PlayMode.Shuffle: PlayModeText = LocalizationService.Instance["ModeShuffle"]; break;
-            }
+            PlayModeText = "Single Loop (Refactoring)";
         }
 
         private void ApplyLocalSettingsToService()
         {
-            if (long.TryParse(LoopStartSample, out long start)) _playerService.SetLoopStart(start);
-            if (long.TryParse(LoopEndSample, out long end)) _playerService.SetLoopEnd(end);
+            if (long.TryParse(LoopStartSample, out long start) && long.TryParse(LoopEndSample, out long end))
+            {
+                 _playbackService.SetLoopPoints(start, end);
+            }
         }
 
         private void UpdateSecLabels()
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            int rate = _playerService.SampleRate > 0 ? _playerService.SampleRate : 44100;
-
+            int rate = _playbackService.SampleRate > 0 ? _playbackService.SampleRate : 44100;
             if (long.TryParse(LoopStartSample, out long s)) LoopStartSec = ((double)s / rate).ToString("F3");
             if (long.TryParse(LoopEndSample, out long e)) LoopEndSec = ((double)e / rate).ToString("F3");
             _isUpdatingInternally = false;
@@ -410,7 +401,7 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            int rate = _playerService.SampleRate > 0 ? _playerService.SampleRate : 44100;
+            int rate = _playbackService.SampleRate > 0 ? _playbackService.SampleRate : 44100;
             if (long.TryParse(LoopStartSample, out long s)) LoopStartSec = ((double)s / rate).ToString("F3");
             _isUpdatingInternally = false;
         }
@@ -419,7 +410,7 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            int rate = _playerService.SampleRate > 0 ? _playerService.SampleRate : 44100;
+            int rate = _playbackService.SampleRate > 0 ? _playbackService.SampleRate : 44100;
             if (long.TryParse(LoopEndSample, out long e)) LoopEndSec = ((double)e / rate).ToString("F3");
             _isUpdatingInternally = false;
         }
@@ -428,9 +419,8 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
             if (double.TryParse(LoopStartSec, out double sec))
-                LoopStartSample = ((long)Math.Max(0, Math.Min(total, sec * _playerService.SampleRate))).ToString();
+                LoopStartSample = ((long)Math.Max(0, Math.Min(total, sec * _playbackService.SampleRate))).ToString();
             _isUpdatingInternally = false;
         }
 
@@ -438,9 +428,9 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            long total = _playerService.CurrentTrack?.TotalSamples ?? 0;
+            long total = _playbackService.CurrentTrack?.TotalSamples ?? 0;
             if (double.TryParse(LoopEndSec, out double sec))
-                LoopEndSample = ((long)Math.Max(0, Math.Min(total, sec * _playerService.SampleRate))).ToString();
+                LoopEndSample = ((long)Math.Max(0, Math.Min(total, sec * _playbackService.SampleRate))).ToString();
             _isUpdatingInternally = false;
         }
 

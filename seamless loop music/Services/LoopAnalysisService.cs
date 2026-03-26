@@ -10,7 +10,7 @@ namespace seamless_loop_music.Services
     /// 循环分析服务
     /// 负责所有与循环点计算、PyMusicLooper 交互、候选结果缓存处理相关的逻辑
     /// </summary>
-    public class LoopAnalysisService
+    public class LoopAnalysisService : ILoopAnalysisService
     {
         public event Action<string> OnStatusMessage;
         private readonly PyMusicLooperWrapper _pyMusicLooperWrapper;

@@ -43,14 +43,16 @@ namespace seamless_loop_music.Services
             // 1. 查系统路径 (直接运行 pymusiclooper)
             if (await IsCommandAvailableAsync("pymusiclooper", "--version")) return 0;
 
-            // 2. 查 uv 是否存在
-            if (!await IsCommandAvailableAsync("uv", "--version")) return 2;
+            // 2. 查 uvx 是否可用 (uvx 是 uv 的一部分)
+            if (await IsCommandAvailableAsync("uvx", "--version")) 
+            {
+                return 0; // uvx 具备自动下载并运行的能力，视为就绪
+            }
 
-            // 3. 查 uvx 缓存 (用 --offline 探测)
-            // 如果 uvx 已经下载过，offline 也能跑通获取版本
-            if (await IsCommandAvailableAsync("uv", "tool run --offline pymusiclooper --version")) return 0;
+            // 3. 查 uv 是否存在
+            if (await IsCommandAvailableAsync("uv", "--version")) return 1;
 
-            return 1; // 需要下载
+            return 2; // 环境缺失 (无 pymusiclooper 也无 uv)
         }
 
         private async Task<bool> IsCommandAvailableAsync(string cmd, string args)
@@ -123,13 +125,13 @@ namespace seamless_loop_music.Services
             }
             catch (Exception) { }
             
-            // 2. 如果直接调用失败，尝试使用 uv (必须是离线可用的)
+            // 2. 如果直接调用失败，尝试使用 uvx
             try
             {
                 var startInfo = new ProcessStartInfo
                 {
-                    FileName = "uv",
-                    Arguments = $"tool run --offline pymusiclooper {args}",
+                    FileName = "uvx",
+                    Arguments = $"pymusiclooper {args}",
                     RedirectStandardOutput = true,
                     RedirectStandardError = true,
                     UseShellExecute = false,

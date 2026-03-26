@@ -7,7 +7,10 @@ using Prism.Unity;
 using Prism.Ioc;
 using seamless_loop_music.Services;
 using seamless_loop_music.Data;
+using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.UI;
+using seamless_loop_music.UI.Views;
+using Prism.Regions;
 
 namespace seamless_loop_music
 {
@@ -40,10 +43,34 @@ namespace seamless_loop_music
 
         protected override void RegisterTypes(IContainerRegistry containerRegistry)
         {
-            // 核心服务注册 (单例)
+            // 数据层注册
+            containerRegistry.RegisterSingleton<ITrackRepository, TrackRepository>();
+            containerRegistry.RegisterSingleton<IPlaylistRepository, PlaylistRepository>();
+
+            // 服务层注册
+            containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
+            containerRegistry.RegisterSingleton<IPlaybackService, PlaybackService>();
+            containerRegistry.RegisterSingleton<IPlaylistManager, PlaylistManager>();
+            
+            // 兼容性保留 (逐步废弃)
             containerRegistry.RegisterSingleton<IDatabaseHelper, DatabaseHelper>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
+
+            // 视图注册 (用于导航)
+            containerRegistry.RegisterForNavigation<PlaylistSidebar>(); // 暂时继续使用原 Sidebar
+            containerRegistry.RegisterForNavigation<LibraryView>();
+            containerRegistry.RegisterForNavigation<DetailView>();
+        }
+
+        protected override void OnInitialized()
+        {
+            base.OnInitialized();
+
+            // 初始化区域导航
+            var regionManager = Container.Resolve<IRegionManager>();
+            regionManager.RequestNavigate("SidebarRegion", nameof(PlaylistSidebar));
+            regionManager.RequestNavigate("MainContentRegion", nameof(LibraryView));
         }
     }
 }

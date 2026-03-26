@@ -57,7 +57,11 @@ namespace seamless_loop_music
             }
             _loopStartSample = sample;
             if (_loopStream != null)
+            {
                 _loopStream.LoopStartPosition = sample * _audioStream.WaveFormat.BlockAlign;
+                // 注意：这里不强制 ClearBuffer，因为起始点变动通常不影响当前正在播放的片段
+                // 只有当起始点被设为当前点之后（比如往前挪了）才需要考虑，但为了稳定暂不 Clear
+            }
             
             OnStatusChanged?.Invoke($"Loop Start set: {sample} ({sample / (double)_audioStream.WaveFormat.SampleRate:F2}s)");
         }
@@ -83,6 +87,13 @@ namespace seamless_loop_music
             {
                  long endPos = sample * _audioStream.WaveFormat.BlockAlign;
                  _loopStream.LoopEndPosition = (sample <= 0 || endPos > _audioStream.Length) ? _audioStream.Length : endPos;
+                 
+                 // 重点改进：如果新的循环终点在当前播放点之前，必须立即清除缓冲区并 Seek
+                 // 否则用户会听到已经填入缓冲区的、本该被切掉的音频
+                 if (sample > 0 && CurrentTime.TotalSeconds * SampleRate > sample)
+                 {
+                     SeekToSample(_loopStartSample); 
+                 }
             }
             string endLabel = sample == 0 ? "End of file" : sample.ToString();
             OnStatusChanged?.Invoke($"Loop End set: {endLabel}");
@@ -144,7 +155,7 @@ namespace seamless_loop_music
                 // --- 异步缓冲系统配置 ---
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
                 {
-                    BufferDuration = TimeSpan.FromSeconds(5), // 调整为 5秒，在抗干扰与实时性之间寻找平衡
+                    BufferDuration = TimeSpan.FromSeconds(2), // 降低到 2秒，提高响应速度
                     DiscardOnBufferOverflow = true
                 };
 
