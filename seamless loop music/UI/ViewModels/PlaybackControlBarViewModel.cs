@@ -36,6 +36,9 @@ namespace seamless_loop_music.UI.ViewModels
         private double _totalTime;
         public double TotalTime { get => _totalTime; set => SetProperty(ref _totalTime, value); }
 
+        private double _progressValue;
+        public double ProgressValue { get => _progressValue; set => SetProperty(ref _progressValue, value); }
+
         public bool IsDragging { get; set; }
         public bool IsUpdating { get; set; }
 
@@ -94,6 +97,12 @@ namespace seamless_loop_music.UI.ViewModels
                 var total = _playbackService.TotalTime;
                 TotalTime = total.TotalSeconds;
                 TotalTimeStr = total.ToString(@"mm\:ss");
+
+                // 换算 0-1000 比例
+                if (TotalTime > 0)
+                {
+                    ProgressValue = (CurrentTime / TotalTime) * 1000.0;
+                }
 
                 PlayState = _playbackService.PlaybackState.ToString();
             }
