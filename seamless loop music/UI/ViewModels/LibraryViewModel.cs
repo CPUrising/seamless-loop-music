@@ -1,10 +1,12 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Regions;
+using Prism.Events;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Data.Repositories;
@@ -15,9 +17,10 @@ namespace seamless_loop_music.UI.ViewModels
     {
         private readonly ITrackRepository _trackRepository;
         private readonly IPlaybackService _playbackService;
+        private readonly IPlaylistManager _playlistManager;
         private readonly IRegionManager _regionManager;
         
-        private ObservableCollection<MusicTrack> _tracks;
+        private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
         public ObservableCollection<MusicTrack> Tracks
         {
             get => _tracks;
@@ -36,20 +39,22 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
+        public DelegateCommand<MusicTrack> PlayCommand { get; }
         public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
         public DelegateCommand RefreshCommand { get; }
 
-        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IRegionManager regionManager)
+        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager)
         {
             _trackRepository = trackRepository;
             _playbackService = playbackService;
+            _playlistManager = playlistManager;
             _regionManager = regionManager;
 
-            Tracks = new ObservableCollection<MusicTrack>();
+            PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
             RefreshCommand = new DelegateCommand(async () => await LoadTracksAsync());
 
-            // 初始加载
+            // Initial load
             Task.Run(async () => await LoadTracksAsync());
         }
 
@@ -68,7 +73,15 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void FilterTracks()
         {
-            // TODO: 实现搜索过滤
+            // TODO
+        }
+
+        private void OnPlayTrack(MusicTrack track)
+        {
+            if (track == null) return;
+            
+            _playlistManager.SetNowPlayingList(Tracks, track);
+            _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
         }
 
         private void OnOpenDetail(MusicTrack track)
@@ -76,9 +89,8 @@ namespace seamless_loop_music.UI.ViewModels
             if (track == null) return;
             
             var parameters = new NavigationParameters();
-            parameters.Add("Track", track);
+            parameters.Add("track", track);
             _regionManager.RequestNavigate("MainContentRegion", "DetailView", parameters);
         }
     }
 }
-

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading.Tasks;
 using NAudio.Wave;
 using Prism.Events;
@@ -15,19 +16,17 @@ namespace seamless_loop_music.Services
         private readonly AudioLooper _audioLooper;
         private readonly ITrackRepository _trackRepository;
         private readonly IEventAggregator _eventAggregator;
+        private readonly IPlaylistManager _playlistManager;
 
         public MusicTrack CurrentTrack { get; private set; }
-        public PlaybackState PlaybackState => _audioLooper.PlaybackState;
-        public TimeSpan CurrentTime => _audioLooper.CurrentTime;
-        public TimeSpan TotalTime => _audioLooper.TotalTime;
-        public int SampleRate => _audioLooper.SampleRate;
+        public PlaybackState PlaybackState => _audioLooper?.PlaybackState ?? PlaybackState.Stopped;
+        public TimeSpan CurrentTime => _audioLooper?.CurrentTime ?? TimeSpan.Zero;
+        public TimeSpan TotalTime => _audioLooper?.TotalTime ?? TimeSpan.Zero;
+        public int SampleRate => _audioLooper?.SampleRate ?? 44100;
         public float Volume { get => _audioLooper.Volume; set => _audioLooper.Volume = value; }
 
         public event Action<MusicTrack> TrackChanged;
         public event Action<PlaybackState> StateChanged;
-        public event Action<TimeSpan> PositionChanged;
-
-        private readonly IPlaylistManager _playlistManager;
 
         public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator)
         {
@@ -40,11 +39,6 @@ namespace seamless_loop_music.Services
             {
                 _eventAggregator.GetEvent<PlaybackStateChangedEvent>().Publish(state);
                 StateChanged?.Invoke(state);
-            };
-
-            _audioLooper.OnPositionChanged += pos =>
-            {
-                PositionChanged?.Invoke(pos);
             };
         }
 
@@ -83,13 +77,12 @@ namespace seamless_loop_music.Services
             if (prev != null) await LoadTrackAsync(prev, true);
         }
 
-        public void Seek(TimeSpan position) => _audioLooper.Seek(position.TotalSeconds);
+        public void Seek(TimeSpan position) => _audioLooper.Seek(position.TotalSeconds / TotalTime.TotalSeconds);
         public void SeekToSample(long sample) => _audioLooper.SeekToSample(sample);
 
         public void SetLoopPoints(long startSample, long endSample)
         {
-            _audioLooper.SetLoopStartSample(startSample);
-            _audioLooper.SetLoopEndSample(endSample);
+            _audioLooper.SetLoopPoints(startSample, endSample);
             
             if (CurrentTrack != null)
             {

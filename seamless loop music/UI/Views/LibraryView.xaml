@@ -27,20 +27,35 @@
             </ListBox.ItemsPanel>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Button Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                            CommandParameter="{Binding}"
-                            Padding="0" BorderThickness="0" Background="Transparent"
-                            Margin="10">
-                        <Border Background="#313244" CornerRadius="10" Width="180" Height="220">
-                            <StackPanel>
-                                <Border CornerRadius="8" Background="#45475A" Width="160" Height="140" Margin="10">
-                                    <Path Data="M 12 1 Q 12 0 13 0 L 23 0 Q 24 0 24 1 L 24 23 Q 24 24 23 24 L 13 24 Q 12 24 12 23 Z" Fill="#89B4FA" Stretch="Uniform" Margin="40"/>
-                                </Border>
-                                <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis"/>
-                                <TextBlock Text="{Binding FileName}" Foreground="#A6ADC8" FontSize="11" TextAlignment="Center" Margin="10,2" TextTrimming="CharacterEllipsis"/>
-                            </StackPanel>
-                        </Border>
-                    </Button>
+                    <Grid Margin="10">
+                        <!-- Main Playable Area (Click to Play) -->
+                        <Button Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}"
+                                Padding="0" BorderThickness="0" Background="Transparent">
+                            <Border Background="#313244" CornerRadius="10" Width="180" Height="220">
+                                <StackPanel>
+                                    <Border CornerRadius="8" Background="#45475A" Width="160" Height="140" Margin="10">
+                                        <Path Data="M 12 1 Q 12 0 13 0 L 23 0 Q 24 0 24 1 L 24 23 Q 24 24 23 24 L 13 24 Q 12 24 12 23 Z" Fill="#89B4FA" Stretch="Uniform" Margin="40"/>
+                                    </Border>
+                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis"/>
+                                    <TextBlock Text="{Binding FileName}" Foreground="#A6ADC8" FontSize="11" TextAlignment="Center" Margin="10,2" TextTrimming="CharacterEllipsis"/>
+                                </StackPanel>
+                            </Border>
+                        </Button>
+
+                        <!-- Edit Button (Overlays in top-right) -->
+                        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="5"
+                                Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}"
+                                Content="✎" Width="30" Height="30" Padding="0"
+                                Background="#45475A" Foreground="White" BorderThickness="0">
+                            <Button.Resources>
+                                <Style TargetType="Border">
+                                    <Setter Property="CornerRadius" Value="15"/>
+                                </Style>
+                            </Button.Resources>
+                        </Button>
+                    </Grid>
                 </DataTemplate>
             </ListBox.ItemTemplate>
         </ListBox>

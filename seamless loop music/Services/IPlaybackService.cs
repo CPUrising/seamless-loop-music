@@ -17,7 +17,6 @@ namespace seamless_loop_music.Services
         
         event Action<MusicTrack> TrackChanged;
         event Action<PlaybackState> StateChanged;
-        event Action<TimeSpan> PositionChanged;
 
         Task LoadTrackAsync(MusicTrack track, bool autoPlay = false);
         void Play();

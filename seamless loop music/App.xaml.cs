@@ -43,6 +43,7 @@ namespace seamless_loop_music
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
+            containerRegistry.RegisterForNavigation<PlaylistSidebar, PlaylistSidebarViewModel>();
             
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();

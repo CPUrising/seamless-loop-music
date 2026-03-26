@@ -1,4 +1,5 @@
 using System;
+using System.Windows.Threading;
 using Prism.Commands;
 using Prism.Events;
 using Prism.Mvvm;
@@ -12,6 +13,7 @@ namespace seamless_loop_music.UI.ViewModels
     {
         private readonly IPlaybackService _playbackService;
         private readonly IEventAggregator _eventAggregator;
+        private readonly DispatcherTimer _statusTimer;
 
         private MusicTrack _currentTrack;
         public MusicTrack CurrentTrack { get => _currentTrack; set => SetProperty(ref _currentTrack, value); }
@@ -22,14 +24,20 @@ namespace seamless_loop_music.UI.ViewModels
         public string PlayButtonContent => PlayState == "Playing" ? "||" : ">";
 
         private string _currentTimeStr = "00:00";
+        private string _totalTimeStr = "00:00";
         public string TimeDisplay => $"{_currentTimeStr} / {_totalTimeStr}";
 
-        private string _totalTimeStr = "00:00";
         public string CurrentTimeStr { get => _currentTimeStr; set { if (SetProperty(ref _currentTimeStr, value)) RaisePropertyChanged(nameof(TimeDisplay)); } }
         public string TotalTimeStr { get => _totalTimeStr; set { if (SetProperty(ref _totalTimeStr, value)) RaisePropertyChanged(nameof(TimeDisplay)); } }
 
-        private double _progressValue;
-        public double ProgressValue { get => _progressValue; set => SetProperty(ref _progressValue, value); }
+        private double _currentTime;
+        public double CurrentTime { get => _currentTime; set => SetProperty(ref _currentTime, value); }
+
+        private double _totalTime;
+        public double TotalTime { get => _totalTime; set => SetProperty(ref _totalTime, value); }
+
+        public bool IsDragging { get; set; }
+        public bool IsUpdating { get; set; }
 
         private double _volumeValue = 100;
         public double VolumeValue 
@@ -41,12 +49,6 @@ namespace seamless_loop_music.UI.ViewModels
                     _playbackService.Volume = (float)(value / 100.0); 
             } 
         }
-
-        private bool _isDragging;
-        public bool IsDragging { get => _isDragging; set => SetProperty(ref _isDragging, value); }
-
-        private bool _isUpdating;
-        public bool IsUpdating { get => _isUpdating; set => SetProperty(ref _isUpdating, value); }
 
         public DelegateCommand PlayCommand { get; }
         public DelegateCommand StopCommand { get; }
@@ -67,9 +69,38 @@ namespace seamless_loop_music.UI.ViewModels
 
             _playbackService.TrackChanged += track => CurrentTrack = track;
             _playbackService.StateChanged += state => PlayState = state.ToString();
-            _playbackService.PositionChanged += OnPositionChanged;
             
             _volumeValue = _playbackService.Volume * 100;
+
+            _statusTimer = new DispatcherTimer
+            {
+                Interval = TimeSpan.FromMilliseconds(100)
+            };
+            _statusTimer.Tick += OnStatusTimerTick;
+            _statusTimer.Start();
+        }
+
+        private void OnStatusTimerTick(object sender, EventArgs e)
+        {
+            if (_playbackService == null || IsDragging) return;
+
+            IsUpdating = true;
+            try
+            {
+                var pos = _playbackService.CurrentTime;
+                CurrentTime = pos.TotalSeconds;
+                CurrentTimeStr = pos.ToString(@"mm\:ss");
+
+                var total = _playbackService.TotalTime;
+                TotalTime = total.TotalSeconds;
+                TotalTimeStr = total.ToString(@"mm\:ss");
+
+                PlayState = _playbackService.PlaybackState.ToString();
+            }
+            finally
+            {
+                IsUpdating = false;
+            }
         }
 
         private void OnPlayPause()
@@ -85,17 +116,6 @@ namespace seamless_loop_music.UI.ViewModels
                 var target = TimeSpan.FromSeconds(value.Value / 1000.0 * _playbackService.TotalTime.TotalSeconds);
                 _playbackService.Seek(target);
             }
-        }
-
-        private void OnPositionChanged(TimeSpan position)
-        {
-            if (IsDragging) return;
-            IsUpdating = true;
-            CurrentTimeStr = position.ToString(@"mm\:ss");
-            var total = _playbackService.TotalTime;
-            TotalTimeStr = total.ToString(@"mm\:ss");
-            if (total.TotalSeconds > 0) ProgressValue = position.TotalSeconds / total.TotalSeconds * 1000;
-            IsUpdating = false;
         }
     }
 }
