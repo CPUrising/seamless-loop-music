@@ -13,7 +13,7 @@ using seamless_loop_music.Data.Repositories;
 
 namespace seamless_loop_music.UI.ViewModels
 {
-    public class LibraryViewModel : BindableBase
+    public class LibraryViewModel : BindableBase, INavigationAware
     {
         private readonly ITrackRepository _trackRepository;
         private readonly IPlaybackService _playbackService;
@@ -43,6 +43,8 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
         public DelegateCommand RefreshCommand { get; }
 
+        private int? _currentPlaylistId = null;
+
         public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager)
         {
             _trackRepository = trackRepository;
@@ -52,19 +54,42 @@ namespace seamless_loop_music.UI.ViewModels
 
             PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
-            RefreshCommand = new DelegateCommand(async () => await LoadTracksAsync());
-
-            // Initial load
-            Task.Run(async () => await LoadTracksAsync());
+            RefreshCommand = new DelegateCommand(async () => await LoadTracksAsync(_currentPlaylistId));
         }
 
-        private async Task LoadTracksAsync()
+        public async void OnNavigatedTo(NavigationContext navigationContext)
         {
-            var allTracks = await _trackRepository.GetAllAsync();
+            if (navigationContext.Parameters.ContainsKey("PlaylistId"))
+            {
+                _currentPlaylistId = (int)navigationContext.Parameters["PlaylistId"];
+            }
+            else
+            {
+                _currentPlaylistId = null;
+            }
+
+            await LoadTracksAsync(_currentPlaylistId);
+        }
+
+        public bool IsNavigationTarget(NavigationContext navigationContext) => true;
+        public void OnNavigatedFrom(NavigationContext navigationContext) { }
+
+        private async Task LoadTracksAsync(int? playlistId = null)
+        {
+            List<MusicTrack> results;
+            if (playlistId.HasValue)
+            {
+                results = await _playlistManager.GetTracksInPlaylistAsync(playlistId.Value);
+            }
+            else
+            {
+                results = await _trackRepository.GetAllAsync();
+            }
+
             App.Current.Dispatcher.Invoke(() =>
             {
                 Tracks.Clear();
-                foreach (var track in allTracks)
+                foreach (var track in results)
                 {
                     Tracks.Add(track);
                 }
@@ -73,7 +98,7 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void FilterTracks()
         {
-            // TODO
+            // TODO: Implement local search filtering if needed
         }
 
         private void OnPlayTrack(MusicTrack track)

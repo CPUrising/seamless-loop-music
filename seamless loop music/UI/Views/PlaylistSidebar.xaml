@@ -12,8 +12,6 @@
     <Grid Margin="0,0,10,0">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
-            <RowDefinition Height="200"/>
-            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
@@ -39,31 +37,6 @@
                     <MenuItem Header="{Binding [MenuRefresh], Source={StaticResource Loc}}" Command="{Binding RefreshPlaylistCommand}"/>
                     <MenuItem Header="{Binding [MenuRename], Source={StaticResource Loc}}" Command="{Binding RenamePlaylistCommand}"/>
                     <MenuItem Header="{Binding [MenuDelete], Source={StaticResource Loc}}" Command="{Binding DeletePlaylistCommand}"/>
-                </ContextMenu>
-            </ListBox.ContextMenu>
-        </ListBox>
-
-        <TextBlock Grid.Row="2" Text="{Binding [TrackList], Source={StaticResource Loc}}" FontWeight="Bold" Foreground="#89B4FA" Margin="0,5,0,5"/>
-
-        <!-- Songs ListBox -->
-        <ListBox Grid.Row="3" ItemsSource="{Binding CurrentTracks}" SelectedItem="{Binding SelectedTrack}"
-                 Background="#181825" BorderThickness="0" Margin="0,0,0,10" Foreground="#CDD6F4">
-            <i:Interaction.Triggers>
-                <i:EventTrigger EventName="MouseDoubleClick">
-                    <i:InvokeCommandAction Command="{Binding PlayTrackCommand}" CommandParameter="{Binding SelectedTrack}"/>
-                </i:EventTrigger>
-            </i:Interaction.Triggers>
-            <ListBox.ItemTemplate>
-                <DataTemplate>
-                    <TextBlock Text="{Binding Title}" Padding="2" />
-                </DataTemplate>
-            </ListBox.ItemTemplate>
-            <ListBox.ContextMenu>
-                <ContextMenu>
-                    <MenuItem Header="{Binding [MenuOpenFolder], Source={StaticResource Loc}}" Command="{Binding OpenFolderCommand}"/>
-                    <MenuItem Header="{Binding [MenuRemoveFromList], Source={StaticResource Loc}}" Command="{Binding RemoveTrackCommand}"/>
-                    <Separator />
-                    <MenuItem Header="{Binding [MenuBatchAnalysis], Source={StaticResource Loc}}" Command="{Binding BatchAnalysisCommand}"/>
                 </ContextMenu>
             </ListBox.ContextMenu>
         </ListBox>
