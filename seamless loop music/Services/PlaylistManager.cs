@@ -45,9 +45,32 @@ namespace seamless_loop_music.Services
             await Task.Run(() => _playlistRepository.RemoveTrack(playlistId, trackId));
         }
 
+        private List<MusicTrack> _nowPlayingList = new List<MusicTrack>();
+        private int _currentIndex = -1;
+
         public async Task<List<MusicTrack>> GetTracksInPlaylistAsync(int playlistId)
         {
             return await _playlistRepository.GetTracksInPlaylistAsync(playlistId);
+        }
+
+        public void SetNowPlayingList(IEnumerable<MusicTrack> tracks, MusicTrack current)
+        {
+            _nowPlayingList = tracks?.ToList() ?? new List<MusicTrack>();
+            _currentIndex = _nowPlayingList.FindIndex(t => t.Id == current?.Id);
+        }
+
+        public MusicTrack GetNextTrack()
+        {
+            if (_nowPlayingList.Count == 0) return null;
+            _currentIndex = (_currentIndex + 1) % _nowPlayingList.Count;
+            return _nowPlayingList[_currentIndex];
+        }
+
+        public MusicTrack GetPreviousTrack()
+        {
+            if (_nowPlayingList.Count == 0) return null;
+            _currentIndex = (_currentIndex - 1 + _nowPlayingList.Count) % _nowPlayingList.Count;
+            return _nowPlayingList[_currentIndex];
         }
     }
 }

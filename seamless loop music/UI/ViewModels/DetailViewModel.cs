@@ -24,9 +24,9 @@ namespace seamless_loop_music.UI.ViewModels
 
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
-            if (navigationContext.Parameters.ContainsKey("Track"))
+            if (navigationContext.Parameters.ContainsKey("track"))
             {
-                var track = navigationContext.Parameters["Track"] as MusicTrack;
+                var track = navigationContext.Parameters["track"] as MusicTrack;
                 if (track != null)
                 {
                     CurrentTrack = track;

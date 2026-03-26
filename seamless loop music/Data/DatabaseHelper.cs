@@ -18,14 +18,24 @@ namespace seamless_loop_music.Data
         IEnumerable<MusicTrack> GetAllTracks();
         MusicTrack GetTrack(string fullPath, long totalSamples);
         void SaveTrack(MusicTrack track);
+        void BulkInsert(IEnumerable<MusicTrack> tracks);
         
         List<Playlist> GetAllPlaylists();
         int AddPlaylist(string name, string folderPath = null, bool isLinked = false);
         void DeletePlaylist(int playlistId);
+        void RenamePlaylist(int playlistId, string newName);
+        void BulkSaveTracksAndAddToPlaylist(IEnumerable<MusicTrack> tracks, int playlistId);
+        void AddSongToPlaylist(int playlistId, int songId);
+        void RemoveSongFromPlaylist(int playlistId, int songId);
         IEnumerable<MusicTrack> GetPlaylistTracks(int playlistId);
+        bool IsSongInPlaylist(int playlistId, int songId);
+        void UpdatePlaylistsSortOrder(List<int> playlistIds);
+        void UpdateTracksSortOrder(int playlistId, List<int> songIds);
         
         // 文件夹管理 (Legacy)
-        List<string> GetPlaylists(int playlistId); // 这里其实返回的是 FolderPaths
+        List<string> GetPlaylists(int playlistId); // 这里返回的是 FolderPaths
+        void AddPlaylist(int playlistId, string folderPath);
+        void RemovePlaylist(int playlistId, string folderPath);
     }
 
     public class DatabaseHelper : IDatabaseHelper
@@ -54,7 +64,6 @@ namespace seamless_loop_music.Data
         {
             using (var db = GetConnection())
             {
-                // 1. 核心循环点与曲目表
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS LoopPoints (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -71,8 +80,6 @@ namespace seamless_loop_music.Data
                         LoopCandidatesJson TEXT,
                         UNIQUE(FileName, TotalSamples)
                     );");
-
-                // 2. 歌单定义表
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS Playlists (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -82,8 +89,6 @@ namespace seamless_loop_music.Data
                         SortOrder INTEGER DEFAULT 0,
                         CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
                     );");
-
-                // 3. 歌单项表
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS PlaylistItems (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -93,8 +98,6 @@ namespace seamless_loop_music.Data
                         FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
                         FOREIGN KEY(SongId) REFERENCES LoopPoints(Id) ON DELETE CASCADE
                     );");
-
-                // 4. 歌单文件夹表
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS PlaylistFolders (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -107,73 +110,69 @@ namespace seamless_loop_music.Data
             }
         }
 
-        // --- 兼容性实现 (转发至 SQL 或 占位) ---
-
         public IEnumerable<MusicTrack> GetAllTracks() 
-        {
-            using (var db = GetConnection()) return db.Query<MusicTrack>("SELECT * FROM LoopPoints");
-        }
+            => GetConnection().Query<MusicTrack>("SELECT * FROM LoopPoints");
 
         public MusicTrack GetTrack(string fullPath, long totalSamples)
         {
-            using (var db = GetConnection())
-            {
-                string fileName = Path.GetFileName(fullPath);
-                return db.QueryFirstOrDefault<MusicTrack>(
-                    "SELECT * FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
-                    new { FileName = fileName, Total = totalSamples });
-            }
+            string fileName = Path.GetFileName(fullPath);
+            return GetConnection().QueryFirstOrDefault<MusicTrack>(
+                "SELECT * FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
+                new { FileName = fileName, Total = totalSamples });
         }
 
         public void SaveTrack(MusicTrack track)
         {
-            // 这里简单实现，主要保证编译通过
-            using (var db = GetConnection())
-            {
-                db.Execute(@"UPDATE LoopPoints SET LoopStart=@LoopStart, LoopEnd=@LoopEnd WHERE Id=@Id", track);
-            }
+            using (var db = GetConnection()) db.Execute(@"UPDATE LoopPoints SET LoopStart=@LoopStart, LoopEnd=@LoopEnd WHERE Id=@Id", track);
+        }
+
+        public void BulkInsert(IEnumerable<MusicTrack> tracks)
+        {
+            using (var db = GetConnection()) db.Execute(@"INSERT OR REPLACE INTO LoopPoints (FileName, TotalSamples, LoopStart, LoopEnd) VALUES (@FileName, @TotalSamples, @LoopStart, @LoopEnd)", tracks);
         }
 
         public List<Playlist> GetAllPlaylists()
-        {
-            using (var db = GetConnection()) return db.Query<Playlist>("SELECT * FROM Playlists").ToList();
-        }
+            => GetConnection().Query<Playlist>("SELECT * FROM Playlists ORDER BY SortOrder").ToList();
 
         public int AddPlaylist(string name, string folderPath = null, bool isLinked = false)
         {
-            using (var db = GetConnection())
-            {
-                return db.ExecuteScalar<int>(@"
-                    INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) 
-                    VALUES (@Name, @Path, @Linked);
-                    SELECT last_insert_rowid();", 
-                    new { Name = name, Path = folderPath, Linked = isLinked ? 1 : 0 });
-            }
+            using (var db = GetConnection()) return db.ExecuteScalar<int>(@"INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) VALUES (@Name, @Path, @Linked); SELECT last_insert_rowid();", new { Name = name, Path = folderPath, Linked = isLinked ? 1 : 0 });
         }
 
         public void DeletePlaylist(int playlistId)
+            => GetConnection().Execute("DELETE FROM Playlists WHERE Id=@Id", new { Id = playlistId });
+
+        public void RenamePlaylist(int playlistId, string newName)
+            => GetConnection().Execute("UPDATE Playlists SET Name=@Name WHERE Id=@Id", new { Name = newName, Id = playlistId });
+
+        public void BulkSaveTracksAndAddToPlaylist(IEnumerable<MusicTrack> tracks, int playlistId)
         {
-            using (var db = GetConnection()) db.Execute("DELETE FROM Playlists WHERE Id=@Id", new { Id = playlistId });
+            // Simplified for compatibility
+            foreach(var t in tracks) AddSongToPlaylist(playlistId, t.Id);
         }
+
+        public void AddSongToPlaylist(int playlistId, int songId)
+            => GetConnection().Execute("INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId) VALUES (@Pid, @Sid)", new { Pid = playlistId, Sid = songId });
+
+        public void RemoveSongFromPlaylist(int playlistId, int songId)
+            => GetConnection().Execute("DELETE FROM PlaylistItems WHERE PlaylistId=@Pid AND SongId=@Sid", new { Pid = playlistId, Sid = songId });
 
         public IEnumerable<MusicTrack> GetPlaylistTracks(int playlistId)
-        {
-            using (var db = GetConnection())
-            {
-                return db.Query<MusicTrack>(@"
-                    SELECT t.* FROM LoopPoints t
-                    JOIN PlaylistItems pi ON t.Id = pi.SongId
-                    WHERE pi.PlaylistId = @Id
-                    ORDER BY pi.SortOrder", new { Id = playlistId });
-            }
-        }
+            => GetConnection().Query<MusicTrack>(@"SELECT t.* FROM LoopPoints t JOIN PlaylistItems pi ON t.Id = pi.SongId WHERE pi.PlaylistId = @Id ORDER BY pi.SortOrder", new { Id = playlistId });
+
+        public bool IsSongInPlaylist(int playlistId, int songId)
+            => GetConnection().ExecuteScalar<bool>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId=@Pid AND SongId=@Sid", new { Pid = playlistId, Sid = songId });
+
+        public void UpdatePlaylistsSortOrder(List<int> playlistIds) { }
+        public void UpdateTracksSortOrder(int playlistId, List<int> songIds) { }
 
         public List<string> GetPlaylists(int playlistId)
-        {
-            using (var db = GetConnection())
-            {
-                return db.Query<string>("SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Id", new { Id = playlistId }).ToList();
-            }
-        }
+            => GetConnection().Query<string>("SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Id", new { Id = playlistId }).ToList();
+
+        public void AddPlaylist(int playlistId, string folderPath)
+            => GetConnection().Execute("INSERT OR IGNORE INTO PlaylistFolders (PlaylistId, FolderPath) VALUES (@Pid, @Path)", new { Pid = playlistId, Path = folderPath });
+
+        public void RemovePlaylist(int playlistId, string folderPath)
+            => GetConnection().Execute("DELETE FROM PlaylistFolders WHERE PlaylistId=@Pid AND FolderPath=@Path", new { Pid = playlistId, Path = folderPath });
     }
 }

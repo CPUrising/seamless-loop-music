@@ -13,6 +13,11 @@ namespace seamless_loop_music.Services
         Task AddTrackToPlaylistAsync(int playlistId, MusicTrack track);
         Task RemoveTrackFromPlaylistAsync(int playlistId, int trackId);
         Task<List<MusicTrack>> GetTracksInPlaylistAsync(int playlistId);
+
+        // Now Playing Navigation
+        void SetNowPlayingList(IEnumerable<MusicTrack> tracks, MusicTrack current);
+        MusicTrack GetNextTrack();
+        MusicTrack GetPreviousTrack();
     }
 }
 

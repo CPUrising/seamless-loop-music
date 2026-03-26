@@ -18,6 +18,7 @@
         <TextBlock Text="Music Library" FontSize="28" FontWeight="Bold" Foreground="#89B4FA" Margin="20,20,20,10"/>
 
         <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="10"
+                 ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  ItemsSource="{Binding Tracks}">
             <ListBox.ItemsPanel>
                 <ItemsPanelTemplate>

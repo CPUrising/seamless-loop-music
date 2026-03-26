@@ -26,11 +26,8 @@ namespace seamless_loop_music.UI
 
         private void ApplyLanguage()
         {
-            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
-            Title = LocalizationService.Instance["TitleFolderManager"];
-            lblTitle.Text = (isZh ? "歌单关联文件夹: " : "Linked Folders for: ") + _playlistName;
-            btnAdd.Content = isZh ? "+ 添加文件夹" : "+ Add Folder";
-            btnClose.Content = isZh ? "关闭" : "Close";
+            Title = "Folder Manager";
+            lblTitle.Text = "Linked Folders for: " + _playlistName;
         }
 
         private void LoadFolders()
@@ -41,30 +38,22 @@ namespace seamless_loop_music.UI
 
         private async void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
-            var picker = new FolderPicker();
-            if (picker.ShowDialog(this))
+            var dialog = new Microsoft.Win32.OpenFileDialog();
+            dialog.Title = "Select Folder (Select any file)";
+            if (dialog.ShowDialog() == true)
             {
-                await _playerService.AddFolderToPlaylist(_playlistId, picker.ResultPath);
+                string path = Path.GetDirectoryName(dialog.FileName);
+                await _playerService.AddFolderToPlaylist(_playlistId, path);
                 LoadFolders();
             }
         }
 
         private async void BtnRemove_Click(object sender, RoutedEventArgs e)
         {
-            if (sender is Button btn && btn.Tag is string path)
+            if (lstFolders.SelectedItem is string path)
             {
-                bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
-                var result = MessageBox.Show(
-                    isZh ? $"确定要移除此文件夹关联吗？\n{path}\n(磁盘上的文件不会被删除)" 
-                         : $"Are you sure to remove this folder link?\n{path}\n(Files on disk won't be deleted)",
-                    isZh ? "确认移除" : "Confirm Removal",
-                    MessageBoxButton.YesNo, MessageBoxImage.Question);
-
-                if (result == MessageBoxResult.Yes)
-                {
-                    await _playerService.RemoveFolderFromPlaylist(_playlistId, path);
-                    LoadFolders();
-                }
+                await _playerService.RemoveFolderFromPlaylist(_playlistId, path);
+                LoadFolders();
             }
         }
 

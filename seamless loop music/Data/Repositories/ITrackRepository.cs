@@ -14,4 +14,3 @@ namespace seamless_loop_music.Data.Repositories
         void UpdateLoopPoints(int trackId, long start, long end);
     }
 }
-

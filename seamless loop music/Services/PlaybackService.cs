@@ -27,9 +27,12 @@ namespace seamless_loop_music.Services
         public event Action<PlaybackState> StateChanged;
         public event Action<TimeSpan> PositionChanged;
 
-        public PlaybackService(ITrackRepository trackRepository, IEventAggregator eventAggregator)
+        private readonly IPlaylistManager _playlistManager;
+
+        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator)
         {
             _trackRepository = trackRepository;
+            _playlistManager = playlistManager;
             _eventAggregator = eventAggregator;
             _audioLooper = new AudioLooper();
 
@@ -67,6 +70,19 @@ namespace seamless_loop_music.Services
         public void Play() => _audioLooper.Play();
         public void Pause() => _audioLooper.Pause();
         public void Stop() => _audioLooper.Stop();
+        
+        public async void Next()
+        {
+            var next = _playlistManager.GetNextTrack();
+            if (next != null) await LoadTrackAsync(next, true);
+        }
+
+        public async void Previous()
+        {
+            var prev = _playlistManager.GetPreviousTrack();
+            if (prev != null) await LoadTrackAsync(prev, true);
+        }
+
         public void Seek(TimeSpan position) => _audioLooper.Seek(position.TotalSeconds);
         public void SeekToSample(long sample) => _audioLooper.SeekToSample(sample);
 

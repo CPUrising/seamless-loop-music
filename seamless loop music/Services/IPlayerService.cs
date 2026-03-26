@@ -13,6 +13,11 @@ namespace seamless_loop_music.Services
         MusicTrack CurrentTrack { get; }
         PlaybackState PlaybackState { get; }
         
+        // Loop Point Properties
+        long LoopStartSample { get; set; }
+        long LoopEndSample { get; set; }
+        int SampleRate { get; }
+
         void Play();
         void Pause();
         void Stop();
@@ -41,6 +46,7 @@ namespace seamless_loop_music.Services
         
         void SetLoopStart(long sample);
         void SetLoopEnd(long sample);
+        void ApplyLoopCandidate(LoopCandidate candidate);
         void ResetABLoopPoints();
         
         float Volume { get; set; }

@@ -45,7 +45,7 @@ namespace seamless_loop_music.UI
                 
                 if (_checker != null && !await _checker()) return;
 
-                var newCandidates = await _playerService.GetLoopCandidatesAsync(forceRefresh: true);
+                var newCandidates = await _playerService.GetLoopCandidatesAsync();
                 if (newCandidates != null) RefreshListView(newCandidates);
             }
             catch (Exception ex)

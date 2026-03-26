@@ -23,6 +23,8 @@ namespace seamless_loop_music.Services
         void Play();
         void Pause();
         void Stop();
+        void Next();
+        void Previous();
         void Seek(TimeSpan position);
         void SeekToSample(long sample);
         
