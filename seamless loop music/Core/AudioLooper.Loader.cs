@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 using NAudio.Vorbis;
 using System;
 using System.IO;
@@ -8,7 +8,7 @@ namespace seamless_loop_music
     public partial class AudioLooper
     {
         /// <summary>
-        /// 鍔犺浇鍗曢煶棰戞枃浠?
+        /// 加载单音频文件
         /// </summary>
         public void LoadAudio(string filePath)
         {
@@ -16,7 +16,7 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 鍔犺浇闊抽銆傚鏋滄彁渚涗簡 secondFilePath锛屽垯鎵ц鈥滅墿鐞嗛鍚堝苟鈥濇柟妗?(A+B)
+        /// 加载音频。如果提供了 secondFilePath，则执行"物理预合并"方式(A+B)
         /// </summary>
         public void LoadAudio(string firstFilePath, string secondFilePath)
         {
@@ -31,7 +31,7 @@ namespace seamless_loop_music
 
                 if (string.IsNullOrEmpty(secondFilePath))
                 {
-                    // 鏅€氬崟鏂囦欢鍔犺浇妯″紡
+                    // 普通单文件加载模式
                     _audioStream = CreateAudioStream(firstFilePath);
                     if (_audioStream == null)
                     {
@@ -44,7 +44,7 @@ namespace seamless_loop_music
                 }
                 else
                 {
-                    // 鏆村姏鏂规锛氱墿鐞嗛鍚堝苟 A + B
+                    // 强制方案：物理预合并 A + B
                     OnStatusChanged?.Invoke("Merging A/B parts in memory for perfect seamlessness...");
                     
                     using (var readerA = CreateAudioStream(firstFilePath))
@@ -64,18 +64,18 @@ namespace seamless_loop_music
                             return;
                         }
 
-                        // 鍒涘缓鍐呭瓨娴佸苟鎷兼帴
+                        // 创建内存流并拼接
                         var memStream = new MemoryStream();
                         readerA.CopyTo(memStream);
-                        long lengthA = memStream.Position; // 璁板綍鎺ョ紳鐐?
+                        long lengthA = memStream.Position; // 记录切分点
                         readerB.CopyTo(memStream);
                         memStream.Position = 0;
 
-                        // 鍖呰鎴愬師濮嬫尝褰㈡祦銆傝繖鏍峰浜庣郴缁熸潵璇达紝杩欏氨鏄竴棣栧畬鏁寸殑銆佺墿鐞嗕笂杩炵画鐨勯暱姝屻€?
+                        // 封装为原始音频流。这对于系统来说，这就是一段完整的、物理上连续的长音频。
                         _audioStream = new RawSourceWaveStream(memStream, readerA.WaveFormat);
                         
                         _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
-                        _loopStartSample = lengthA / _audioStream.WaveFormat.BlockAlign; // 鑷姩鐬勫噯 B 寮€澶?
+                        _loopStartSample = lengthA / _audioStream.WaveFormat.BlockAlign; // 自动校准 B 开始
                         _loopEndSample = _totalSamples;
                     }
                 }
@@ -97,7 +97,7 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 鍒涘缓瀵瑰簲鏍煎紡鐨勯煶棰戞祦
+        /// 创建对应格式的音频流
         /// </summary>
         private WaveStream CreateAudioStream(string filePath)
         {
@@ -116,4 +116,3 @@ namespace seamless_loop_music
         }
     }
 }
-

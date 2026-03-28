@@ -7,7 +7,7 @@ using System.Threading;
 namespace seamless_loop_music
 {
     /// <summary>
-    /// 鏃犵紳寰幆闊抽鎾斁鍣?(涓绘帶閮ㄥ垎)
+    /// 无缝循环音频播放器（主体部分）
     /// </summary>
     public partial class AudioLooper : IDisposable
     {
@@ -22,17 +22,17 @@ namespace seamless_loop_music
         private volatile bool _isSeeking = false;
         public bool IsSeeking => _isSeeking;
 
-        // 鍖归厤闀垮害閰嶇疆 (绉?
+        // 匹配长度配置 (秒)
         public double MatchWindowSize { get; set; } = 1.0; 
         public double MatchSearchRadius { get; set; } = 5.0; 
 
 
-        // 鍏紑璇诲彇鎺ュ彛
+        // 公开读写接口
         public long LoopStartSample => _loopStartSample;
         public long LoopEndSample => _loopEndSample;
         public int SampleRate => _audioStream?.WaveFormat.SampleRate ?? 44100;
 
-        // 鐘舵€佸洖璋冧簨浠?
+        // 状态回调事件
         public event Action<string> OnStatusChanged;
         public event Action<PlaybackState> OnPlayStateChanged; 
         public event Action<long, int> OnAudioLoaded;
@@ -45,39 +45,39 @@ namespace seamless_loop_music
 
 
         /// <summary>
-        /// 璁剧疆寰幆璧峰閲囨牱鏁?
+        /// 设置循环起始采样点
         /// </summary>
         public void SetLoopStartSample(long sample)
         {
             if (sample < 0 || sample >= _totalSamples)
             {
-                OnStatusChanged?.Invoke($"閲囨牱鏁拌秴鍑鸿寖鍥?鏈夋晥鑼冨洿:0 ~ {_totalSamples - 1}");
+                OnStatusChanged?.Invoke($"采样点超出有效范围:0 ~ {_totalSamples - 1}");
                 return;
             }
             _loopStartSample = sample;
             if (_loopStream != null)
             {
                 _loopStream.LoopStartPosition = sample * _audioStream.WaveFormat.BlockAlign;
-                // 娉ㄦ剰锛氳繖閲屼笉寮哄埗 ClearBuffer锛屽洜涓鸿捣濮嬬偣鍙樺姩閫氬父涓嶅奖鍝嶅綋鍓嶆鍦ㄦ挱鏀剧殑鐗囨
-                // 鍙湁褰撹捣濮嬬偣琚涓哄綋鍓嶇偣涔嬪悗锛堟瘮濡傚線鍓嶆尓浜嗭級鎵嶉渶瑕佽€冭檻锛屼絾涓轰簡绋冲畾鏆備笉 Clear
+                // 注意：这里不强制 ClearBuffer，因为起点变化通常不影响当前正在播放的片段
+                // 只有当起点被设为当前点之后（比如往前跳了）才需要考虑，但为了稳定最好不 Clear
             }
             
             OnStatusChanged?.Invoke($"Loop Start set: {sample} ({sample / (double)_audioStream.WaveFormat.SampleRate:F2}s)");
         }
 
         /// <summary>
-        /// 璁剧疆寰幆缁撴潫閲囨牱鏁?
+        /// 设置循环结束采样点
         /// </summary>
         public void SetLoopEndSample(long sample)
         {
             if (sample < 0)
             {
-                sample = 0; // 0 琛ㄧず鏈熬
+                sample = 0; // 0 表示文件末尾
             }
-            // 濡傛灉闈?涓斿皬浜庤捣鐐癸紝鎻愮ず閿欒锛堢畝鍗曟牎楠岋紝鍏蜂綋閫昏緫璁︰I灞傛垨LoopStream澶勭悊锛?
+            // 如果小于等于起点，提示错误（简单校验，具体逻辑由UI层或LoopStream处理）
             if (sample > 0 && sample <= _loopStartSample)
             {
-                OnStatusChanged?.Invoke($"閿欒: 寰幆缁堢偣蹇呴』澶т簬璧风偣({_loopStartSample})");
+                OnStatusChanged?.Invoke($"错误: 循环终点必须大于起点({_loopStartSample})");
                 return;
             }
             
@@ -87,8 +87,8 @@ namespace seamless_loop_music
                  long endPos = sample * _audioStream.WaveFormat.BlockAlign;
                  _loopStream.LoopEndPosition = (sample <= 0 || endPos > _audioStream.Length) ? _audioStream.Length : endPos;
                  
-                 // 閲嶇偣鏀硅繘锛氬鏋滄柊鐨勫惊鐜粓鐐瑰湪褰撳墠鎾斁鐐逛箣鍓嶏紝蹇呴』绔嬪嵆娓呴櫎缂撳啿鍖哄苟 Seek
-                 // 鍚﹀垯鐢ㄦ埛浼氬惉鍒板凡缁忓～鍏ョ紦鍐插尯鐨勩€佹湰璇ヨ鍒囨帀鐨勯煶棰?
+                 // 重点改进：如果新的循环终点在当前位置之前，必须立即清除缓冲并 Seek
+                 // 否则用户会听到已经被截掉的音乐
                  if (sample > 0 && CurrentTime.TotalSeconds * SampleRate > sample)
                  {
                      SeekToSample(_loopStartSample); 
@@ -105,7 +105,7 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 寮€濮嬫挱鏀?(鏀寔浠庢殏鍋滃缁х画)
+        /// 开始播放（支持从暂停处继续）
         /// </summary>
         public void Play()
         {
@@ -115,14 +115,14 @@ namespace seamless_loop_music
                 return;
             }
 
-            // 濡傛灉鏄殏鍋滅姸鎬侊紝鐩存帴鎭㈠鎾斁
+            // 如果是暂停状态，直接恢复播放
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Paused)
             {
-                // 寮哄埗鍚屾涓€娆￠厤缃紝闃叉鎰忓
+                // 强制同步一次配置，防止意外
                 if (_loopStream != null)
                 {
                      _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
-                     // 鍚屾 LoopEnd
+                     // 同步 LoopEnd
                      long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
                      if (_loopEndSample <= 0 || endPos > _audioStream.Length)
                          _loopStream.LoopEndPosition = _audioStream.Length;
@@ -136,35 +136,35 @@ namespace seamless_loop_music
                 return;
             }
 
-            // 濡傛灉宸茬粡鍦ㄦ挱鏀撅紝涔熷悓姝ヤ竴娆￠厤缃? 
+            // 如果已经在播放，也同步一次配置? 
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
             {
                  if (_loopStream != null)
-                {
-                     _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
-                     long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
-                     if (_loopEndSample <= 0 || endPos > _audioStream.Length)
-                         _loopStream.LoopEndPosition = _audioStream.Length;
-                     else
-                         _loopStream.LoopEndPosition = endPos;
-                }
-                return;
+                 {
+                      _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
+                      long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
+                      if (_loopEndSample <= 0 || endPos > _audioStream.Length)
+                          _loopStream.LoopEndPosition = _audioStream.Length;
+                      else
+                          _loopStream.LoopEndPosition = endPos;
+                 }
+                 return;
             }
 
             try
             {
-                // 鍏ㄦ柊寮€濮嬶細鍒涘缓寰幆娴?
+                // 全新开始：创建循环流
                 _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
                 _loopStream.OnLoopCompleted += () => OnLoopCycleCompleted?.Invoke();
 
-                // --- 寮傛缂撳啿绯荤粺閰嶇疆 ---
+                // --- 异步缓冲系统配置 ---
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
                 {
-                    BufferDuration = TimeSpan.FromSeconds(5), // 澧炲姞鍒?5 绉掞紝闃叉姣绾х殑婧㈠嚭
+                    BufferDuration = TimeSpan.FromSeconds(5), // 增加到5秒，防止毫秒级的溢出
                     DiscardOnBufferOverflow = true
                 };
 
-                // 鍒涘缓鎾斁鍣?
+                // 创建播放器
                 _wavePlayer = new WaveOutEvent
                 {
                     DesiredLatency = 200, 
@@ -178,7 +178,7 @@ namespace seamless_loop_music
                 {
                     if (_isLoading) return;
                     
-                    // 鏍稿績绋冲仴鎬ф敼杩涳細鎹曡幏搴曞眰寮傚父
+                    // 核心健壮性改进：捕获底层异常
                     if (e.Exception != null)
                     {
                         OnPlaybackError?.Invoke(e.Exception);
@@ -192,7 +192,7 @@ namespace seamless_loop_music
                     }
                 };
 
-                // 鍚姩鍚庡彴濉厖浠诲姟
+                // 启动后台填充任务
                 StartFillerTask();
 
                 _wavePlayer.Play();
@@ -207,7 +207,7 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 鏆傚仠鎾斁
+        /// 暂停播放
         /// </summary>
         public void Pause()
         {
@@ -220,7 +220,7 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 鍋滄鎾斁
+        /// 停止播放
         /// </summary>
         public void Stop()
         {
@@ -310,13 +310,13 @@ namespace seamless_loop_music
         private DateTime _seekTime = DateTime.MinValue;
         private long _seekTargetSample = 0;
         private long _totalBytesReadSinceSeek = 0;
-        private readonly object _streamLock = new();
+        private readonly object _streamLock = new object();
 
         public void SeekToSample(long sample)
         {
             if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
             {
-                lock (_streamLock) // 鎶㈠崰閿侊紝纭繚姝ゆ椂鍚庡彴娌℃湁鍦?Read
+                lock (_streamLock) // 占位锁，确保此时后台没有在 Read
                 {
                     _isSeeking = true;
                     _bufferedProvider.ClearBuffer(); 
@@ -329,12 +329,12 @@ namespace seamless_loop_music
                     
                     _loopStream.Position = position;
 
-                    // 璁板綍 Seek 鐘舵€侊紝鐢ㄤ簬骞虫粦 UI 鏄剧ず
+                    // 记录 Seek 状态，用于平滑 UI 显示
                     _seekTargetSample = sample;
                     _seekTime = DateTime.Now;
 
-                    // 娉ㄦ剰锛氳繖閲屼笉鍐嶇珛鍗冲皢 _isSeeking 璁句负 false
-                    // 鎴戜滑璁╁悗鍙板～鍏呯嚎绋嬪湪濉叆绗竴鎵规暟鎹悗鍐嶅皢鍏堕噴鏀?
+                    // 注意：这里不再立即将 _isSeeking 设为 false
+                    // 我们让后台填充线程在填入第一帧数据后再将其释放
                 }
             }
         }
@@ -349,7 +349,7 @@ namespace seamless_loop_music
             _wavePlayer = null;
             _audioStream = null;
 
-            // 鏍稿績淇锛氬交搴曢噸缃繘搴﹁拷韪浉鍏崇殑鍐呴儴鐘舵€侊紝纭繚鏂版瓕鍔犺浇鍚庤绠楀噯纭?
+            // 核心修复：彻底重置进度的相关内部状态，确保新歌加载后计算准确
             _seekTargetSample = 0;
             _isSeeking = false;
             Interlocked.Exchange(ref _totalBytesReadSinceSeek, 0);
@@ -372,4 +372,3 @@ namespace seamless_loop_music
         }
     }
 }
-

@@ -1,4 +1,4 @@
-﻿using NAudio.Wave;
+using NAudio.Wave;
 using NAudio.Vorbis;
 using System;
 using System.IO;
@@ -9,10 +9,10 @@ namespace seamless_loop_music
     public partial class AudioLooper
     {
         /// <summary>
-        /// 鏅鸿兘瀵绘壘鏈€浣冲惊鐜偣 (寮傛鐗?- 鍩轰簬閲戝瓧濉旀悳绱?Pyramid Search)
-        /// 浣跨敤鐙珛鏂囦欢娴侊紝閬垮厤涓庢挱鏀剧嚎绋嬪啿绐併€?
+        /// 智能寻找最佳循环点 (异步 - 基于金字塔搜索 Pyramid Search)
+        /// 使用独立文件流，避免与播放线程冲突
         /// </summary>
-        /// <param name="adjustStart">True: 鍥哄畾 End 鎵?Start (閫嗗悜); False: 鍥哄畾 Start 鎵?End (姝ｅ悜)</param>
+        /// <param name="adjustStart">True: 固定 End 找 Start (逆向); False: 固定 Start 找 End (正向)</param>
         public async void FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart, Action<long, long> onResult)
         {
             if (string.IsNullOrEmpty(_currentFilePath) || !File.Exists(_currentFilePath))
@@ -30,14 +30,14 @@ namespace seamless_loop_music
                 WaveStream tempStream = null;
                 try
                 {
-                    // 1. 鍒涘缓鐙珛鐨勪复鏃舵祦
+                    // 1. 创建独立的临时流
                     if (string.IsNullOrEmpty(pathB))
                     {
                         tempStream = CreateAudioStream(pathA);
                     }
                     else
                     {
-                        // A/B 妯″紡锛氶噸鏂板姞杞?A 鍜?B 鍒嗘暎鍒嗘瀽浠诲姟鍘嬪姏
+                        // A/B 模式：重新加载 A 和 B 分离分析任务压力
                         using (var rA = CreateAudioStream(pathA))
                         using (var rB = CreateAudioStream(pathB))
                         {
@@ -62,7 +62,7 @@ namespace seamless_loop_music
                     int sampleRate = fmt.SampleRate;
                     long totalSamples = tempStream.Length / fmt.BlockAlign;
 
-                    // --- 鍙傛暟鍑嗗 ---
+                    // --- 参数准备 ---
                     int windowSize = (int)(sampleRate * MatchWindowSize); 
                     
                     if (adjustStart) {
@@ -112,7 +112,7 @@ namespace seamless_loop_music
                          return;
                     }
 
-                    // 浠庝复鏃舵祦璇诲彇鏁版嵁 (鎵归噺璇诲彇)
+                    // 从临时流读取数据 (批量读取)
                     float[] templateFull = ReadSamplesFromStream(tempStream, templateStartPos, (int)templateLen);
                     float[] searchBufferFull = ReadSamplesFromStream(tempStream, searchRegionBegin, (int)searchLen);
 
@@ -123,7 +123,7 @@ namespace seamless_loop_music
                          return;
                     }
 
-                    // --- 绗竴灞傦細绮楁悳 ---
+                    // --- 第一阶段：粗搜 ---
                     int downsampleFactor = 8;
                     float[] templateSmall = Downsample(templateFull, downsampleFactor);
                     float[] searchSmall = Downsample(searchBufferFull, downsampleFactor);
@@ -153,7 +153,7 @@ namespace seamless_loop_music
                          return;
                     }
 
-                    // --- 绗簩灞傦細绮炬悳 ---
+                    // --- 第二阶段：精搜 ---
                     int fineSearchRadius = downsampleFactor * 4;
                     int fineStart = bestCoarseOffset * downsampleFactor - fineSearchRadius;
                     int fineEnd = bestCoarseOffset * downsampleFactor + fineSearchRadius;
@@ -212,7 +212,7 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 绠€鍗曠殑闄嶉噰鏍峰姪鎵嬶細姣?N 涓偣鍙栧钩鍧?
+        /// 简单的降采样辅助函数：每 N 个点取平均
         /// </summary>
         private float[] Downsample(float[] input, int factor)
         {
@@ -222,7 +222,7 @@ namespace seamless_loop_music
             for (int i = 0; i < newSize; i++)
             {
                 float sum = 0;
-                // 绠€鍗曠殑鍧囧€兼睜鍖?
+                // 简单的平均池化
                 for (int j = 0; j < factor; j++)
                 {
                     sum += input[i * factor + j];
@@ -241,19 +241,19 @@ namespace seamless_loop_music
             int bitsPerSample = _audioStream.WaveFormat.BitsPerSample;
             byte[] raw = new byte[count * bytesPerSample];
 
-            // 淇濆瓨褰撳墠娴佷綅缃敤浜庢仮澶?
+            // 保存当前位置用于恢复
             long oldPos = _audioStream.Position;
             
             _audioStream.Position = startSample * bytesPerSample;
             int bytesRead = _audioStream.Read(raw, 0, raw.Length);
             
-            _audioStream.Position = oldPos; // 鎭㈠浣嶇疆
+            _audioStream.Position = oldPos; // 恢复位置
 
             int samplesRead = bytesRead / bytesPerSample;
             float[] samples = new float[samplesRead];
 
-            // 绠€鍗曠殑 PCM 杞?Float 瑙ｆ瀽
-            // 娉ㄦ剰锛氳繖閲屽彧鍙栫涓€涓０閬撳仛鍖归厤鍗冲彲锛屼负浜嗛€熷害銆傚鏋滄槸绔嬩綋澹帮紝鍙栧乏澹伴亾銆?
+            // 简单的 PCM 转 Float 解析
+            // 注意：这里只取第一个声道做匹配即可，为了速度。如果是立体声，取左声道。
             for (int i = 0; i < samplesRead; i++)
             {
                 if (bitsPerSample == 16)
@@ -265,7 +265,7 @@ namespace seamless_loop_music
                 {
                     samples[i] = BitConverter.ToSingle(raw, i * bytesPerSample);
                 }
-                // 鏆備笉澶勭悊8bit鎴?4bit锛岄€氬父澶熺敤
+                // 不处理8bit或4bit，通常够用
             }
 
             return samples;
@@ -279,7 +279,7 @@ namespace seamless_loop_music
             int bitsPerSample = stream.WaveFormat.BitsPerSample;
             byte[] raw = new byte[count * bytesPerSample];
 
-            // 杩欓噷鐨?seek 鏄畨鍏ㄧ殑锛屽洜涓哄畠鏄嫭绔嬬殑涓存椂娴?
+            // 这里的 seek 是安全的，因为它是独立的临时流
             stream.Position = startSample * bytesPerSample;
             int bytesRead = stream.Read(raw, 0, raw.Length);
             
@@ -302,4 +302,3 @@ namespace seamless_loop_music
         }
     }
 }
-
