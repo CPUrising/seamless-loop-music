@@ -160,7 +160,7 @@ namespace seamless_loop_music
                 // --- 异步缓冲系统配置 ---
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
                 {
-                    BufferDuration = TimeSpan.FromSeconds(5), // 增加到5秒，防止毫秒级的溢出
+                    BufferDuration = TimeSpan.FromSeconds(3), // 增加到3秒，防止毫秒级的溢出
                     DiscardOnBufferOverflow = true
                 };
 

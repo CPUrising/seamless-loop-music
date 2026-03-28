@@ -65,7 +65,7 @@ namespace seamless_loop_music
                     if (_bufferedProvider == null || _loopStream == null) break;
 
                     TimeSpan buffered = _bufferedProvider.BufferedDuration;
-                    if (buffered.TotalMilliseconds < 3000)
+                    if (buffered.TotalMilliseconds < 2500)
                     {
                         try 
                         {
