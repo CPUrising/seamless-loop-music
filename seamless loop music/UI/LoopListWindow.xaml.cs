@@ -50,7 +50,7 @@ namespace seamless_loop_music.UI
             }
             catch (Exception ex)
             {
-                MessageBox.Show("Update failed: " + ex.Message);
+                System.Diagnostics.Debug.WriteLine($"[Loop更新失败] {ex.Message}");
             }
             finally
             {

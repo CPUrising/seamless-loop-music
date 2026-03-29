@@ -38,22 +38,36 @@ namespace seamless_loop_music.UI
 
         private async void BtnAdd_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new Microsoft.Win32.OpenFileDialog();
-            dialog.Title = "Select Folder (Select any file)";
-            if (dialog.ShowDialog() == true)
+            try
             {
-                string path = Path.GetDirectoryName(dialog.FileName);
-                await _playerService.AddFolderToPlaylist(_playlistId, path);
-                LoadFolders();
+                var dialog = new Microsoft.Win32.OpenFileDialog();
+                dialog.Title = "Select Folder (Select any file)";
+                if (dialog.ShowDialog() == true)
+                {
+                    string path = Path.GetDirectoryName(dialog.FileName);
+                    await _playerService.AddFolderToPlaylist(_playlistId, path);
+                    LoadFolders();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[添加文件夹失败] {ex.Message}");
             }
         }
 
         private async void BtnRemove_Click(object sender, RoutedEventArgs e)
         {
-            if (lstFolders.SelectedItem is string path)
+            try
             {
-                await _playerService.RemoveFolderFromPlaylist(_playlistId, path);
-                LoadFolders();
+                if (lstFolders.SelectedItem is string path)
+                {
+                    await _playerService.RemoveFolderFromPlaylist(_playlistId, path);
+                    LoadFolders();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[移除文件夹失败] {ex.Message}");
             }
         }
 

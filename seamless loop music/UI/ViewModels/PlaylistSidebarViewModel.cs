@@ -75,7 +75,8 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 Playlists.Clear();
                 
-                // 添加“我的最爱”虚拟歌单
+                // 添加虚拟歌单
+                Playlists.Add(new Playlist { Id = 0, Name = "全部歌曲 📚" });
                 Playlists.Add(new Playlist { Id = -1, Name = "我的最爱 ❤️" });
 
                 foreach (var p in allPlaylists)

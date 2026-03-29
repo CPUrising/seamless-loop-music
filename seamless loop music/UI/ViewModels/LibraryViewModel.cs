@@ -139,13 +139,13 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 results = await _trackRepository.GetLovedTracksAsync();
             }
-            else if (playlistId.HasValue)
+            else if (playlistId == 0 || !playlistId.HasValue) // 全部歌曲
             {
-                results = await _playlistManager.GetTracksInPlaylistAsync(playlistId.Value);
+                results = await _trackRepository.GetAllAsync();
             }
             else
             {
-                results = await _trackRepository.GetAllAsync();
+                results = await _playlistManager.GetTracksInPlaylistAsync(playlistId.Value);
             }
 
             App.Current.Dispatcher.Invoke(() =>
@@ -190,8 +190,15 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (track == null) return;
             
-            _playlistManager.SetNowPlayingList(Tracks, track);
-            _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
+            try
+            {
+                _playlistManager.SetNowPlayingList(Tracks, track);
+                _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[播放失败] {ex.Message}");
+            }
         }
 
         private void OnOpenDetail(MusicTrack track)
@@ -206,23 +213,34 @@ namespace seamless_loop_music.UI.ViewModels
         private async void OnToggleLove(MusicTrack track)
         {
             if (track == null) return;
-            track.IsLoved = !track.IsLoved;
-            await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
-            _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Publish(track);
-            
-            // 如果是在“最爱”列表中取消爱心，则需要刷新
-            if (_currentPlaylistId == -1)
+            try
             {
-                await LoadTracksAsync(_currentPlaylistId);
+                track.IsLoved = !track.IsLoved;
+                await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+                _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Publish(track);
+                
+                if (_currentPlaylistId == -1)
+                {
+                    await LoadTracksAsync(_currentPlaylistId);
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[爱心操作失败] {ex.Message}");
             }
         }
 
         private async void OnRateTrack(MusicTrack track)
         {
-            if (track != null)
+            if (track == null) return;
+            try
             {
-                track.Rating = (track.Rating % 5) + 1;
+                track.Rating = (track.Rating + 1) % 6;
                 await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[评分操作失败] {ex.Message}");
             }
         }
 

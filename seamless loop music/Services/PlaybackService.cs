@@ -67,14 +67,28 @@ namespace seamless_loop_music.Services
         
         public async void Next()
         {
-            var next = _playlistManager.GetNextTrack();
-            if (next != null) await LoadTrackAsync(next, true);
+            try
+            {
+                var next = _playlistManager.GetNextTrack();
+                if (next != null) await LoadTrackAsync(next, true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Next失败] {ex.Message}");
+            }
         }
 
         public async void Previous()
         {
-            var prev = _playlistManager.GetPreviousTrack();
-            if (prev != null) await LoadTrackAsync(prev, true);
+            try
+            {
+                var prev = _playlistManager.GetPreviousTrack();
+                if (prev != null) await LoadTrackAsync(prev, true);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[Previous失败] {ex.Message}");
+            }
         }
 
         public void Seek(TimeSpan position) => _audioLooper.Seek(position.TotalSeconds / TotalTime.TotalSeconds);

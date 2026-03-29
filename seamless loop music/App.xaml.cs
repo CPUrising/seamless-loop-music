@@ -65,8 +65,12 @@ namespace seamless_loop_music
                 base.OnInitialized();
 
                 var regionManager = Container.Resolve<IRegionManager>();
-                regionManager.RequestNavigate("MainContentRegion", "LibraryView");
-                regionManager.RequestNavigate("SidebarRegion", "PlaylistSidebar"); 
+                regionManager.RequestNavigate("SidebarRegion", "PlaylistSidebar");
+                regionManager.RequestNavigate("MainContentRegion", "LibraryView", new NavigationParameters
+                {
+                    { "PlaylistId", 0 },
+                    { "PlaylistName", "全部歌曲 📚" }
+                }); 
             }
             catch (Exception ex)
             {

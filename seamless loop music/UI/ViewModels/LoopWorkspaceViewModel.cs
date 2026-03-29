@@ -190,24 +190,38 @@ namespace seamless_loop_music.UI.ViewModels
 
         private async void ExecuteSmartMatchReverse()
         {
-            ApplyLocalSettingsToService();
-            if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
-            
-            var result = await _playbackService.FindBestLoopPointsAsync(start, end, true);
-            LoopStartSample = result.Start.ToString();
-            LoopEndSample = result.End.ToString();
-            StatusMessage = LocalizationService.Instance["StatusDone"];
+            try
+            {
+                ApplyLocalSettingsToService();
+                if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
+                
+                var result = await _playbackService.FindBestLoopPointsAsync(start, end, true);
+                LoopStartSample = result.Start.ToString();
+                LoopEndSample = result.End.ToString();
+                StatusMessage = LocalizationService.Instance["StatusDone"];
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SmartMatchReverse失败] {ex.Message}");
+            }
         }
 
         private async void ExecuteSmartMatchForward()
         {
-            ApplyLocalSettingsToService();
-            if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
-            
-            var result = await _playbackService.FindBestLoopPointsAsync(start, end, false);
-            LoopStartSample = result.Start.ToString();
-            LoopEndSample = result.End.ToString();
-            StatusMessage = LocalizationService.Instance["StatusDone"];
+            try
+            {
+                ApplyLocalSettingsToService();
+                if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
+                
+                var result = await _playbackService.FindBestLoopPointsAsync(start, end, false);
+                LoopStartSample = result.Start.ToString();
+                LoopEndSample = result.End.ToString();
+                StatusMessage = LocalizationService.Instance["StatusDone"];
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SmartMatchForward失败] {ex.Message}");
+            }
         }
 
         private void ExecuteResetAB()
@@ -219,21 +233,28 @@ namespace seamless_loop_music.UI.ViewModels
 
         private async void ExecutePyRanking()
         {
-            if (_playbackService.CurrentTrack == null) return;
-            
-            StatusMessage = LocalizationService.Instance["StatusSearching"];
-            var candidates = await _playerService.GetLoopCandidatesAsync();
-
-            if (candidates == null || candidates.Count == 0)
+            try
             {
-                StatusMessage = LocalizationService.Instance["StatusNoCandidates"];
-                return;
-            }
+                if (_playbackService.CurrentTrack == null) return;
+                
+                StatusMessage = LocalizationService.Instance["StatusSearching"];
+                var candidates = await _playerService.GetLoopCandidatesAsync();
 
-            StatusMessage = LocalizationService.Instance["StatusDone"];
-            var win = new LoopListWindow(candidates, _playerService);
-            win.Owner = Application.Current.MainWindow;
-            win.ShowDialog();
+                if (candidates == null || candidates.Count == 0)
+                {
+                    StatusMessage = LocalizationService.Instance["StatusNoCandidates"];
+                    return;
+                }
+
+                StatusMessage = LocalizationService.Instance["StatusDone"];
+                var win = new LoopListWindow(candidates, _playerService);
+                win.Owner = Application.Current.MainWindow;
+                win.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[PyRanking失败] {ex.Message}");
+            }
         }
 
         private void ExecuteApplyLoop()
