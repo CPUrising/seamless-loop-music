@@ -3,8 +3,11 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:local="clr-namespace:seamless_loop_music"
              xmlns:services="clr-namespace:seamless_loop_music.Services"
+             xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
              xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
         <x:Static Member="services:LocalizationService.Instance" x:Key="Loc" />
+        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+        <converters:NullToVisibilityInverseConverter x:Key="NullToVisibilityInverseConverter"/>
     </Application.Resources>
 </prism:PrismApplication>
