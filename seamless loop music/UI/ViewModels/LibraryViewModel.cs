@@ -7,6 +7,8 @@ using Prism.Commands;
 using Prism.Mvvm;
 using Prism.Regions;
 using Prism.Events;
+using System.ComponentModel;
+using System.Windows.Data;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Data.Repositories;
@@ -19,6 +21,8 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IPlaybackService _playbackService;
         private readonly IPlaylistManager _playlistManager;
         private readonly IRegionManager _regionManager;
+        private readonly ISearchService _searchService;
+        private string[] _currentFilterKeywords = Array.Empty<string>();
         
         private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
         public ObservableCollection<MusicTrack> Tracks
@@ -27,14 +31,23 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _tracks, value);
         }
 
+        private ICollectionView _tracksView;
+        public ICollectionView TracksView
+        {
+            get => _tracksView;
+            set => SetProperty(ref _tracksView, value);
+        }
+
         private string _searchText;
         public string SearchText
         {
-            get => _searchText;
-            set {
-                if (SetProperty(ref _searchText, value))
+            get => _searchService.SearchText;
+            set 
+            {
+                if (_searchService.SearchText != value)
                 {
-                    FilterTracks();
+                    _searchService.SearchText = value;
+                    RaisePropertyChanged(nameof(SearchText));
                 }
             }
         }
@@ -45,16 +58,33 @@ namespace seamless_loop_music.UI.ViewModels
 
         private int? _currentPlaylistId = null;
 
-        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager)
+        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager, ISearchService searchService)
         {
             _trackRepository = trackRepository;
             _playbackService = playbackService;
             _playlistManager = playlistManager;
             _regionManager = regionManager;
+            _searchService = searchService;
 
             PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
             RefreshCommand = new DelegateCommand(async () => await LoadTracksAsync(_currentPlaylistId));
+
+            // Initialize View
+            TracksView = CollectionViewSource.GetDefaultView(Tracks);
+            TracksView.Filter = TracksFilter;
+
+            // Subscribe to debounced search
+            _searchService.DoSearch += (s) => App.Current.Dispatcher.Invoke(() => 
+            {
+                // Pre-process keywords once per search (Optimization)
+                var filter = s?.Trim().ToLower();
+                _currentFilterKeywords = string.IsNullOrWhiteSpace(filter) 
+                    ? Array.Empty<string>() 
+                    : filter.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+
+                TracksView.Refresh();
+            });
         }
 
         public async void OnNavigatedTo(NavigationContext navigationContext)
@@ -93,13 +123,28 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     Tracks.Add(track);
                 }
+                TracksView.Refresh();
             });
         }
 
-        private void FilterTracks()
+        private bool TracksFilter(object item)
         {
-            // TODO: Implement local search filtering if needed
+            if (!(item is MusicTrack track)) return false;
+            if (_currentFilterKeywords.Length == 0) return true;
+
+            // Match all keywords (AND logic) - Using cached keywords for extreme speed
+            return _currentFilterKeywords.All(k => 
+                (track.DisplayName != null && track.DisplayName.ToLower().Contains(k)) ||
+                (track.Artist != null && track.Artist.ToLower().Contains(k)) ||
+                (track.Album != null && track.Album.ToLower().Contains(k)) ||
+                (track.FileName != null && track.FileName.ToLower().Contains(k))
+            );
         }
+        
+        // C# does not have a native case-insensitive "Contains" in all versions of .NET Framework, 
+        // using ToLower contains is standard, but since keywords are already lowered, 
+        // we only lower the track fields. 
+        // Note: For absolute pro-level, we could use String.IndexOf with OrdinalIgnoreCase.
 
         private void OnPlayTrack(MusicTrack track)
         {

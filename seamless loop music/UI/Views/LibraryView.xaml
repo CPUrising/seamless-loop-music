@@ -11,44 +11,117 @@
     <Grid Background="#1E1E2E">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Header / Search -->
-        <TextBlock Text="Music Library" FontSize="28" FontWeight="Bold" Foreground="#89B4FA" Margin="20,20,20,10"/>
+        <!-- Header -->
+        <TextBlock Text="Music Library" FontSize="28" FontWeight="Bold" Foreground="#89B4FA" Margin="20,20,20,5"/>
 
-        <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="10"
+        <!-- Search Bar -->
+        <Border Grid.Row="1" Margin="20,5,20,10" Background="#313244" CornerRadius="8" Height="40">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock Text="🔍" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="#A6ADC8" IsHitTestVisible="False"/>
+                <TextBox Grid.Column="1" 
+                         Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
+                         Background="Transparent" BorderThickness="0" 
+                         Foreground="White" VerticalContentAlignment="Center"
+                         FontSize="14" CaretBrush="#89B4FA"
+                         Margin="5,0,10,0"/>
+                
+                <!-- Placeholder / Hint (Optional, showing when text is empty) -->
+                <TextBlock Grid.Column="1" Text="Search tracks..." 
+                           Foreground="#585B70" VerticalAlignment="Center" 
+                           Margin="8,0,0,0" IsHitTestVisible="False"
+                           FontSize="14">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding SearchText}" Value="">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                                <DataTrigger Binding="{Binding SearchText}" Value="{x:Null}">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
+        </Border>
+
+        <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="10"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                 ItemsSource="{Binding Tracks}">
-            <ListBox.ItemsPanel>
-                <ItemsPanelTemplate>
-                    <WrapPanel Orientation="Horizontal"/>
-                </ItemsPanelTemplate>
-            </ListBox.ItemsPanel>
+                 HorizontalContentAlignment="Stretch"
+                 ItemsSource="{Binding TracksView}"
+                 VirtualizingStackPanel.IsVirtualizing="True"
+                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+            <ListBox.ItemContainerStyle>
+                <Style TargetType="ListBoxItem">
+                    <Setter Property="Background" Value="Transparent"/>
+                    <Setter Property="BorderThickness" Value="0"/>
+                    <Setter Property="Margin" Value="0,2"/>
+                    <Setter Property="Padding" Value="0"/>
+                    <Setter Property="Template">
+                        <Setter.Value>
+                            <ControlTemplate TargetType="ListBoxItem">
+                                <Border Background="{TemplateBinding Background}" CornerRadius="5">
+                                    <ContentPresenter/>
+                                </Border>
+                                <ControlTemplate.Triggers>
+                                    <Trigger Property="IsMouseOver" Value="True">
+                                        <Setter Property="Background" Value="#313244"/>
+                                    </Trigger>
+                                    <Trigger Property="IsSelected" Value="True">
+                                        <Setter Property="Background" Value="#45475A"/>
+                                    </Trigger>
+                                </ControlTemplate.Triggers>
+                            </ControlTemplate>
+                        </Setter.Value>
+                    </Setter>
+                </Style>
+            </ListBox.ItemContainerStyle>
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Grid Margin="10">
-                        <!-- Main Playable Area (Click to Play) -->
+                    <Grid Height="50" Margin="10,0">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="40"/> <!-- Play/Icon -->
+                            <ColumnDefinition Width="2*"/> <!-- Title -->
+                            <ColumnDefinition Width="1*"/> <!-- Artist -->
+                            <ColumnDefinition Width="1*"/> <!-- Album -->
+                            <ColumnDefinition Width="Auto"/> <!-- Action -->
+                        </Grid.ColumnDefinitions>
+
+                        <!-- Play Button / Icon -->
                         <Button Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                 CommandParameter="{Binding}"
-                                Padding="0" BorderThickness="0" Background="Transparent">
-                            <Border Background="#313244" CornerRadius="10" Width="180" Height="220">
-                                <StackPanel>
-                                    <Border CornerRadius="8" Background="#45475A" Width="160" Height="140" Margin="10">
-                                        <Path Data="M 12 1 Q 12 0 13 0 L 23 0 Q 24 0 24 1 L 24 23 Q 24 24 23 24 L 13 24 Q 12 24 12 23 Z" Fill="#89B4FA" Stretch="Uniform" Margin="40"/>
-                                    </Border>
-                                    <TextBlock Text="{Binding DisplayName}" Foreground="White" FontWeight="SemiBold" TextAlignment="Center" Margin="10,0" TextTrimming="CharacterEllipsis"/>
-                                    <TextBlock Text="{Binding FileName}" Foreground="#A6ADC8" FontSize="11" TextAlignment="Center" Margin="10,2" TextTrimming="CharacterEllipsis"/>
-                                </StackPanel>
-                            </Border>
+                                Background="Transparent" BorderThickness="0" Padding="0">
+                            <TextBlock Text="▶" Foreground="#89B4FA" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
 
-                        <!-- Edit Button (Overlays in top-right) -->
-                        <Button HorizontalAlignment="Right" VerticalAlignment="Top" Margin="5"
+                        <!-- Title & Filename -->
+                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+                            <TextBlock Text="{Binding Title}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                            <TextBlock Text="{Binding FileName}" Foreground="#A6ADC8" FontSize="11" TextTrimming="CharacterEllipsis"/>
+                        </StackPanel>
+
+                        <!-- Artist -->
+                        <TextBlock Grid.Column="2" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="#BAC2DE" FontSize="13" TextTrimming="CharacterEllipsis" Margin="5,0"/>
+
+                        <!-- Album -->
+                        <TextBlock Grid.Column="3" Text="{Binding Album}" VerticalAlignment="Center" Foreground="#9399B2" FontSize="13" TextTrimming="CharacterEllipsis" Margin="5,0"/>
+
+                        <!-- Edit Button -->
+                        <Button Grid.Column="4" 
                                 Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                 CommandParameter="{Binding}"
-                                Content="✎" Width="30" Height="30" Padding="0"
-                                Background="#45475A" Foreground="White" BorderThickness="0">
+                                Content="✎" Width="30" Height="30" Margin="5,0"
+                                Background="#313244" Foreground="#CDD6F4" BorderThickness="0">
                             <Button.Resources>
                                 <Style TargetType="Border">
                                     <Setter Property="CornerRadius" Value="15"/>
