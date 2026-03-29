@@ -1,22 +1,34 @@
 using System;
+using System.IO;
 using System.Windows.Threading;
+using System.Windows.Media.Imaging;
 using Prism.Commands;
 using Prism.Events;
 using Prism.Mvvm;
+using Prism.Regions;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Events;
+using TagLib;
 
 namespace seamless_loop_music.UI.ViewModels
 {
     public class PlaybackControlBarViewModel : BindableBase
     {
         private readonly IPlaybackService _playbackService;
+        private readonly IRegionManager _regionManager;
         private readonly IEventAggregator _eventAggregator;
         private readonly DispatcherTimer _statusTimer;
 
         private MusicTrack _currentTrack;
         public MusicTrack CurrentTrack { get => _currentTrack; set => SetProperty(ref _currentTrack, value); }
+
+        private BitmapImage _albumCoverImage;
+        public BitmapImage AlbumCoverImage
+        {
+            get => _albumCoverImage;
+            set => SetProperty(ref _albumCoverImage, value);
+        }
 
         private string _playState;
         public string PlayState { get => _playState; set { if (SetProperty(ref _playState, value)) RaisePropertyChanged(nameof(PlayButtonContent)); } }
@@ -58,10 +70,12 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand PrevCommand { get; }
         public DelegateCommand NextCommand { get; }
         public DelegateCommand<double?> SeekCommand { get; }
+        public DelegateCommand OpenDetailCommand { get; }
 
-        public PlaybackControlBarViewModel(IPlaybackService playbackService, IEventAggregator eventAggregator)
+        public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator)
         {
             _playbackService = playbackService;
+            _regionManager = regionManager;
             _eventAggregator = eventAggregator;
 
             PlayCommand = new DelegateCommand(OnPlayPause);
@@ -69,8 +83,13 @@ namespace seamless_loop_music.UI.ViewModels
             PrevCommand = new DelegateCommand(() => _playbackService.Previous());
             NextCommand = new DelegateCommand(() => _playbackService.Next());
             SeekCommand = new DelegateCommand<double?>(OnSeek);
+            OpenDetailCommand = new DelegateCommand(OnOpenDetail);
 
-            _playbackService.TrackChanged += track => CurrentTrack = track;
+            _playbackService.TrackChanged += track => 
+            {
+                CurrentTrack = track;
+                LoadAlbumCover(track);
+            };
             _playbackService.StateChanged += state => PlayState = state.ToString();
             
             _volumeValue = _playbackService.Volume * 100;
@@ -125,6 +144,50 @@ namespace seamless_loop_music.UI.ViewModels
                 var target = TimeSpan.FromSeconds(value.Value / 1000.0 * _playbackService.TotalTime.TotalSeconds);
                 _playbackService.Seek(target);
             }
+        }
+
+        private void OnOpenDetail()
+        {
+            if (CurrentTrack == null) return;
+
+            var parameters = new NavigationParameters();
+            parameters.Add("track", CurrentTrack);
+            parameters.Add("autoPlay", false);
+            _regionManager.RequestNavigate("MainContentRegion", "DetailView", parameters);
+        }
+
+        private void LoadAlbumCover(MusicTrack track)
+        {
+            try
+            {
+                if (track == null || !System.IO.File.Exists(track.FilePath))
+                {
+                    AlbumCoverImage = null;
+                    return;
+                }
+
+                using (var file = TagLib.File.Create(track.FilePath))
+                {
+                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 0)
+                    {
+                        var picture = file.Tag.Pictures[0];
+                        var bitmap = new BitmapImage();
+                        bitmap.BeginInit();
+                        bitmap.StreamSource = new MemoryStream(picture.Data.Data);
+                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                        bitmap.DecodePixelWidth = 60;
+                        bitmap.EndInit();
+                        bitmap.Freeze();
+                        AlbumCoverImage = bitmap;
+                        return;
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[封面加载失败] {ex.Message}");
+            }
+            AlbumCoverImage = null;
         }
     }
 }

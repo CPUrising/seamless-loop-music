@@ -61,12 +61,21 @@ namespace seamless_loop_music.UI.ViewModels
             if (navigationContext.Parameters.ContainsKey("track"))
             {
                 var track = navigationContext.Parameters["track"] as MusicTrack;
+                bool autoPlay = true;
+                if (navigationContext.Parameters.ContainsKey("autoPlay"))
+                {
+                    autoPlay = (bool)navigationContext.Parameters["autoPlay"];
+                }
+                
                 if (track != null)
                 {
                     CurrentTrack = track;
                     LoadAlbumCover(track);
                     UpdateAlbumInfo(track);
-                    _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
+                    if (autoPlay)
+                    {
+                        _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
+                    }
                 }
             }
         }

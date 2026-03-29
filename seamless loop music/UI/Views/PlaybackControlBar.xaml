@@ -25,6 +25,25 @@
 
         <!-- Bottom Bar: Playback Controls -->
         <Grid Grid.Row="1" Margin="0,0,0,10">
+            <!-- Left: Current Track Info (Clickable) -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
+                <Border Width="45" Height="45" CornerRadius="4" Margin="10,0,10,0" Background="#2A2A3E">
+                    <Image Source="{Binding AlbumCoverImage}" Stretch="UniformToFill"/>
+                </Border>
+                <Button Command="{Binding OpenDetailCommand}" 
+                        Background="Transparent" BorderThickness="0" 
+                        Cursor="Hand" Padding="5" VerticalAlignment="Center">
+                    <StackPanel>
+                        <TextBlock Text="{Binding CurrentTrack.DisplayName, FallbackValue='未选择曲目'}" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="#CDD6F4" 
+                                   MaxWidth="200" TextTrimming="CharacterEllipsis"/>
+                        <TextBlock Text="{Binding CurrentTrack.Artist, FallbackValue='未知艺术家'}" 
+                                   FontSize="12" Foreground="#CDD6F4" Opacity="0.6"
+                                   MaxWidth="200" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
+
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                 <Button Content="&lt;&lt;" Command="{Binding PrevCommand}" Width="60" Margin="5"/>
                 <Button Content="{Binding PlayButtonContent}" Command="{Binding PlayCommand}" Width="110" Height="45" Margin="15,5" 
