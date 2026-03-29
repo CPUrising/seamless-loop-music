@@ -205,8 +205,11 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (track == null) return;
             
+            _playlistManager.SetNowPlayingList(Tracks, track);
+            
             var parameters = new NavigationParameters();
             parameters.Add("track", track);
+            parameters.Add("autoPlay", true);
             _regionManager.RequestNavigate("MainContentRegion", "DetailView", parameters);
         }
 

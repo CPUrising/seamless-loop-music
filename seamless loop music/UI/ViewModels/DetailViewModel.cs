@@ -48,12 +48,14 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnTrackChanged(MusicTrack track)
         {
-            if (track != null)
+            if (track == null) return;
+            
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 CurrentTrack = track;
                 LoadAlbumCover(track);
                 UpdateAlbumInfo(track);
-            }
+            });
         }
 
         public void OnNavigatedTo(NavigationContext navigationContext)
@@ -83,7 +85,6 @@ namespace seamless_loop_music.UI.ViewModels
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;
         public void OnNavigatedFrom(NavigationContext navigationContext)
         {
-            _playbackService.TrackChanged -= OnTrackChanged;
         }
 
         private void LoadAlbumCover(MusicTrack track)
