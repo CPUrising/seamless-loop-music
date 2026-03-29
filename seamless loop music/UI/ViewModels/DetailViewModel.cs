@@ -43,6 +43,17 @@ namespace seamless_loop_music.UI.ViewModels
             _playbackService = playbackService;
             _regionManager = regionManager;
             GoBackCommand = new DelegateCommand(OnGoBack);
+            _playbackService.TrackChanged += OnTrackChanged;
+        }
+
+        private void OnTrackChanged(MusicTrack track)
+        {
+            if (track != null)
+            {
+                CurrentTrack = track;
+                LoadAlbumCover(track);
+                UpdateAlbumInfo(track);
+            }
         }
 
         public void OnNavigatedTo(NavigationContext navigationContext)
@@ -61,7 +72,10 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;
-        public void OnNavigatedFrom(NavigationContext navigationContext) { }
+        public void OnNavigatedFrom(NavigationContext navigationContext)
+        {
+            _playbackService.TrackChanged -= OnTrackChanged;
+        }
 
         private void LoadAlbumCover(MusicTrack track)
         {
