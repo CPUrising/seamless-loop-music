@@ -10,6 +10,7 @@ namespace seamless_loop_music.Services
         Task<List<Playlist>> GetAllPlaylistsAsync();
         Task<Playlist> CreatePlaylistAsync(string name);
         Task DeletePlaylistAsync(int playlistId);
+        Task RenamePlaylistAsync(int id, string name);
         Task AddTrackToPlaylistAsync(int playlistId, MusicTrack track);
         Task RemoveTrackFromPlaylistAsync(int playlistId, int trackId);
         Task<List<MusicTrack>> GetTracksInPlaylistAsync(int playlistId);

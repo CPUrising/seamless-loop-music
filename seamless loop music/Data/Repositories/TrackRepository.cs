@@ -115,8 +115,25 @@ namespace seamless_loop_music.Data.Repositories
         {
             using (var db = GetConnection())
             {
-                db.Execute("UPDATE LoopPoints SET LoopStart = @Start, LoopEnd = @End WHERE Id = @Id", 
-                    new { Start = start, End = end, Id = trackId });
+                db.Execute("UPDATE LoopPoints SET LoopStart=@S, LoopEnd=@E WHERE Id=@Id", new { S = start, E = end, Id = trackId });
+            }
+        }
+
+        public async Task UpdateMetadataAsync(int id, bool isLoved, int rating)
+        {
+            using (var db = GetConnection())
+            {
+                await db.ExecuteAsync("UPDATE LoopPoints SET IsLoved=@L, Rating=@R WHERE Id=@Id", 
+                    new { L = isLoved ? 1 : 0, R = rating, Id = id });
+            }
+        }
+
+        public async Task<List<MusicTrack>> GetLovedTracksAsync()
+        {
+            using (var db = GetConnection())
+            {
+                var result = await db.QueryAsync<MusicTrack>("SELECT * FROM LoopPoints WHERE IsLoved = 1");
+                return result.ToList();
             }
         }
     }

@@ -8,18 +8,28 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Background="#1E1E2E">
+    <Grid Background="#1E1E2E" Margin="10">
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/> <!-- Header -->
+            <RowDefinition Height="Auto"/> <!-- Search -->
+            <RowDefinition Height="*"/>    <!-- List -->
         </Grid.RowDefinitions>
 
-        <!-- Header -->
-        <TextBlock Text="Music Library" FontSize="28" FontWeight="Bold" Foreground="#89B4FA" Margin="20,20,20,5"/>
+        <!-- Playlist Header & Stats -->
+        <Border Grid.Row="0" Margin="10,0,10,20" Background="#313244" CornerRadius="10" Padding="20,15">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="60" Height="60" CornerRadius="8" Background="#45475A" Margin="0,0,20,0">
+                    <TextBlock Text="🎵" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                </Border>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock Text="{Binding PlaylistName}" Foreground="White" FontSize="24" FontWeight="Bold"/>
+                    <TextBlock Text="{Binding PlaylistStats}" Foreground="#A6ADC8" FontSize="14" Margin="0,5,0,0"/>
+                </StackPanel>
+            </StackPanel>
+        </Border>
 
         <!-- Search Bar -->
-        <Border Grid.Row="1" Margin="20,5,20,10" Background="#313244" CornerRadius="8" Height="40">
+        <Border Grid.Row="1" Margin="10,0,10,10" Background="#313244" CornerRadius="8" Height="40">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
@@ -90,34 +100,66 @@
                 <DataTemplate>
                     <Grid Height="50" Margin="10,0">
                         <Grid.ColumnDefinitions>
-                            <ColumnDefinition Width="40"/> <!-- Play/Icon -->
+                            <ColumnDefinition Width="40"/> <!-- Play -->
+                            <ColumnDefinition Width="35"/> <!-- Love -->
                             <ColumnDefinition Width="2*"/> <!-- Title -->
                             <ColumnDefinition Width="1*"/> <!-- Artist -->
                             <ColumnDefinition Width="1*"/> <!-- Album -->
+                            <ColumnDefinition Width="Auto"/> <!-- Rating -->
                             <ColumnDefinition Width="Auto"/> <!-- Action -->
                         </Grid.ColumnDefinitions>
 
                         <!-- Play Button / Icon -->
-                        <Button Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                        <Button Grid.Column="0" Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                 CommandParameter="{Binding}"
                                 Background="Transparent" BorderThickness="0" Padding="0">
                             <TextBlock Text="▶" Foreground="#89B4FA" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Button>
 
+                        <!-- Love Toggle -->
+                        <Button Grid.Column="1" Command="{Binding DataContext.ToggleLoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent" BorderThickness="0">
+                            <TextBlock FontSize="18" VerticalAlignment="Center" HorizontalAlignment="Center">
+                                <TextBlock.Style>
+                                    <Style TargetType="TextBlock">
+                                        <Setter Property="Text" Value="♡"/>
+                                        <Setter Property="Foreground" Value="#585B70"/>
+                                        <Style.Triggers>
+                                            <DataTrigger Binding="{Binding IsLoved}" Value="True">
+                                                <Setter Property="Text" Value="❤️"/>
+                                                <Setter Property="Foreground" Value="#F38BA8"/>
+                                            </DataTrigger>
+                                        </Style.Triggers>
+                                    </Style>
+                                </TextBlock.Style>
+                            </TextBlock>
+                        </Button>
+
                         <!-- Title & Filename -->
-                        <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
+                        <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="10,0">
                             <TextBlock Text="{Binding Title}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                             <TextBlock Text="{Binding FileName}" Foreground="#A6ADC8" FontSize="11" TextTrimming="CharacterEllipsis"/>
                         </StackPanel>
 
                         <!-- Artist -->
-                        <TextBlock Grid.Column="2" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="#BAC2DE" FontSize="13" TextTrimming="CharacterEllipsis" Margin="5,0"/>
+                        <TextBlock Grid.Column="3" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="#BAC2DE" FontSize="13" TextTrimming="CharacterEllipsis" Margin="5,0"/>
 
                         <!-- Album -->
-                        <TextBlock Grid.Column="3" Text="{Binding Album}" VerticalAlignment="Center" Foreground="#9399B2" FontSize="13" TextTrimming="CharacterEllipsis" Margin="5,0"/>
+                        <TextBlock Grid.Column="4" Text="{Binding Album}" VerticalAlignment="Center" Foreground="#9399B2" FontSize="13" TextTrimming="CharacterEllipsis" Margin="5,0"/>
+
+                        <!-- Rating Display (Click to cycle) -->
+                        <Button Grid.Column="5" Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}"
+                                Background="Transparent" BorderThickness="0" Margin="5,0">
+                            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text="★" Foreground="#F9E2AF" FontSize="14" VerticalAlignment="Center"/>
+                                <TextBlock Text="{Binding Rating}" Foreground="#F9E2AF" FontSize="12" Margin="3,0,0,0" VerticalAlignment="Center"/>
+                            </StackPanel>
+                        </Button>
 
                         <!-- Edit Button -->
-                        <Button Grid.Column="4" 
+                        <Button Grid.Column="6" 
                                 Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                 CommandParameter="{Binding}"
                                 Content="✎" Width="30" Height="30" Margin="5,0"

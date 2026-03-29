@@ -17,6 +17,8 @@ namespace seamless_loop_music.Models
         private string _artist;
         private string _album;
         private string _albumArtist;
+        private bool _isLoved;
+        private int _rating;
 
         public int Id 
         { 
@@ -67,6 +69,18 @@ namespace seamless_loop_music.Models
         { 
             get => _albumArtist; 
             set { _albumArtist = value; OnPropertyChanged(); } 
+        }
+
+        public bool IsLoved
+        {
+            get => _isLoved;
+            set { _isLoved = value; OnPropertyChanged(); }
+        }
+
+        public int Rating
+        {
+            get => _rating;
+            set { _rating = value; OnPropertyChanged(); }
         }
 
         public DateTime LastModified { get; set; } = DateTime.Now;

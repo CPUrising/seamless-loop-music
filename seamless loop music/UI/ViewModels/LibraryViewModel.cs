@@ -11,6 +11,7 @@ using System.ComponentModel;
 using System.Windows.Data;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
+using seamless_loop_music.Events;
 using seamless_loop_music.Data.Repositories;
 
 namespace seamless_loop_music.UI.ViewModels
@@ -22,6 +23,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IPlaylistManager _playlistManager;
         private readonly IRegionManager _regionManager;
         private readonly ISearchService _searchService;
+        private readonly IEventAggregator _eventAggregator;
         private string[] _currentFilterKeywords = Array.Empty<string>();
         
         private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
@@ -55,20 +57,42 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<MusicTrack> PlayCommand { get; }
         public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
         public DelegateCommand RefreshCommand { get; }
+        public DelegateCommand<MusicTrack> ToggleLoveCommand { get; }
+        public DelegateCommand<MusicTrack> RateCommand { get; }
 
         private int? _currentPlaylistId = null;
+        private string _playlistName = "所有曲目";
+        public string PlaylistName
+        {
+            get => _playlistName;
+            set => SetProperty(ref _playlistName, value);
+        }
 
-        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager, ISearchService searchService)
+        private string _playlistStats;
+        public string PlaylistStats
+        {
+            get => _playlistStats;
+            set => SetProperty(ref _playlistStats, value);
+        }
+
+        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager, ISearchService searchService, IEventAggregator eventAggregator)
         {
             _trackRepository = trackRepository;
             _playbackService = playbackService;
             _playlistManager = playlistManager;
             _regionManager = regionManager;
             _searchService = searchService;
+            _eventAggregator = eventAggregator;
 
             PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
             RefreshCommand = new DelegateCommand(async () => await LoadTracksAsync(_currentPlaylistId));
+            ToggleLoveCommand = new DelegateCommand<MusicTrack>(OnToggleLove);
+            RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
+
+            // 订阅元数据变动
+            _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Subscribe(OnTrackMetadataChanged);
+            _eventAggregator.GetEvent<PlaylistChangedEvent>().Subscribe(async () => await LoadTracksAsync(_currentPlaylistId));
 
             // Initialize View
             TracksView = CollectionViewSource.GetDefaultView(Tracks);
@@ -92,10 +116,14 @@ namespace seamless_loop_music.UI.ViewModels
             if (navigationContext.Parameters.ContainsKey("PlaylistId"))
             {
                 _currentPlaylistId = (int)navigationContext.Parameters["PlaylistId"];
+                PlaylistName = navigationContext.Parameters.ContainsKey("PlaylistName") 
+                    ? (string)navigationContext.Parameters["PlaylistName"] 
+                    : "未知歌单";
             }
             else
             {
                 _currentPlaylistId = null;
+                PlaylistName = "所有曲目";
             }
 
             await LoadTracksAsync(_currentPlaylistId);
@@ -107,7 +135,11 @@ namespace seamless_loop_music.UI.ViewModels
         private async Task LoadTracksAsync(int? playlistId = null)
         {
             List<MusicTrack> results;
-            if (playlistId.HasValue)
+            if (playlistId == -1) // 我的最爱
+            {
+                results = await _trackRepository.GetLovedTracksAsync();
+            }
+            else if (playlistId.HasValue)
             {
                 results = await _playlistManager.GetTracksInPlaylistAsync(playlistId.Value);
             }
@@ -123,8 +155,16 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     Tracks.Add(track);
                 }
+                UpdateStats();
                 TracksView.Refresh();
             });
+        }
+
+        private void UpdateStats()
+        {
+            int count = Tracks.Count;
+            // 简单的统计信息（未来可加入总时长）
+            PlaylistStats = $"{count} 首曲目";
         }
 
         private bool TracksFilter(object item)
@@ -161,6 +201,41 @@ namespace seamless_loop_music.UI.ViewModels
             var parameters = new NavigationParameters();
             parameters.Add("track", track);
             _regionManager.RequestNavigate("MainContentRegion", "DetailView", parameters);
+        }
+
+        private async void OnToggleLove(MusicTrack track)
+        {
+            if (track == null) return;
+            track.IsLoved = !track.IsLoved;
+            await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+            _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Publish(track);
+            
+            // 如果是在“最爱”列表中取消爱心，则需要刷新
+            if (_currentPlaylistId == -1)
+            {
+                await LoadTracksAsync(_currentPlaylistId);
+            }
+        }
+
+        private async void OnRateTrack(MusicTrack track)
+        {
+            if (track != null)
+            {
+                track.Rating = (track.Rating % 5) + 1;
+                await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+            }
+        }
+
+        private void OnTrackMetadataChanged(MusicTrack track)
+        {
+            // 找到本地匹配的并更新（如果是单例引用其实不需要，但为了严谨性）
+            var local = Tracks.FirstOrDefault(t => t.Id == track.Id);
+            if (local != null && local != track)
+            {
+                local.IsLoved = track.IsLoved;
+                local.Rating = track.Rating;
+            }
+            UpdateStats();
         }
     }
 }

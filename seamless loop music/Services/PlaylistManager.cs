@@ -1,9 +1,11 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Prism.Events;
 using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.Models;
+using seamless_loop_music.Events;
+
 
 namespace seamless_loop_music.Services
 {
@@ -11,11 +13,13 @@ namespace seamless_loop_music.Services
     {
         private readonly IPlaylistRepository _playlistRepository;
         private readonly ITrackRepository _trackRepository;
+        private readonly IEventAggregator _eventAggregator;
 
-        public PlaylistManager(IPlaylistRepository playlistRepository, ITrackRepository trackRepository)
+        public PlaylistManager(IPlaylistRepository playlistRepository, ITrackRepository trackRepository, IEventAggregator eventAggregator)
         {
             _playlistRepository = playlistRepository;
             _trackRepository = trackRepository;
+            _eventAggregator = eventAggregator;
         }
 
         public async Task<List<Playlist>> GetAllPlaylistsAsync()
@@ -26,6 +30,7 @@ namespace seamless_loop_music.Services
         public async Task<Playlist> CreatePlaylistAsync(string name)
         {
             int id = _playlistRepository.Add(name);
+            _eventAggregator.GetEvent<PlaylistChangedEvent>().Publish();
             var playlists = await _playlistRepository.GetAllAsync();
             return playlists.FirstOrDefault(p => p.Id == id);
         }
@@ -33,6 +38,13 @@ namespace seamless_loop_music.Services
         public async Task DeletePlaylistAsync(int playlistId)
         {
             await Task.Run(() => _playlistRepository.Delete(playlistId));
+            _eventAggregator.GetEvent<PlaylistChangedEvent>().Publish();
+        }
+
+        public async Task RenamePlaylistAsync(int id, string name)
+        {
+            await Task.Run(() => _playlistRepository.Rename(id, name));
+            _eventAggregator.GetEvent<PlaylistChangedEvent>().Publish();
         }
 
         public async Task AddTrackToPlaylistAsync(int playlistId, MusicTrack track)

@@ -78,8 +78,23 @@ namespace seamless_loop_music.Data
                         AlbumArtist TEXT,
                         LastModified DATETIME,
                         LoopCandidatesJson TEXT,
+                        IsLoved INTEGER DEFAULT 0,
+                        Rating INTEGER DEFAULT 0,
                         UNIQUE(FileName, TotalSamples)
                     );");
+                
+                // 自动迁移：检查并添加缺失的字段
+                var columnsResult = db.Query("PRAGMA table_info(LoopPoints)").Cast<System.Collections.Generic.IDictionary<string, object>>();
+                var columnNames = columnsResult.Select(c => c["name"].ToString()).ToList();
+
+                if (!columnNames.Contains("IsLoved"))
+                {
+                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN IsLoved INTEGER DEFAULT 0;");
+                }
+                if (!columnNames.Contains("Rating"))
+                {
+                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN Rating INTEGER DEFAULT 0;");
+                }
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS Playlists (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
