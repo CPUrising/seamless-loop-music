@@ -210,7 +210,7 @@ namespace seamless_loop_music.UI.ViewModels
         private void ExecuteAdjust(string parameter)
         {
             if (string.IsNullOrEmpty(parameter)) return;
-            string[] parts = parameter.Split('|');
+            string[] parts = parameter.Split(':');
             if (parts.Length < 2) return;
 
             string target = parts[0];

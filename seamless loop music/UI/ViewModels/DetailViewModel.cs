@@ -4,6 +4,7 @@ using System.Windows.Media.Imaging;
 using Prism.Mvvm;
 using Prism.Regions;
 using Prism.Commands;
+using Prism.Events;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using TagLib;
@@ -14,6 +15,7 @@ namespace seamless_loop_music.UI.ViewModels
     {
         private readonly IPlaybackService _playbackService;
         private readonly IRegionManager _regionManager;
+        private readonly IEventAggregator _eventAggregator;
         private IRegionNavigationService _navigationService;
         
         private MusicTrack _currentTrack;
@@ -39,10 +41,11 @@ namespace seamless_loop_music.UI.ViewModels
 
         public DelegateCommand GoBackCommand { get; }
 
-        public DetailViewModel(IPlaybackService playbackService, IRegionManager regionManager)
+        public DetailViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator)
         {
             _playbackService = playbackService;
             _regionManager = regionManager;
+            _eventAggregator = eventAggregator;
             GoBackCommand = new DelegateCommand(OnGoBack);
             _playbackService.TrackChanged += OnTrackChanged;
         }
@@ -78,6 +81,10 @@ namespace seamless_loop_music.UI.ViewModels
                     CurrentTrack = track;
                     LoadAlbumCover(track);
                     UpdateAlbumInfo(track);
+                    
+                    // 重要：即使不播放，也要告诉 LoopWorkspace 更新曲目数据
+                    _eventAggregator.GetEvent<seamless_loop_music.Events.TrackLoadedEvent>().Publish(track);
+
                     if (autoPlay)
                     {
                         _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);

@@ -74,6 +74,7 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
         public DelegateCommand<MusicTrack> ToggleLoveCommand { get; }
         public DelegateCommand<MusicTrack> RateCommand { get; }
+        public DelegateCommand<MusicTrack> AnalyzeTrackCommand { get; }
 
         public TrackListViewModel(
             ITrackRepository trackRepository, 
@@ -94,6 +95,7 @@ namespace seamless_loop_music.UI.ViewModels
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
             ToggleLoveCommand = new DelegateCommand<MusicTrack>(OnToggleLove);
             RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
+            AnalyzeTrackCommand = new DelegateCommand<MusicTrack>(OnAnalyzeTrack);
 
             // 初始化视图
             TracksView = CollectionViewSource.GetDefaultView(Tracks);
@@ -221,6 +223,22 @@ namespace seamless_loop_music.UI.ViewModels
             if (track == null) return;
             track.Rating = (track.Rating + 1) % 6;
             await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+        }
+
+        private void OnAnalyzeTrack(MusicTrack track)
+        {
+            if (track == null) return;
+            
+            // 1. 导航到详情页
+            var parameters = new NavigationParameters();
+            parameters.Add("track", track);
+            parameters.Add("autoPlay", false);
+            _regionManager.RequestNavigate("LibraryContentRegion", "DetailView", parameters);
+
+            // 2. 发送分析信号 (这一步可以通过 Event 延迟触发，或者在 LoopWorkspaceViewModel 里监听状态变化)
+            // 鉴于目前的 UI 结构，直接跳转到详情页已经让 LoopWorkspace 加载了数据
+            // 我们只需要通过事件告诉工作区“开始分析”即可
+            _eventAggregator.GetEvent<seamless_loop_music.Events.TrackMetadataChangedEvent>().Publish(track);
         }
 
         private void OnTrackMetadataChanged(MusicTrack track)

@@ -71,6 +71,17 @@
                     <Setter Property="BorderThickness" Value="0"/>
                     <Setter Property="Margin" Value="0,2"/>
                     <Setter Property="Padding" Value="0"/>
+                    <Setter Property="ContextMenu">
+                        <Setter.Value>
+                            <ContextMenu Background="#313244" BorderThickness="0">
+                                <MenuItem Header="▶ 播放" Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="✎ 编辑属性/歌词" Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                                <MenuItem Header="♾️ 寻找循环点 (PyMusicLooper)" Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                                <Separator Background="#45475A"/>
+                                <MenuItem Header="❤️ 收藏/取消收藏" Command="{Binding DataContext.ToggleLoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                            </ContextMenu>
+                        </Setter.Value>
+                    </Setter>
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
@@ -147,10 +158,11 @@
                         </Button>
 
                         <Button Grid.Column="6" 
-                                Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                                 CommandParameter="{Binding}"
-                                Content="✎" Width="34" Height="34" Margin="8,0"
-                                Background="#313244" Foreground="#CDD6F4" BorderThickness="0">
+                                Content="♾️" Width="34" Height="34" Margin="2,0,8,0"
+                                Background="#313244" Foreground="#CDD6F4" BorderThickness="0"
+                                ToolTip="寻找循环点 (PyMusicLooper)">
                             <Button.Style>
                                 <Style TargetType="Button">
                                     <Setter Property="Template">
@@ -162,6 +174,39 @@
                                             </ControlTemplate>
                                         </Setter.Value>
                                     </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#45475A"/>
+                                            <Setter Property="Foreground" Value="#89B4FA"/>
+                                        </Trigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </Button.Style>
+                        </Button>
+
+                        <Button Grid.Column="6" 
+                                HorizontalAlignment="Right"
+                                Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                                CommandParameter="{Binding}"
+                                Content="✎" Width="34" Height="34" Margin="0,0,45,0"
+                                Background="#313244" Foreground="#CDD6F4" BorderThickness="0"
+                                ToolTip="编辑属性">
+                            <Button.Style>
+                                <Style TargetType="Button">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="Button">
+                                                <Border Background="{TemplateBinding Background}" CornerRadius="17">
+                                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                                </Border>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                    <Style.Triggers>
+                                        <Trigger Property="IsMouseOver" Value="True">
+                                            <Setter Property="Background" Value="#45475A"/>
+                                        </Trigger>
+                                    </Style.Triggers>
                                 </Style>
                             </Button.Style>
                         </Button>
