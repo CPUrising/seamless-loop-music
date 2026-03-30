@@ -79,4 +79,7 @@
   <data name="ApplyAndTest" xml:space="preserve">
     <value>Apply &amp; Test</value>
   </data>
+  <data name="ButtonApply" xml:space="preserve">
+    <value>Apply</value>
+  </data>
 </root>

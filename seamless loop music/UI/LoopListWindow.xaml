@@ -41,7 +41,8 @@
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
             <Button x:Name="btnUpdate" Content="{Binding [ButtonUpdate], Source={StaticResource Loc}}" Click="BtnUpdate_Click" 
                     Style="{StaticResource WPFAccentButtonStyle}" Width="110" Margin="0,0,10,0" />
-            
+            <Button x:Name="btnApply" Content="{Binding [ButtonApply], Source={StaticResource Loc}}" Click="BtnApply_Click" 
+                    Style="{StaticResource WPFAccentButtonStyle}" Width="75" Margin="0,0,10,0" />
             <Button Content="{Binding [ButtonClose], Source={StaticResource Loc}}" Click="BtnClose_Click" 
                     Style="{StaticResource WPFButtonStyle}" Width="75"/>
         </StackPanel>

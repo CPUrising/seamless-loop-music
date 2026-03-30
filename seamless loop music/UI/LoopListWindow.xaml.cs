@@ -62,6 +62,27 @@ namespace seamless_loop_music.UI
         {
             if (lstCandidates.SelectedItem is LoopCandidateViewModel vm)
             {
+                // 应用循环点以便试听衔接效果
+                _playerService.ApplyLoopCandidate(vm.Candidate);
+                
+                // 跳转到结束前3秒
+                int rate = _playerService.SampleRate;
+                if (rate <= 0) rate = 44100;
+                long previewOffset = rate * 3;
+                long target = vm.Candidate.LoopEnd - previewOffset;
+                if (target < 0) target = 0;
+
+                _playerService.SeekToSample(target);
+                _playerService.Play();
+                
+                // 不再自动退出
+            }
+        }
+
+        private void BtnApply_Click(object sender, RoutedEventArgs e)
+        {
+            if (lstCandidates.SelectedItem is LoopCandidateViewModel vm)
+            {
                 _playerService.ApplyLoopCandidate(vm.Candidate);
                 this.DialogResult = true;
                 this.Close();
