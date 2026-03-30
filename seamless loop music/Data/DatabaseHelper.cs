@@ -32,6 +32,9 @@ namespace seamless_loop_music.Data
         void UpdatePlaylistsSortOrder(List<int> playlistIds);
         void UpdateTracksSortOrder(int playlistId, List<int> songIds);
         
+        // 存储分析结果与元数据
+        void UpdateTrackAnalysis(MusicTrack track);
+        
         // 文件夹管理 (Legacy)
         List<string> GetPlaylists(int playlistId); // 这里返回的是 FolderPaths
         void AddPlaylist(int playlistId, string folderPath);
@@ -141,9 +144,32 @@ namespace seamless_loop_music.Data
             using (var db = GetConnection()) db.Execute(@"UPDATE LoopPoints SET LoopStart=@LoopStart, LoopEnd=@LoopEnd WHERE Id=@Id", track);
         }
 
+        public void UpdateTrackAnalysis(MusicTrack track)
+        {
+            using (var db = GetConnection())
+            {
+                db.Execute(@"
+                    UPDATE LoopPoints SET 
+                        Artist = @Artist, 
+                        Album = @Album, 
+                        AlbumArtist = @AlbumArtist, 
+                        DisplayName = @DisplayName,
+                        LoopCandidatesJson = @LoopCandidatesJson 
+                    WHERE Id = @Id", track);
+            }
+        }
+
         public void BulkInsert(IEnumerable<MusicTrack> tracks)
         {
-            using (var db = GetConnection()) db.Execute(@"INSERT OR REPLACE INTO LoopPoints (FileName, TotalSamples, LoopStart, LoopEnd) VALUES (@FileName, @TotalSamples, @LoopStart, @LoopEnd)", tracks);
+            using (var db = GetConnection())
+            {
+                db.Execute(@"
+                    INSERT OR REPLACE INTO LoopPoints 
+                    (FileName, FilePath, DisplayName, TotalSamples, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LoopCandidatesJson) 
+                    VALUES 
+                    (@FileName, @FilePath, @DisplayName, @TotalSamples, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LoopCandidatesJson)", 
+                    tracks);
+            }
         }
 
         public List<Playlist> GetAllPlaylists()

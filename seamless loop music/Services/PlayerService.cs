@@ -74,6 +74,18 @@ namespace seamless_loop_music.Services
         {
             return await _loopAnalysisService.CheckEnvironmentAsync();
         }
+
+        public async Task UpdateTrackLoopCandidatesAsync(MusicTrack track, List<LoopCandidate> candidates)
+        {
+            if (track == null || candidates == null) return;
+            
+            // Serialize
+            track.LoopCandidatesJson = _loopAnalysisService.SerializeLoopCandidates(candidates);
+            
+            // Update DB
+            await Task.Run(() => _databaseHelper.UpdateTrackAnalysis(track));
+        }
+
         public void Dispose() { }
     }
 }

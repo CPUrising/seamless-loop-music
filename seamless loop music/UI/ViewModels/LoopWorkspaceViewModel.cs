@@ -241,7 +241,26 @@ namespace seamless_loop_music.UI.ViewModels
                 if (!await EnsurePyMusicLooperReadyAsync()) return;
 
                 StatusMessage = LocalizationService.Instance["StatusSearching"];
-                var candidates = await _playerService.GetLoopCandidatesAsync();
+                
+                List<LoopCandidate> candidates = null;
+
+                // 1. Check Cache
+                if (!string.IsNullOrEmpty(_playbackService.CurrentTrack.LoopCandidatesJson))
+                {
+                    candidates = _loopAnalysisService.DeserializeLoopCandidates(_playbackService.CurrentTrack.LoopCandidatesJson);
+                }
+
+                // 2. Fetch if no cache
+                if (candidates == null || candidates.Count == 0)
+                {
+                    candidates = await _playerService.GetLoopCandidatesAsync();
+                    
+                    // 3. Save to DB
+                    if (candidates != null && candidates.Count > 0)
+                    {
+                        await _playerService.UpdateTrackLoopCandidatesAsync(_playbackService.CurrentTrack, candidates);
+                    }
+                }
 
                 if (candidates == null || candidates.Count == 0)
                 {
