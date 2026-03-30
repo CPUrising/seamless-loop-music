@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
 using System.Windows.Data;
@@ -26,6 +27,7 @@ namespace seamless_loop_music.UI.ViewModels
 
         private string[] _currentFilterKeywords = Array.Empty<string>();
         private CategoryItem _selectedCategoryItem;
+        private HashSet<int> _currentPlaylistTrackIds = new HashSet<int>();
 
         private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
         public ObservableCollection<MusicTrack> Tracks
@@ -114,9 +116,21 @@ namespace seamless_loop_music.UI.ViewModels
             });
         }
 
-        private void OnCategoryItemSelected(CategoryItem item)
+        private async void OnCategoryItemSelected(CategoryItem item)
         {
             _selectedCategoryItem = item;
+            
+            // 如果是常规歌单，需要加载其包含的曲目 ID
+            if (item != null && item.Type == CategoryType.Playlist && item.Id > 0)
+            {
+                var tracks = await _playlistManager.GetTracksInPlaylistAsync(item.Id);
+                _currentPlaylistTrackIds = new HashSet<int>(tracks.Select(t => t.Id));
+            }
+            else
+            {
+                _currentPlaylistTrackIds.Clear();
+            }
+
             UpdateSearchPlaceholder();
             TracksView.Refresh();
             UpdateStats();
@@ -150,7 +164,18 @@ namespace seamless_loop_music.UI.ViewModels
                         if (track.Artist != _selectedCategoryItem.Name) return false;
                         break;
                     case CategoryType.Playlist:
-                        // 占位逻辑
+                        if (_selectedCategoryItem.Id == -1) // 全部歌曲
+                        {
+                            // 不进行任何分类过滤
+                        }
+                        else if (_selectedCategoryItem.Id == -2) // 我的收藏
+                        {
+                            if (!track.IsLoved) return false;
+                        }
+                        else if (_selectedCategoryItem.Id > 0) // 普通歌单
+                        {
+                            if (!_currentPlaylistTrackIds.Contains(track.Id)) return false;
+                        }
                         break;
                 }
             }

@@ -148,7 +148,8 @@ namespace seamless_loop_music.UI.ViewModels
                         { 
                             Name = g.Key, 
                             Type = CategoryType.Album,
-                            ImagePath = g.FirstOrDefault()?.FilePath // 暂时用第一个曲目
+                            Icon = "💿",
+                            ImagePath = g.FirstOrDefault()?.FilePath 
                         });
                     break;
                 case CategoryType.Artist:
@@ -159,18 +160,26 @@ namespace seamless_loop_music.UI.ViewModels
                         { 
                             Name = g.Key, 
                             Type = CategoryType.Artist,
+                            Icon = "👤",
                             ImagePath = g.FirstOrDefault()?.FilePath 
                         });
                     break;
                 case CategoryType.Playlist:
                     var playlists = await _playlistManager.GetAllPlaylistsAsync();
-                    items = playlists.Select(p => new CategoryItem 
+                    var list = new List<CategoryItem>
+                    {
+                        new CategoryItem { Id = -1, Name = "全部歌曲", Icon = "🎶", Type = CategoryType.Playlist },
+                        new CategoryItem { Id = -2, Name = "我的收藏", Icon = "❤️", Type = CategoryType.Playlist }
+                    };
+                    list.AddRange(playlists.Select(p => new CategoryItem 
                     { 
                         Id = p.Id,
                         Name = p.Name, 
+                        Icon = "📂",
                         Type = CategoryType.Playlist,
                         ImagePath = null 
-                    });
+                    }));
+                    items = list;
                     break;
             }
 

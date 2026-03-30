@@ -13,6 +13,7 @@ namespace seamless_loop_music.Models
     {
         public int Id { get; set; } // 存储关联项的 ID (如 PlaylistId)
         public string Name { get; set; }
+        public string Icon { get; set; } // 图标字符串 (如 🎶, ❤️)
         public string ImagePath { get; set; } // 专辑封面或艺术家头像
         public CategoryType Type { get; set; }
     }
