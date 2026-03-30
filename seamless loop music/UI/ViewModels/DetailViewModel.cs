@@ -14,6 +14,7 @@ namespace seamless_loop_music.UI.ViewModels
     {
         private readonly IPlaybackService _playbackService;
         private readonly IRegionManager _regionManager;
+        private IRegionNavigationService _navigationService;
         
         private MusicTrack _currentTrack;
         public MusicTrack CurrentTrack
@@ -60,6 +61,9 @@ namespace seamless_loop_music.UI.ViewModels
 
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
+            // 保存导航服务用于返回
+            _navigationService = navigationContext.NavigationService;
+            
             if (navigationContext.Parameters.ContainsKey("track"))
             {
                 var track = navigationContext.Parameters["track"] as MusicTrack;
@@ -127,8 +131,14 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnGoBack()
         {
-            _regionManager.RequestNavigate("MainContentRegion", "LibraryView");
+            if (_navigationService?.Journal.CanGoBack == true)
+            {
+                _navigationService.Journal.GoBack();
+            }
+            else
+            {
+                _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
+            }
         }
     }
 }
-
