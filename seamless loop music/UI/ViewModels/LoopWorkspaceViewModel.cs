@@ -5,6 +5,7 @@ using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Events;
 using System;
+using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Threading;
 using System.Collections.Generic;
@@ -236,7 +237,9 @@ namespace seamless_loop_music.UI.ViewModels
             try
             {
                 if (_playbackService.CurrentTrack == null) return;
-                
+
+                if (!await EnsurePyMusicLooperReadyAsync()) return;
+
                 StatusMessage = LocalizationService.Instance["StatusSearching"];
                 var candidates = await _playerService.GetLoopCandidatesAsync();
 
@@ -247,7 +250,7 @@ namespace seamless_loop_music.UI.ViewModels
                 }
 
                 StatusMessage = LocalizationService.Instance["StatusDone"];
-                var win = new LoopListWindow(candidates, _playerService);
+                var win = new LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
                 win.Owner = Application.Current.MainWindow;
                 win.ShowDialog();
             }
@@ -255,6 +258,23 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 System.Diagnostics.Debug.WriteLine($"[PyRanking失败] {ex.Message}");
             }
+        }
+
+        private async Task<bool> EnsurePyMusicLooperReadyAsync()
+        {
+            int status = await _playerService.CheckPyMusicLooperStatusAsync();
+            if (status == 0) return true;
+
+            if (status == 2)
+            {
+                System.Windows.MessageBox.Show("PyMusicLooper 需要 uv 环境。请先安装 uv：\nhttps://github.com/astral-sh/uv",
+                    "环境检查", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                return false;
+            }
+
+            System.Windows.MessageBox.Show("PyMusicLooper 未安装或需要下载。\n请运行: uvx pymusiclooper --version",
+                "环境检查", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            return false;
         }
 
         private void ExecuteApplyLoop()

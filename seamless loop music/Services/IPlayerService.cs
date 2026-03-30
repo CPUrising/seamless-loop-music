@@ -54,5 +54,6 @@ namespace seamless_loop_music.Services
         double MatchSearchRadius { get; set; }
         
         Task<List<LoopCandidate>> GetLoopCandidatesAsync();
+        Task<int> CheckPyMusicLooperStatusAsync();
     }
 }

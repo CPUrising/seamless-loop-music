@@ -12,6 +12,7 @@ namespace seamless_loop_music.Services
     {
         private readonly IDatabaseHelper _databaseHelper;
         private readonly IPlaybackService _playbackService;
+        private readonly ILoopAnalysisService _loopAnalysisService;
 
         public List<MusicTrack> Playlist { get; set; } = new List<MusicTrack>();
         public int CurrentIndex { get; set; } = -1;
@@ -26,10 +27,11 @@ namespace seamless_loop_music.Services
         public double MatchWindowSize { get; set; } = 1.0;
         public double MatchSearchRadius { get; set; } = 5.0;
 
-        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService)
+        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService)
         {
             _databaseHelper = databaseHelper;
             _playbackService = playbackService;
+            _loopAnalysisService = loopAnalysisService;
         }
 
         public void Play() => _playbackService.Play();
@@ -62,7 +64,16 @@ namespace seamless_loop_music.Services
         public void ApplyLoopCandidate(LoopCandidate candidate) { if (candidate != null) _playbackService.SetLoopPoints(candidate.LoopStart, candidate.LoopEnd); }
         public void ResetABLoopPoints() => _playbackService.SetLoopPoints(0, 0);
 
-        public async Task<List<LoopCandidate>> GetLoopCandidatesAsync() => new List<LoopCandidate>();
+        public async Task<List<LoopCandidate>> GetLoopCandidatesAsync()
+        {
+            if (CurrentTrack == null) return new List<LoopCandidate>();
+            return await _loopAnalysisService.FetchTopLoopCandidatesAsync(CurrentTrack.FilePath);
+        }
+
+        public async Task<int> CheckPyMusicLooperStatusAsync()
+        {
+            return await _loopAnalysisService.CheckEnvironmentAsync();
+        }
         public void Dispose() { }
     }
 }
