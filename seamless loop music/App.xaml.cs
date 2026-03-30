@@ -46,6 +46,8 @@ namespace seamless_loop_music
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
             containerRegistry.RegisterForNavigation<TrackListView, TrackListViewModel>();
             
+            containerRegistry.RegisterSingleton<LoopWorkspaceViewModel>();
+            
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
         }

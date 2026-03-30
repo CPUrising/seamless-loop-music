@@ -18,7 +18,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IPlaybackService _playbackService;
         private readonly ILoopAnalysisService _loopAnalysisService;
         private readonly IEventAggregator _eventAggregator;
-        private readonly IPlayerService _playerService; // Legacy for specific actions if needed
+        private readonly IPlayerService _playerService;
 
         private bool _isUpdatingInternally;
 
@@ -35,9 +35,22 @@ namespace seamless_loop_music.UI.ViewModels
             ResetABCommand = new DelegateCommand(ExecuteResetAB);
             PyRankingCommand = new DelegateCommand(ExecutePyRanking);
             ApplyLoopCommand = new DelegateCommand(ExecuteApplyLoop);
+            ChangePlayModeCommand = new DelegateCommand(ExecuteChangePlayMode);
 
             _eventAggregator.GetEvent<TrackLoadedEvent>().Subscribe(OnTrackLoaded);
             _eventAggregator.GetEvent<LoopPointsChangedEvent>().Subscribe(OnLoopPointsChanged);
+            
+            if (_playbackService.CurrentTrack != null)
+            {
+                OnTrackLoaded(_playbackService.CurrentTrack);
+            }
+        }
+
+        private string _filePath = "";
+        public string FilePath
+        {
+            get => _filePath;
+            set => SetProperty(ref _filePath, value);
         }
 
         private string _loopStartSample = "0";
@@ -92,28 +105,35 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
-        private string _statusMessage;
+        private string _loopLimit = "0";
+        public string LoopLimit
+        {
+            get => _loopLimit;
+            set => SetProperty(ref _loopLimit, value);
+        }
+
+        private string _statusMessage = "";
         public string StatusMessage
         {
             get => _statusMessage;
             set => SetProperty(ref _statusMessage, value);
         }
 
-        private string _audioInfo;
+        private string _audioInfo = "";
         public string AudioInfo
         {
             get => _audioInfo;
             set => SetProperty(ref _audioInfo, value);
         }
 
-        private string _playModeText;
+        private string _playModeText = "Loop";
         public string PlayModeText
         {
             get => _playModeText;
             set => SetProperty(ref _playModeText, value);
         }
 
-        public bool IsABMode => false; // TODO: Implement in PlaybackService
+        public bool IsABMode => false;
 
         private double _matchWindowSize = 1.0;
         public double MatchWindowSize
@@ -129,18 +149,23 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _searchRadius, value);
         }
 
+        public string MatchWindowTitle => LocalizationService.Instance["MatchWindowTitle"];
+        public string SearchRadiusTitle => LocalizationService.Instance["SearchRadiusTitle"];
+
         public DelegateCommand<string> AdjustCommand { get; }
         public DelegateCommand SmartMatchReverseCommand { get; }
         public DelegateCommand SmartMatchForwardCommand { get; }
         public DelegateCommand ResetABCommand { get; }
         public DelegateCommand PyRankingCommand { get; }
         public DelegateCommand ApplyLoopCommand { get; }
+        public DelegateCommand ChangePlayModeCommand { get; }
 
         private void OnTrackLoaded(MusicTrack track)
         {
             UpdateAudioInfo(track);
             LoopStartSample = track.LoopStart.ToString();
             LoopEndSample = track.LoopEnd.ToString();
+            FilePath = track.FilePath;
         }
 
         private void OnLoopPointsChanged((long start, long end) points)
@@ -162,6 +187,24 @@ namespace seamless_loop_music.UI.ViewModels
                 $"Audio Info: {total} Samples | Rate: {rate} Hz";
             
             AudioInfo = info;
+        }
+
+        private void ExecuteChangePlayMode()
+        {
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
+            switch (PlayModeText)
+            {
+                case "Loop":
+                    PlayModeText = isZh ? "单曲" : "Single";
+                    break;
+                case "Single":
+                case "单曲":
+                    PlayModeText = isZh ? "列表" : "List";
+                    break;
+                default:
+                    PlayModeText = "Loop";
+                    break;
+            }
         }
 
         private void ExecuteAdjust(string parameter)
@@ -244,18 +287,15 @@ namespace seamless_loop_music.UI.ViewModels
                 
                 List<LoopCandidate> candidates = null;
 
-                // 1. Check Cache
                 if (!string.IsNullOrEmpty(_playbackService.CurrentTrack.LoopCandidatesJson))
                 {
                     candidates = _loopAnalysisService.DeserializeLoopCandidates(_playbackService.CurrentTrack.LoopCandidatesJson);
                 }
 
-                // 2. Fetch if no cache
                 if (candidates == null || candidates.Count == 0)
                 {
                     candidates = await _playerService.GetLoopCandidatesAsync();
                     
-                    // 3. Save to DB
                     if (candidates != null && candidates.Count > 0)
                     {
                         await _playerService.UpdateTrackLoopCandidatesAsync(_playbackService.CurrentTrack, candidates);

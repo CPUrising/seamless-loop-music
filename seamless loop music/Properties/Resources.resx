@@ -61,4 +61,22 @@
   <data name="AppTitle" xml:space="preserve">
     <value>Seamless Loop Music Player</value>
   </data>
+  <data name="LoopStartLabel" xml:space="preserve">
+    <value>Loop Start</value>
+  </data>
+  <data name="LoopEndLabel" xml:space="preserve">
+    <value>Loop End</value>
+  </data>
+  <data name="MatchWindowTitle" xml:space="preserve">
+    <value>Match Window</value>
+  </data>
+  <data name="SearchRadiusTitle" xml:space="preserve">
+    <value>Search Radius</value>
+  </data>
+  <data name="FilePathTitle" xml:space="preserve">
+    <value>File Path:</value>
+  </data>
+  <data name="ApplyAndTest" xml:space="preserve">
+    <value>Apply &amp; Test</value>
+  </data>
 </root>

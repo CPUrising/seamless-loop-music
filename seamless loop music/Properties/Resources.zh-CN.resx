@@ -61,4 +61,22 @@
   <data name="AppTitle" xml:space="preserve">
     <value>无缝循环音乐播放器</value>
   </data>
+  <data name="LoopStartLabel" xml:space="preserve">
+    <value>循环起点</value>
+  </data>
+  <data name="LoopEndLabel" xml:space="preserve">
+    <value>循环终点</value>
+  </data>
+  <data name="MatchWindowTitle" xml:space="preserve">
+    <value>匹配窗口</value>
+  </data>
+  <data name="SearchRadiusTitle" xml:space="preserve">
+    <value>搜索半径</value>
+  </data>
+  <data name="FilePathTitle" xml:space="preserve">
+    <value>文件路径:</value>
+  </data>
+  <data name="ApplyAndTest" xml:space="preserve">
+    <value>应用并测试</value>
+  </data>
 </root>
