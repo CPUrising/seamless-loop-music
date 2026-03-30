@@ -17,18 +17,8 @@
         </Grid.RowDefinitions>
         
         <Grid Grid.Row="0">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="280"/>
-                <ColumnDefinition Width="*"/>
-            </Grid.ColumnDefinitions>
-
-            <!-- Sidebar Region -->
-            <Border Grid.Column="0" Background="#181825" BorderThickness="0,0,1,0" BorderBrush="#313244">
-                <ContentControl prism:RegionManager.RegionName="SidebarRegion" />
-            </Border>
-
             <!-- Main Content Region -->
-            <Border Grid.Column="1">
+            <Border>
                 <ContentControl prism:RegionManager.RegionName="MainContentRegion" />
             </Border>
         </Grid>

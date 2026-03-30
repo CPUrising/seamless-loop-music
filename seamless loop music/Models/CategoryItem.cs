@@ -1,0 +1,19 @@
+using System;
+
+namespace seamless_loop_music.Models
+{
+    public enum CategoryType
+    {
+        Album,
+        Artist,
+        Playlist
+    }
+
+    public class CategoryItem
+    {
+        public int Id { get; set; } // 存储关联项的 ID (如 PlaylistId)
+        public string Name { get; set; }
+        public string ImagePath { get; set; } // 专辑封面或艺术家头像
+        public CategoryType Type { get; set; }
+    }
+}

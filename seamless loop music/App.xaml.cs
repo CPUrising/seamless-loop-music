@@ -44,7 +44,7 @@ namespace seamless_loop_music
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
-            containerRegistry.RegisterForNavigation<PlaylistSidebar, PlaylistSidebarViewModel>();
+            containerRegistry.RegisterForNavigation<TrackListView, TrackListViewModel>();
             
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
@@ -65,12 +65,7 @@ namespace seamless_loop_music
                 base.OnInitialized();
 
                 var regionManager = Container.Resolve<IRegionManager>();
-                regionManager.RequestNavigate("SidebarRegion", "PlaylistSidebar");
-                regionManager.RequestNavigate("MainContentRegion", "LibraryView", new NavigationParameters
-                {
-                    { "PlaylistId", 0 },
-                    { "PlaylistName", "全部歌曲 📚" }
-                }); 
+                regionManager.RequestNavigate("MainContentRegion", "LibraryView"); 
             }
             catch (Exception ex)
             {

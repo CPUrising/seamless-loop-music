@@ -24,56 +24,71 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IRegionManager _regionManager;
         private readonly ISearchService _searchService;
         private readonly IEventAggregator _eventAggregator;
-        private string[] _currentFilterKeywords = Array.Empty<string>();
         
-        private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
-        public ObservableCollection<MusicTrack> Tracks
+        
+        // --- 三栏式导航新增属性 ---
+        private ObservableCollection<CategoryNavTarget> _navigationCategories;
+        public ObservableCollection<CategoryNavTarget> NavigationCategories
         {
-            get => _tracks;
-            set => SetProperty(ref _tracks, value);
+            get => _navigationCategories;
+            set => SetProperty(ref _navigationCategories, value);
         }
 
-        private ICollectionView _tracksView;
-        public ICollectionView TracksView
+        private CategoryNavTarget _selectedCategory;
+        public CategoryNavTarget SelectedCategory
         {
-            get => _tracksView;
-            set => SetProperty(ref _tracksView, value);
-        }
-
-        private string _searchText;
-        public string SearchText
-        {
-            get => _searchService.SearchText;
+            get => _selectedCategory;
             set 
             {
-                if (_searchService.SearchText != value)
+                if (SetProperty(ref _selectedCategory, value))
                 {
-                    _searchService.SearchText = value;
-                    RaisePropertyChanged(nameof(SearchText));
+                    LoadCategoryItems();
                 }
             }
         }
 
-        public DelegateCommand<MusicTrack> PlayCommand { get; }
-        public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
-        public DelegateCommand RefreshCommand { get; }
-        public DelegateCommand<MusicTrack> ToggleLoveCommand { get; }
-        public DelegateCommand<MusicTrack> RateCommand { get; }
-
-        private int? _currentPlaylistId = null;
-        private string _playlistName = "所有曲目";
-        public string PlaylistName
+        private ObservableCollection<CategoryItem> _categoryItems = new ObservableCollection<CategoryItem>();
+        public ObservableCollection<CategoryItem> CategoryItems
         {
-            get => _playlistName;
-            set => SetProperty(ref _playlistName, value);
+            get => _categoryItems;
+            set => SetProperty(ref _categoryItems, value);
         }
 
-        private string _playlistStats;
-        public string PlaylistStats
+        private ICollectionView _categoryItemsView;
+        public ICollectionView CategoryItemsView
         {
-            get => _playlistStats;
-            set => SetProperty(ref _playlistStats, value);
+            get => _categoryItemsView;
+            set => SetProperty(ref _categoryItemsView, value);
         }
+
+        private CategoryItem _selectedCategoryItem;
+        public CategoryItem SelectedCategoryItem
+        {
+            get => _selectedCategoryItem;
+            set 
+            {
+                if (SetProperty(ref _selectedCategoryItem, value))
+                {
+                    // 发布事件通知子区域刷新
+                    _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(value);
+                }
+            }
+        }
+
+        private string _middleFilterText;
+        public string MiddleFilterText
+        {
+            get => _middleFilterText;
+            set 
+            {
+                if (SetProperty(ref _middleFilterText, value))
+                {
+                    CategoryItemsView?.Refresh();
+                }
+            }
+        }
+
+        
 
         public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager, ISearchService searchService, IEventAggregator eventAggregator)
         {
@@ -84,179 +99,90 @@ namespace seamless_loop_music.UI.ViewModels
             _searchService = searchService;
             _eventAggregator = eventAggregator;
 
-            PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
-            OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
-            RefreshCommand = new DelegateCommand(async () => await LoadTracksAsync(_currentPlaylistId));
-            ToggleLoveCommand = new DelegateCommand<MusicTrack>(OnToggleLove);
-            RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
-
-            // 订阅元数据变动
-            _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Subscribe(OnTrackMetadataChanged);
-            _eventAggregator.GetEvent<PlaylistChangedEvent>().Subscribe(async () => await LoadTracksAsync(_currentPlaylistId));
-
-            // Initialize View
-            TracksView = CollectionViewSource.GetDefaultView(Tracks);
-            TracksView.Filter = TracksFilter;
-
-            // Subscribe to debounced search
-            _searchService.DoSearch += (s) => App.Current.Dispatcher.Invoke(() => 
+            // 初始化导航分类
+            NavigationCategories = new ObservableCollection<CategoryNavTarget>
             {
-                // Pre-process keywords once per search (Optimization)
-                var filter = s?.Trim().ToLower();
-                _currentFilterKeywords = string.IsNullOrWhiteSpace(filter) 
-                    ? Array.Empty<string>() 
-                    : filter.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
+                new CategoryNavTarget { Name = "专辑", Icon = "💿", Type = CategoryType.Album },
+                new CategoryNavTarget { Name = "艺术家", Icon = "👤", Type = CategoryType.Artist },
+                new CategoryNavTarget { Name = "歌单", Icon = "📂", Type = CategoryType.Playlist }
+            };
 
-                TracksView.Refresh();
-            });
+            // Initialize Category View
+            CategoryItemsView = CollectionViewSource.GetDefaultView(CategoryItems);
+            CategoryItemsView.Filter = (obj) => 
+            {
+                if (string.IsNullOrWhiteSpace(MiddleFilterText)) return true;
+                if (obj is CategoryItem item) return item.Name?.IndexOf(MiddleFilterText, StringComparison.OrdinalIgnoreCase) >= 0;
+                return false;
+            };
+
+            // 设置默认选中
+            SelectedCategory = NavigationCategories.FirstOrDefault();
+
+            
         }
 
-        public async void OnNavigatedTo(NavigationContext navigationContext)
+        public void OnNavigatedTo(NavigationContext navigationContext)
         {
-            if (navigationContext.Parameters.ContainsKey("PlaylistId"))
-            {
-                _currentPlaylistId = (int)navigationContext.Parameters["PlaylistId"];
-                PlaylistName = navigationContext.Parameters.ContainsKey("PlaylistName") 
-                    ? (string)navigationContext.Parameters["PlaylistName"] 
-                    : "未知歌单";
-            }
-            else
-            {
-                _currentPlaylistId = null;
-                PlaylistName = "所有曲目";
-            }
-
-            await LoadTracksAsync(_currentPlaylistId);
+            // 默认在右侧区域打开歌曲列表
+            _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
         }
 
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;
         public void OnNavigatedFrom(NavigationContext navigationContext) { }
 
-        private async Task LoadTracksAsync(int? playlistId = null)
+        private async void LoadCategoryItems()
         {
-            List<MusicTrack> results;
-            if (playlistId == -1) // 我的最爱
+            CategoryItems.Clear();
+            var allTracks = await _trackRepository.GetAllAsync();
+            
+            IEnumerable<CategoryItem> items = null;
+
+            switch (SelectedCategory.Type)
             {
-                results = await _trackRepository.GetLovedTracksAsync();
-            }
-            else if (playlistId == 0 || !playlistId.HasValue) // 全部歌曲
-            {
-                results = await _trackRepository.GetAllAsync();
-            }
-            else
-            {
-                results = await _playlistManager.GetTracksInPlaylistAsync(playlistId.Value);
+                case CategoryType.Album:
+                    items = allTracks
+                        .Where(t => !string.IsNullOrEmpty(t.Album))
+                        .GroupBy(t => t.Album)
+                        .Select(g => new CategoryItem 
+                        { 
+                            Name = g.Key, 
+                            Type = CategoryType.Album,
+                            ImagePath = g.FirstOrDefault()?.FilePath // 暂时用第一个曲目
+                        });
+                    break;
+                case CategoryType.Artist:
+                    items = allTracks
+                        .Where(t => !string.IsNullOrEmpty(t.Artist))
+                        .GroupBy(t => t.Artist)
+                        .Select(g => new CategoryItem 
+                        { 
+                            Name = g.Key, 
+                            Type = CategoryType.Artist,
+                            ImagePath = g.FirstOrDefault()?.FilePath 
+                        });
+                    break;
+                case CategoryType.Playlist:
+                    var playlists = await _playlistManager.GetAllPlaylistsAsync();
+                    items = playlists.Select(p => new CategoryItem 
+                    { 
+                        Id = p.Id,
+                        Name = p.Name, 
+                        Type = CategoryType.Playlist,
+                        ImagePath = null 
+                    });
+                    break;
             }
 
-            App.Current.Dispatcher.Invoke(() =>
+            if (items != null)
             {
-                Tracks.Clear();
-                foreach (var track in results)
-                {
-                    Tracks.Add(track);
-                }
-                UpdateStats();
-                TracksView.Refresh();
-            });
+                foreach (var item in items) CategoryItems.Add(item);
+            }
+
+            CategoryItemsView.Refresh();
+            SelectedCategoryItem = CategoryItems.FirstOrDefault();
         }
 
-        private void UpdateStats()
-        {
-            int count = Tracks.Count;
-            // 简单的统计信息（未来可加入总时长）
-            PlaylistStats = $"{count} 首曲目";
-        }
-
-        private bool TracksFilter(object item)
-        {
-            if (!(item is MusicTrack track)) return false;
-            if (_currentFilterKeywords.Length == 0) return true;
-
-            // Match all keywords (AND logic) - Using cached keywords for extreme speed
-            return _currentFilterKeywords.All(k => 
-                (track.DisplayName != null && track.DisplayName.ToLower().Contains(k)) ||
-                (track.Artist != null && track.Artist.ToLower().Contains(k)) ||
-                (track.Album != null && track.Album.ToLower().Contains(k)) ||
-                (track.FileName != null && track.FileName.ToLower().Contains(k))
-            );
-        }
         
-        // C# does not have a native case-insensitive "Contains" in all versions of .NET Framework, 
-        // using ToLower contains is standard, but since keywords are already lowered, 
-        // we only lower the track fields. 
-        // Note: For absolute pro-level, we could use String.IndexOf with OrdinalIgnoreCase.
-
-        private void OnPlayTrack(MusicTrack track)
-        {
-            if (track == null) return;
-            
-            try
-            {
-                _playlistManager.SetNowPlayingList(Tracks, track);
-                _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[播放失败] {ex.Message}");
-            }
-        }
-
-        private void OnOpenDetail(MusicTrack track)
-        {
-            if (track == null) return;
-            
-            _playlistManager.SetNowPlayingList(Tracks, track);
-            
-            var parameters = new NavigationParameters();
-            parameters.Add("track", track);
-            parameters.Add("autoPlay", true);
-            _regionManager.RequestNavigate("MainContentRegion", "DetailView", parameters);
-        }
-
-        private async void OnToggleLove(MusicTrack track)
-        {
-            if (track == null) return;
-            try
-            {
-                track.IsLoved = !track.IsLoved;
-                await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
-                _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Publish(track);
-                
-                if (_currentPlaylistId == -1)
-                {
-                    await LoadTracksAsync(_currentPlaylistId);
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[爱心操作失败] {ex.Message}");
-            }
-        }
-
-        private async void OnRateTrack(MusicTrack track)
-        {
-            if (track == null) return;
-            try
-            {
-                track.Rating = (track.Rating + 1) % 6;
-                await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[评分操作失败] {ex.Message}");
-            }
-        }
-
-        private void OnTrackMetadataChanged(MusicTrack track)
-        {
-            // 找到本地匹配的并更新（如果是单例引用其实不需要，但为了严谨性）
-            var local = Tracks.FirstOrDefault(t => t.Id == track.Id);
-            if (local != null && local != track)
-            {
-                local.IsLoved = track.IsLoved;
-                local.Rating = track.Rating;
-            }
-            UpdateStats();
-        }
     }
 }
