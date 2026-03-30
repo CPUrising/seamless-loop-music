@@ -7,7 +7,7 @@ namespace seamless_loop_music.Services
 {
     public interface IPlaylistManagerService
     {
-        event Action<List<Playlist>> OnPlaylistsChanged;
+        
 
         List<Playlist> GetAllPlaylists();
         int CreatePlaylist(string name, string folderPath = null, bool isLinked = false);

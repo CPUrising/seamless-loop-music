@@ -310,7 +310,7 @@ namespace seamless_loop_music
         private DateTime _seekTime = DateTime.MinValue;
         private long _seekTargetSample = 0;
         private long _totalBytesReadSinceSeek = 0;
-        private readonly object _streamLock = new object();
+        private readonly object _streamLock = new();
 
         public void SeekToSample(long sample)
         {

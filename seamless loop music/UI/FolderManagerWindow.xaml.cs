@@ -40,8 +40,10 @@ namespace seamless_loop_music.UI
         {
             try
             {
-                var dialog = new Microsoft.Win32.OpenFileDialog();
-                dialog.Title = "Select Folder (Select any file)";
+                var dialog = new Microsoft.Win32.OpenFileDialog
+                {
+                    Title = "Select Folder (Select any file)"
+                };
                 if (dialog.ShowDialog() == true)
                 {
                     string path = Path.GetDirectoryName(dialog.FileName);

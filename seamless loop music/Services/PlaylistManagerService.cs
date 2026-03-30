@@ -17,10 +17,7 @@ namespace seamless_loop_music.Services
     public class PlaylistManagerService : IPlaylistManagerService
     {
         private readonly IDatabaseHelper _dbHelper;
-        
-        // 外部注入通知回调
         public Action<string> OnStatusMessage { get; set; }
-        public event Action<List<Playlist>> OnPlaylistsChanged;
 
         public PlaylistManagerService(IDatabaseHelper dbHelper)
         {
@@ -194,8 +191,8 @@ namespace seamless_loop_music.Services
                     string dir = Path.GetDirectoryName(f);
                     string fileName = Path.GetFileNameWithoutExtension(f);
                     string ext = Path.GetExtension(f);
-                    string[] bSuffixes = { "_B", "_b", "_loop", "_Loop" };
-                    string[] aSuffixes = { "_A", "_a", "_intro", "_Intro" };
+                    string[] bSuffixes = ["_B", "_b", "_loop", "_Loop"];
+                    string[] aSuffixes = ["_A", "_a", "_intro", "_Intro"];
 
                     for (int i = 0; i < bSuffixes.Length; i++)
                     {
@@ -367,8 +364,8 @@ namespace seamless_loop_music.Services
                 string fileName = Path.GetFileNameWithoutExtension(filePath);
                 string ext = Path.GetExtension(filePath);
 
-                string[] aSuffixes = { "_A", "_a", "_intro", "_Intro" };
-                string[] bSuffixes = { "_B", "_b", "_loop", "_Loop" };
+                string[] aSuffixes = ["_A", "_a", "_intro", "_Intro"];
+                string[] bSuffixes = ["_B", "_b", "_loop", "_Loop"];
 
                 for (int i = 0; i < aSuffixes.Length; i++)
                 {
