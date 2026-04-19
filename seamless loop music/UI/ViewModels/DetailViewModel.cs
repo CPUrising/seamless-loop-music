@@ -25,13 +25,6 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _currentTrack, value);
         }
 
-        private BitmapImage _albumCoverImage;
-        public BitmapImage AlbumCoverImage
-        {
-            get => _albumCoverImage;
-            set => SetProperty(ref _albumCoverImage, value);
-        }
-
         private string _albumInfo;
         public string AlbumInfo
         {
@@ -57,7 +50,6 @@ namespace seamless_loop_music.UI.ViewModels
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
                 CurrentTrack = track;
-                LoadAlbumCover(track);
                 UpdateAlbumInfo(track);
             });
         }
@@ -79,10 +71,15 @@ namespace seamless_loop_music.UI.ViewModels
                 if (track != null)
                 {
                     CurrentTrack = track;
-                    LoadAlbumCover(track);
                     UpdateAlbumInfo(track);
                     
-                    // 重要：即使不播放，也要告诉 LoopWorkspace 更新曲目数据
+                    // 1. 将歌曲列表导航到侧边栏区域
+                    var listParams = new NavigationParameters();
+                    listParams.Add("compact", true);
+                    listParams.Add("track", track);
+                    _regionManager.RequestNavigate("DetailListRegion", "TrackListView", listParams);
+
+                    // 2. 重要：即使不播放，也要告诉 LoopWorkspace 更新曲目数据
                     _eventAggregator.GetEvent<seamless_loop_music.Events.TrackLoadedEvent>().Publish(track);
 
                     if (autoPlay)
@@ -98,35 +95,6 @@ namespace seamless_loop_music.UI.ViewModels
         {
         }
 
-        private void LoadAlbumCover(MusicTrack track)
-        {
-            try
-            {
-                if (!System.IO.File.Exists(track.FilePath)) return;
-
-                using (var file = TagLib.File.Create(track.FilePath))
-                {
-                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 0)
-                    {
-                        var picture = file.Tag.Pictures[0];
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.StreamSource = new MemoryStream(picture.Data.Data);
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.DecodePixelWidth = 400;
-                        bitmap.EndInit();
-                        bitmap.Freeze();
-                        AlbumCoverImage = bitmap;
-                        return;
-                    }
-                }
-            }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[专辑封面加载失败] {ex.Message}");
-            }
-            AlbumCoverImage = null;
-        }
 
         private void UpdateAlbumInfo(MusicTrack track)
         {

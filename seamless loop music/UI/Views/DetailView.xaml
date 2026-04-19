@@ -10,84 +10,55 @@
              d:DesignHeight="600" d:DesignWidth="1000">
     <Grid Background="Transparent">
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="400"/>
-            <ColumnDefinition Width="*"/>
+            <ColumnDefinition Width="0.4*"/>
+            <ColumnDefinition Width="0.6*"/>
         </Grid.ColumnDefinitions>
 
-        <!-- Left: Lyrics / Album Cover -->
-        <Border Grid.Column="0" Margin="20" Background="#313244" CornerRadius="15">
-            <Grid>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                    <RowDefinition Height="Auto"/>
-                </Grid.RowDefinitions>
+        <!-- Left: Track List -->
+        <Grid Grid.Column="0" Margin="15,20,10,20">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
 
-                <!-- Back Button -->
-                <Button Content="← 返回" 
-                        Command="{Binding GoBackCommand}"
-                        HorizontalAlignment="Left" 
-                        Margin="15,15,0,0"
-                        Padding="12,6"
-                        Background="#45475A" 
-                        Foreground="White" 
-                        BorderThickness="0"
-                        Cursor="Hand">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" 
-                                                CornerRadius="8" 
-                                                Padding="{TemplateBinding Padding}">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#585B70"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+            <!-- Back Button -->
+            <Button Grid.Row="0" 
+                    Content="← 返回库" 
+                    Command="{Binding GoBackCommand}"
+                    HorizontalAlignment="Left" 
+                    Margin="5,0,0,10"
+                    Padding="12,6"
+                    Background="#313244" 
+                    Foreground="White" 
+                    BorderThickness="0"
+                    Cursor="Hand">
+                <Button.Style>
+                    <Style TargetType="Button">
+                        <Setter Property="Template">
+                            <Setter.Value>
+                                <ControlTemplate TargetType="Button">
+                                    <Border Background="{TemplateBinding Background}" 
+                                            CornerRadius="8" 
+                                            Padding="{TemplateBinding Padding}">
+                                        <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                                    </Border>
+                                </ControlTemplate>
+                            </Setter.Value>
+                        </Setter>
+                        <Style.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter Property="Background" Value="#45475A"/>
+                            </Trigger>
+                        </Style.Triggers>
+                    </Style>
+                </Button.Style>
+            </Button>
 
-                <!-- Album Cover Area -->
-                <StackPanel Grid.Row="1" VerticalAlignment="Center" HorizontalAlignment="Center">
-                    <Border CornerRadius="12" Background="#45475A" Width="280" Height="280" Margin="20">
-                        <Grid>
-                            <!-- Album Cover Image -->
-                            <Image Source="{Binding AlbumCoverImage}" 
-                                   Stretch="UniformToFill"
-                                   Visibility="{Binding AlbumCoverImage, Converter={StaticResource NullToVisibilityConverter}}"/>
-                            <!-- Placeholder Icon -->
-                            <Path Data="M 12 1 Q 12 0 13 0 L 23 0 Q 24 0 24 1 L 24 23 Q 24 24 23 24 L 13 24 Q 12 24 12 23 Z" 
-                                  Fill="#89B4FA" 
-                                  Stretch="Uniform" 
-                                  Margin="60"
-                                  Visibility="{Binding AlbumCoverImage, Converter={StaticResource NullToVisibilityInverseConverter}}"/>
-                        </Grid>
-                    </Border>
-                    <TextBlock Text="{Binding CurrentTrack.DisplayName}" 
-                               FontSize="22" 
-                               FontWeight="Bold" 
-                               HorizontalAlignment="Center" 
-                               Foreground="White" 
-                               TextTrimming="CharacterEllipsis"
-                               Margin="0,0,0,5"/>
-                    <TextBlock Text="{Binding AlbumInfo}" 
-                               FontSize="14" 
-                               HorizontalAlignment="Center" 
-                               Foreground="#A6ADC8"
-                               TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-                
-                <TextBlock Grid.Row="2" Text="L Y R I C S" Foreground="#585B70" HorizontalAlignment="Center" Margin="20" FontWeight="Black" Opacity="0.5"/>
-            </Grid>
-        </Border>
+            <!-- Track List Side Content -->
+            <Border Grid.Row="1" Background="#181825" CornerRadius="15">
+                <ContentControl prism:RegionManager.RegionName="DetailListRegion" />
+            </Border>
+        </Grid>
 
         <!-- Right: LoopWorkspace -->
         <Border Grid.Column="1" Margin="0,20,20,20" Background="#181825" CornerRadius="15">

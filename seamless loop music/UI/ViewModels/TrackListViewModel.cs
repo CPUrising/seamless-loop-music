@@ -43,6 +43,27 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _tracksView, value);
         }
 
+        private bool _isCompact;
+        public bool IsCompact
+        {
+            get => _isCompact;
+            set => SetProperty(ref _isCompact, value);
+        }
+
+        private MusicTrack _selectedTrack;
+        public MusicTrack SelectedTrack
+        {
+            get => _selectedTrack;
+            set 
+            {
+                if (SetProperty(ref _selectedTrack, value) && value != null && IsCompact)
+                {
+                    // 在精简模式下，点击曲目即视为选择编辑该曲目
+                    OnOpenDetail(value);
+                }
+            }
+        }
+
         public string SearchText
         {
             get => _searchService.SearchText;
@@ -203,6 +224,13 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (track == null) return;
             
+            if (IsCompact)
+            {
+                // 如果是精简模式（侧边栏），则直接发送加载事件给 DetailViewModel 和 LoopWorkspace
+                _eventAggregator.GetEvent<seamless_loop_music.Events.TrackLoadedEvent>().Publish(track);
+                return;
+            }
+
             // 重要：在当前区域内进行导航
             var parameters = new NavigationParameters();
             parameters.Add("track", track);
@@ -253,6 +281,12 @@ namespace seamless_loop_music.UI.ViewModels
 
         public async void OnNavigatedTo(NavigationContext navigationContext)
         {
+            // 处理导航参数
+            if (navigationContext.Parameters.ContainsKey("compact"))
+            {
+                IsCompact = (bool)navigationContext.Parameters["compact"];
+            }
+
             // 加载全量数据
             var results = await _trackRepository.GetAllAsync();
             App.Current.Dispatcher.Invoke(() =>
@@ -261,6 +295,16 @@ namespace seamless_loop_music.UI.ViewModels
                 foreach (var t in results) Tracks.Add(t);
                 UpdateStats();
                 TracksView.Refresh();
+
+                // 如果导航带了 track 参数，自动选中
+                if (navigationContext.Parameters.ContainsKey("track"))
+                {
+                    var targetTrack = navigationContext.Parameters["track"] as MusicTrack;
+                    if (targetTrack != null)
+                    {
+                        SelectedTrack = Tracks.FirstOrDefault(t => t.Id == targetTrack.Id);
+                    }
+                }
             });
         }
 
