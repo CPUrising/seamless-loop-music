@@ -119,7 +119,27 @@ namespace seamless_loop_music.UI.ViewModels
             // 设置默认选中
             SelectedCategory = NavigationCategories.FirstOrDefault();
 
-            
+            PlayCategoryItemCommand = new DelegateCommand<CategoryItem>(OnPlayCategoryItem);
+        }
+
+        public DelegateCommand<CategoryItem> PlayCategoryItemCommand { get; }
+
+        private async void OnPlayCategoryItem(CategoryItem item)
+        {
+            if (item == null) return;
+
+            switch (item.Type)
+            {
+                case CategoryType.Artist:
+                    await _playbackService.EnqueueArtistAsync(item.Name);
+                    break;
+                case CategoryType.Album:
+                    await _playbackService.EnqueueAlbumAsync(item.Name);
+                    break;
+                case CategoryType.Playlist:
+                    await _playbackService.EnqueuePlaylistAsync(item);
+                    break;
+            }
         }
 
         public void OnNavigatedTo(NavigationContext navigationContext)

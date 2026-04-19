@@ -120,6 +120,49 @@ namespace seamless_loop_music.Services
             return await tcs.Task;
         }
 
+        public async Task EnqueueArtistAsync(string artistName)
+        {
+            var tracks = await _trackRepository.GetByArtistAsync(artistName);
+            if (tracks != null && tracks.Any())
+            {
+                _playlistManager.SetNowPlayingList(tracks, tracks.First());
+                await LoadTrackAsync(tracks.First(), true);
+            }
+        }
+
+        public async Task EnqueueAlbumAsync(string albumName)
+        {
+            var tracks = await _trackRepository.GetByAlbumAsync(albumName);
+            if (tracks != null && tracks.Any())
+            {
+                _playlistManager.SetNowPlayingList(tracks, tracks.First());
+                await LoadTrackAsync(tracks.First(), true);
+            }
+        }
+
+        public async Task EnqueuePlaylistAsync(CategoryItem playlistItem)
+        {
+            List<MusicTrack> tracks = null;
+            if (playlistItem.Id == -1) // 全部歌曲
+            {
+                tracks = await _trackRepository.GetAllAsync();
+            }
+            else if (playlistItem.Id == -2) // 我的收藏
+            {
+                tracks = await _trackRepository.GetLovedTracksAsync();
+            }
+            else if (playlistItem.Id > 0)
+            {
+                tracks = await _playlistManager.GetTracksInPlaylistAsync(playlistItem.Id);
+            }
+
+            if (tracks != null && tracks.Any())
+            {
+                _playlistManager.SetNowPlayingList(tracks, tracks.First());
+                await LoadTrackAsync(tracks.First(), true);
+            }
+        }
+
         public void Dispose()
         {
             _audioLooper?.Dispose();

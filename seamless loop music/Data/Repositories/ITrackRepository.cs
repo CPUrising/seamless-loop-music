@@ -14,5 +14,7 @@ namespace seamless_loop_music.Data.Repositories
         void UpdateLoopPoints(int trackId, long start, long end);
         Task UpdateMetadataAsync(int id, bool isLoved, int rating);
         Task<List<MusicTrack>> GetLovedTracksAsync();
+        Task<List<MusicTrack>> GetByArtistAsync(string artistName);
+        Task<List<MusicTrack>> GetByAlbumAsync(string albumName);
     }
 }

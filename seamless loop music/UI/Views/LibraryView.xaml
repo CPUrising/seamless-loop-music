@@ -76,6 +76,11 @@
                      ItemsSource="{Binding CategoryItemsView}"
                      SelectedItem="{Binding SelectedCategoryItem}"
                      ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.InputBindings>
+                    <MouseBinding Gesture="LeftDoubleClick" 
+                                  Command="{Binding PlayCategoryItemCommand}" 
+                                  CommandParameter="{Binding SelectedCategoryItem}"/>
+                </ListBox.InputBindings>
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
                         <Setter Property="Template">

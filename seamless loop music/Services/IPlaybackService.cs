@@ -31,6 +31,10 @@ namespace seamless_loop_music.Services
         
         void SetLoopPoints(long startSample, long endSample);
         Task<(long Start, long End)> FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart);
+
+        Task EnqueueArtistAsync(string artistName);
+        Task EnqueueAlbumAsync(string albumName);
+        Task EnqueuePlaylistAsync(CategoryItem playlistItem);
     }
 }
 

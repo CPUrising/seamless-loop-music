@@ -136,5 +136,23 @@ namespace seamless_loop_music.Data.Repositories
                 return result.ToList();
             }
         }
+
+        public async Task<List<MusicTrack>> GetByArtistAsync(string artistName)
+        {
+            using (var db = GetConnection())
+            {
+                var result = await db.QueryAsync<MusicTrack>("SELECT * FROM LoopPoints WHERE Artist = @A", new { A = artistName });
+                return result.ToList();
+            }
+        }
+
+        public async Task<List<MusicTrack>> GetByAlbumAsync(string albumName)
+        {
+            using (var db = GetConnection())
+            {
+                var result = await db.QueryAsync<MusicTrack>("SELECT * FROM LoopPoints WHERE Album = @A", new { A = albumName });
+                return result.ToList();
+            }
+        }
     }
 }
