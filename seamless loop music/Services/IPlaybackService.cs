@@ -16,9 +16,13 @@ namespace seamless_loop_music.Services
         float Volume { get; set; }
         double MatchWindowSize { get; set; }
         double MatchSearchRadius { get; set; }
-        
+
+        IReadOnlyList<MusicTrack> Queue { get; }
+        int CurrentIndex { get; }
+
         event Action<MusicTrack> TrackChanged;
         event Action<PlaybackState> StateChanged;
+        event Action QueueChanged;
 
         Task LoadTrackAsync(MusicTrack track, bool autoPlay = false);
         void Play();
@@ -35,6 +39,12 @@ namespace seamless_loop_music.Services
         Task EnqueueArtistAsync(string artistName);
         Task EnqueueAlbumAsync(string albumName);
         Task EnqueuePlaylistAsync(CategoryItem playlistItem);
+
+        void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null);
+        void AddToQueue(MusicTrack track);
+        void RemoveFromQueue(int index);
+        void ClearQueue();
+        void MoveQueueItem(int fromIndex, int toIndex);
     }
 }
 

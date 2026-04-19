@@ -8,6 +8,7 @@ using Prism.Mvvm;
 using seamless_loop_music.Models;
 using seamless_loop_music.Events;
 using seamless_loop_music.Data.Repositories;
+using seamless_loop_music.Services;
 
 namespace seamless_loop_music.Services
 {
@@ -17,6 +18,7 @@ namespace seamless_loop_music.Services
         private readonly ITrackRepository _trackRepository;
         private readonly IEventAggregator _eventAggregator;
         private readonly IPlaylistManager _playlistManager;
+        private readonly IQueueManager _queueManager;
 
         public MusicTrack CurrentTrack { get; private set; }
         public PlaybackState PlaybackState => _audioLooper?.PlaybackState ?? PlaybackState.Stopped;
@@ -27,20 +29,30 @@ namespace seamless_loop_music.Services
         public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
         public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
 
+        public IReadOnlyList<MusicTrack> Queue => _queueManager.Queue;
+        public int CurrentIndex => _queueManager.CurrentIndex;
+
         public event Action<MusicTrack> TrackChanged;
         public event Action<PlaybackState> StateChanged;
+        public event Action QueueChanged;
 
-        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator)
+        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator, IQueueManager queueManager)
         {
             _trackRepository = trackRepository;
             _playlistManager = playlistManager;
             _eventAggregator = eventAggregator;
+            _queueManager = queueManager;
             _audioLooper = new AudioLooper();
 
             _audioLooper.OnPlayStateChanged += state =>
             {
                 _eventAggregator.GetEvent<PlaybackStateChangedEvent>().Publish(state);
                 StateChanged?.Invoke(state);
+            };
+
+            _queueManager.QueueChanged += () =>
+            {
+                QueueChanged?.Invoke();
             };
         }
 
@@ -71,7 +83,7 @@ namespace seamless_loop_music.Services
         {
             try
             {
-                var next = _playlistManager.GetNextTrack();
+                var next = _queueManager.GetNextTrack();
                 if (next != null) await LoadTrackAsync(next, true);
             }
             catch (Exception ex)
@@ -84,7 +96,7 @@ namespace seamless_loop_music.Services
         {
             try
             {
-                var prev = _playlistManager.GetPreviousTrack();
+                var prev = _queueManager.GetPreviousTrack();
                 if (prev != null) await LoadTrackAsync(prev, true);
             }
             catch (Exception ex)
@@ -125,7 +137,7 @@ namespace seamless_loop_music.Services
             var tracks = await _trackRepository.GetByArtistAsync(artistName);
             if (tracks != null && tracks.Any())
             {
-                _playlistManager.SetNowPlayingList(tracks, tracks.First());
+                _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }
         }
@@ -135,7 +147,7 @@ namespace seamless_loop_music.Services
             var tracks = await _trackRepository.GetByAlbumAsync(albumName);
             if (tracks != null && tracks.Any())
             {
-                _playlistManager.SetNowPlayingList(tracks, tracks.First());
+                _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }
         }
@@ -143,11 +155,11 @@ namespace seamless_loop_music.Services
         public async Task EnqueuePlaylistAsync(CategoryItem playlistItem)
         {
             List<MusicTrack> tracks = null;
-            if (playlistItem.Id == -1) // 全部歌曲
+            if (playlistItem.Id == -1)
             {
                 tracks = await _trackRepository.GetAllAsync();
             }
-            else if (playlistItem.Id == -2) // 我的收藏
+            else if (playlistItem.Id == -2)
             {
                 tracks = await _trackRepository.GetLovedTracksAsync();
             }
@@ -158,9 +170,34 @@ namespace seamless_loop_music.Services
 
             if (tracks != null && tracks.Any())
             {
-                _playlistManager.SetNowPlayingList(tracks, tracks.First());
+                _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }
+        }
+
+        public void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null)
+        {
+            _queueManager.SetQueue(tracks, currentTrack);
+        }
+
+        public void AddToQueue(MusicTrack track)
+        {
+            _queueManager.AddToQueue(track);
+        }
+
+        public void RemoveFromQueue(int index)
+        {
+            _queueManager.RemoveFromQueue(index);
+        }
+
+        public void ClearQueue()
+        {
+            _queueManager.ClearQueue();
+        }
+
+        public void MoveQueueItem(int fromIndex, int toIndex)
+        {
+            _queueManager.MoveTo(fromIndex, toIndex);
         }
 
         public void Dispose()

@@ -39,6 +39,7 @@ namespace seamless_loop_music
 
             containerRegistry.RegisterSingleton<IPlaybackService, PlaybackService>();
             containerRegistry.RegisterSingleton<IPlaylistManager, PlaylistManager>();
+            containerRegistry.RegisterSingleton<IQueueManager, QueueManager>();
             containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
             containerRegistry.RegisterSingleton<ISearchService, SearchService>();
 
