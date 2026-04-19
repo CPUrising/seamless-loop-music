@@ -356,6 +356,9 @@ namespace seamless_loop_music.UI.ViewModels
         {
             _playerService.MatchWindowSize = MatchWindowSize;
             _playerService.MatchSearchRadius = SearchRadius;
+            
+            _playbackService.MatchWindowSize = MatchWindowSize;
+            _playbackService.MatchSearchRadius = SearchRadius;
         }
 
         private void UpdateSecFromSamples()

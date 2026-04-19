@@ -14,6 +14,8 @@ namespace seamless_loop_music.Services
         TimeSpan TotalTime { get; }
         int SampleRate { get; }
         float Volume { get; set; }
+        double MatchWindowSize { get; set; }
+        double MatchSearchRadius { get; set; }
         
         event Action<MusicTrack> TrackChanged;
         event Action<PlaybackState> StateChanged;

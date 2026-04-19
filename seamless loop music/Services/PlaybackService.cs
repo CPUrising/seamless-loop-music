@@ -24,6 +24,8 @@ namespace seamless_loop_music.Services
         public TimeSpan TotalTime => _audioLooper?.TotalTime ?? TimeSpan.Zero;
         public int SampleRate => _audioLooper?.SampleRate ?? 44100;
         public float Volume { get => _audioLooper.Volume; set => _audioLooper.Volume = value; }
+        public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
+        public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
 
         public event Action<MusicTrack> TrackChanged;
         public event Action<PlaybackState> StateChanged;
