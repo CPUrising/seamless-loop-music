@@ -56,6 +56,13 @@ namespace seamless_loop_music.Services
         Task<List<LoopCandidate>> GetLoopCandidatesAsync();
         Task<int> CheckPyMusicLooperStatusAsync();
         Task UpdateTrackLoopCandidatesAsync(MusicTrack track, List<LoopCandidate> candidates);
+
+        // 音乐文件夹管理
+        List<string> GetMusicFolders();
+        void AddMusicFolder(string folderPath);
+        void RemoveMusicFolder(string folderPath);
+        Task ScanMusicFoldersAsync();
+
         new void Dispose();
     }
 }

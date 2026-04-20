@@ -39,6 +39,11 @@ namespace seamless_loop_music.Data
         List<string> GetPlaylists(int playlistId); // 这里返回的是 FolderPaths
         void AddPlaylist(int playlistId, string folderPath);
         void RemovePlaylist(int playlistId, string folderPath);
+
+        // 音乐文件夹管理
+        List<string> GetMusicFolders();
+        void AddMusicFolder(string folderPath);
+        void RemoveMusicFolder(string folderPath);
     }
 
     public class DatabaseHelper : IDatabaseHelper
@@ -124,6 +129,12 @@ namespace seamless_loop_music.Data
                         AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
                         FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
                         UNIQUE(PlaylistId, FolderPath)
+                    );");
+                db.Execute(@"
+                    CREATE TABLE IF NOT EXISTS MusicFolders (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        FolderPath TEXT NOT NULL UNIQUE,
+                        AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP
                     );");
             }
         }
@@ -215,5 +226,14 @@ namespace seamless_loop_music.Data
 
         public void RemovePlaylist(int playlistId, string folderPath)
             => GetConnection().Execute("DELETE FROM PlaylistFolders WHERE PlaylistId=@Pid AND FolderPath=@Path", new { Pid = playlistId, Path = folderPath });
+
+        public List<string> GetMusicFolders()
+            => GetConnection().Query<string>("SELECT FolderPath FROM MusicFolders ORDER BY AddedAt").ToList();
+
+        public void AddMusicFolder(string folderPath)
+            => GetConnection().Execute("INSERT OR IGNORE INTO MusicFolders (FolderPath) VALUES (@Path)", new { Path = folderPath });
+
+        public void RemoveMusicFolder(string folderPath)
+            => GetConnection().Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = folderPath });
     }
 }

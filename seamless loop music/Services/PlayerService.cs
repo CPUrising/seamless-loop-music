@@ -1,8 +1,10 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
 using NAudio.Wave;
+using TagLib;
 using seamless_loop_music.Models;
 using seamless_loop_music.Data;
 
@@ -84,6 +86,63 @@ namespace seamless_loop_music.Services
             
             // Update DB
             await Task.Run(() => _databaseHelper.UpdateTrackAnalysis(track));
+        }
+
+        private static readonly string[] SupportedExtensions = { ".mp3", ".flac", ".wav", ".m4a", ".ogg", ".wma", ".aiff", ".opus" };
+
+        public List<string> GetMusicFolders() => _databaseHelper.GetMusicFolders();
+        public void AddMusicFolder(string folderPath) => _databaseHelper.AddMusicFolder(folderPath);
+        public void RemoveMusicFolder(string folderPath) => _databaseHelper.RemoveMusicFolder(folderPath);
+
+        public async Task ScanMusicFoldersAsync()
+        {
+            var folders = GetMusicFolders();
+            var newTracks = new List<MusicTrack>();
+            foreach (var folder in folders)
+            {
+                if (!Directory.Exists(folder)) continue;
+                var files = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories)
+                    .Where(f => SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    .ToArray();
+                foreach (var file in files)
+                {
+                    try
+                    {
+                        var track = await Task.Run(() => CreateTrackFromFile(file));
+                        if (track != null) newTracks.Add(track);
+                    }
+                    catch { }
+                }
+            }
+            if (newTracks.Count > 0)
+            {
+                _databaseHelper.BulkInsert(newTracks);
+            }
+        }
+
+        private MusicTrack CreateTrackFromFile(string filePath)
+        {
+            try
+            {
+                using var audioFile = TagLib.File.Create(filePath);
+                var track = new MusicTrack
+                {
+                    FilePath = filePath,
+                    FileName = Path.GetFileName(filePath),
+                    DisplayName = !string.IsNullOrEmpty(audioFile.Tag.Title) ? audioFile.Tag.Title : Path.GetFileNameWithoutExtension(filePath),
+                    Artist = audioFile.Tag.FirstPerformer,
+                    Album = audioFile.Tag.Album,
+                    AlbumArtist = audioFile.Tag.FirstAlbumArtist,
+                    TotalSamples = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds),
+                    LoopStart = 0,
+                    LoopEnd = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds)
+                };
+                return track;
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public void Dispose() { }

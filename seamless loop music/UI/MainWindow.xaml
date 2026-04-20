@@ -5,18 +5,25 @@
         xmlns:prism="http://prismlibrary.com/"
         Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="800" Width="1200"
         Icon="/Resources/app_icon.png"
-        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei">
+        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei"
+        WindowStartupLocation="CenterScreen">
     <Window.Resources>
         <!-- Keep existing styles for now, but consolidate later -->
     </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
+
+        <!-- Top Bar: Settings -->
+        <Border Grid.Row="0" Background="#181825" Padding="10,5" BorderThickness="0,0,0,1" BorderBrush="#313244">
+            <Button Content="⚙ Settings" HorizontalAlignment="Right" Click="BtnSettings_Click"/>
+        </Border>
         
-        <Grid Grid.Row="0">
+        <Grid Grid.Row="1">
             <!-- Main Content Region -->
             <Border>
                 <ContentControl prism:RegionManager.RegionName="MainContentRegion" />
@@ -24,7 +31,7 @@
         </Grid>
 
         <!-- Bottom Bar: Playback Controls (Always visible) -->
-        <Border Grid.Row="1" Background="#11111B" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="#313244">
+        <Border Grid.Row="2" Background="#11111B" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="#313244">
             <views:PlaybackControlBar />
         </Border>
     </Grid>
