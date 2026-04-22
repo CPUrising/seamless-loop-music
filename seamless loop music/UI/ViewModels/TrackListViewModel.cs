@@ -128,6 +128,9 @@ namespace seamless_loop_music.UI.ViewModels
             // 监听元数据变更
             _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Subscribe(OnTrackMetadataChanged);
 
+            // 监听音乐库刷新（扫描完成后重载数据）
+            _eventAggregator.GetEvent<LibraryRefreshedEvent>().Subscribe(async () => await ReloadTracksAsync());
+
             // 搜索逻辑
             _searchService.DoSearch += (s) => App.Current.Dispatcher.Invoke(() => 
             {
@@ -287,7 +290,21 @@ namespace seamless_loop_music.UI.ViewModels
                 IsCompact = (bool)navigationContext.Parameters["compact"];
             }
 
-            // 加载全量数据
+            await ReloadTracksAsync();
+
+            // 如果导航带了 track 参数，自动选中
+            if (navigationContext.Parameters.ContainsKey("track"))
+            {
+                var targetTrack = navigationContext.Parameters["track"] as MusicTrack;
+                if (targetTrack != null)
+                {
+                    SelectedTrack = Tracks.FirstOrDefault(t => t.Id == targetTrack.Id);
+                }
+            }
+        }
+
+        private async Task ReloadTracksAsync()
+        {
             var results = await _trackRepository.GetAllAsync();
             App.Current.Dispatcher.Invoke(() =>
             {
@@ -295,16 +312,6 @@ namespace seamless_loop_music.UI.ViewModels
                 foreach (var t in results) Tracks.Add(t);
                 UpdateStats();
                 TracksView.Refresh();
-
-                // 如果导航带了 track 参数，自动选中
-                if (navigationContext.Parameters.ContainsKey("track"))
-                {
-                    var targetTrack = navigationContext.Parameters["track"] as MusicTrack;
-                    if (targetTrack != null)
-                    {
-                        SelectedTrack = Tracks.FirstOrDefault(t => t.Id == targetTrack.Id);
-                    }
-                }
             });
         }
 

@@ -120,6 +120,9 @@ namespace seamless_loop_music.UI.ViewModels
             SelectedCategory = NavigationCategories.FirstOrDefault();
 
             PlayCategoryItemCommand = new DelegateCommand<CategoryItem>(OnPlayCategoryItem);
+
+            // 扫描完成后自动刷新分类列表
+            _eventAggregator.GetEvent<LibraryRefreshedEvent>().Subscribe(() => LoadCategoryItems());
         }
 
         public DelegateCommand<CategoryItem> PlayCategoryItemCommand { get; }

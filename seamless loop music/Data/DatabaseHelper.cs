@@ -53,11 +53,11 @@ namespace seamless_loop_music.Data
 
         public DatabaseHelper()
         {
-            string appData = Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData);
-            string folder = Path.Combine(appData, "SeamlessLoopMusic");
+            string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+            string folder = Path.Combine(exeDir, "Data");
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
-            _dbPath = Path.Combine(folder, "library.db");
+            _dbPath = Path.Combine(folder, "LoopData.db");
             _connectionString = $"Data Source={_dbPath};Version=3;";
         }
 
@@ -174,12 +174,23 @@ namespace seamless_loop_music.Data
         {
             using (var db = GetConnection())
             {
-                db.Execute(@"
-                    INSERT OR REPLACE INTO LoopPoints 
-                    (FileName, FilePath, DisplayName, TotalSamples, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LoopCandidatesJson) 
-                    VALUES 
-                    (@FileName, @FilePath, @DisplayName, @TotalSamples, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LoopCandidatesJson)", 
-                    tracks);
+                using (var trans = db.BeginTransaction())
+                {
+                    db.Execute(@"
+                        INSERT INTO LoopPoints 
+                        (FileName, FilePath, DisplayName, TotalSamples, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson) 
+                        VALUES 
+                        (@FileName, @FilePath, @DisplayName, @TotalSamples, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson)
+                        ON CONFLICT(FileName, TotalSamples) DO UPDATE SET
+                            FilePath = excluded.FilePath,
+                            DisplayName = excluded.DisplayName,
+                            Artist = excluded.Artist,
+                            Album = excluded.Album,
+                            AlbumArtist = excluded.AlbumArtist,
+                            LastModified = excluded.LastModified;", 
+                        tracks, transaction: trans);
+                    trans.Commit();
+                }
             }
         }
 

@@ -27,4 +27,9 @@ namespace seamless_loop_music.Events
     /// 当曲目元数据（爱心、评分）发生变动时发布
     /// </summary>
     public class TrackMetadataChangedEvent : PubSubEvent<MusicTrack> { }
+
+    /// <summary>
+    /// 当音乐库扫描完成或刷新后发布，通知 UI 重新加载曲目数据
+    /// </summary>
+    public class LibraryRefreshedEvent : PubSubEvent { }
 }

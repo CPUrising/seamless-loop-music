@@ -1,17 +1,21 @@
 using System;
 using System.Windows;
+using Prism.Events;
 using seamless_loop_music.Services;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.UI.Views
 {
     public partial class SettingsWindow : Window
     {
         private readonly IPlayerService _playerService;
+        private readonly IEventAggregator _eventAggregator;
 
-        public SettingsWindow(IPlayerService playerService)
+        public SettingsWindow(IPlayerService playerService, IEventAggregator eventAggregator)
         {
             InitializeComponent();
             _playerService = playerService;
+            _eventAggregator = eventAggregator;
             LoadFolders();
         }
 
@@ -50,6 +54,7 @@ namespace seamless_loop_music.UI.Views
             try
             {
                 await _playerService.ScanMusicFoldersAsync();
+                _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
                 MessageBox.Show("Scan completed!", "Settings", MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (Exception ex)

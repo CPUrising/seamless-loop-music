@@ -97,26 +97,34 @@ namespace seamless_loop_music.Services
         public async Task ScanMusicFoldersAsync()
         {
             var folders = GetMusicFolders();
-            var newTracks = new List<MusicTrack>();
-            foreach (var folder in folders)
+            var existingTracks = _databaseHelper.GetAllTracks().ToDictionary(t => t.FilePath, t => t);
+            
+            var allFiles = folders.Where(Directory.Exists)
+                .SelectMany(folder => Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
+                .Where(f => SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                .Distinct()
+                .ToList();
+
+            var filesToScan = allFiles.Where(f => 
+                !existingTracks.TryGetValue(f, out var existing) || 
+                System.IO.File.GetLastWriteTime(f) > existing.LastModified
+            ).ToList();
+
+            if (filesToScan.Count == 0) return;
+
+            var newOrUpdatedTracks = await Task.Run(() => 
+                filesToScan.AsParallel()
+                .WithDegreeOfParallelism(Environment.ProcessorCount)
+                .Select(CreateTrackFromFile)
+                .Where(t => t != null)
+                .ToList()
+            );
+
+            if (newOrUpdatedTracks.Count > 0)
             {
-                if (!Directory.Exists(folder)) continue;
-                var files = Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories)
-                    .Where(f => SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                    .ToArray();
-                foreach (var file in files)
-                {
-                    try
-                    {
-                        var track = await Task.Run(() => CreateTrackFromFile(file));
-                        if (track != null) newTracks.Add(track);
-                    }
-                    catch { }
-                }
-            }
-            if (newTracks.Count > 0)
-            {
-                _databaseHelper.BulkInsert(newTracks);
+                // 对于已存在的轨道，数据库层面会处理元数据更新，但我们在这里也可以确保状态字段不丢
+                // 实际上在上一步的 BulkInsert 中使用 ON CONFLICT 已经处理了大部分逻辑
+                _databaseHelper.BulkInsert(newOrUpdatedTracks);
             }
         }
 
@@ -135,7 +143,8 @@ namespace seamless_loop_music.Services
                     AlbumArtist = audioFile.Tag.FirstAlbumArtist,
                     TotalSamples = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds),
                     LoopStart = 0,
-                    LoopEnd = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds)
+                    LoopEnd = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds),
+                    LastModified = System.IO.File.GetLastWriteTime(filePath)
                 };
                 return track;
             }

@@ -14,8 +14,10 @@ namespace seamless_loop_music
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
         {
-            var playerService = ((Prism.Unity.PrismApplication)Application.Current).Container.Resolve<IPlayerService>();
-            var settingsWindow = new SettingsWindow(playerService) { Owner = this };
+            var container = ((Prism.Unity.PrismApplication)Application.Current).Container;
+            var playerService = container.Resolve<IPlayerService>();
+            var eventAggregator = container.Resolve<Prism.Events.IEventAggregator>();
+            var settingsWindow = new SettingsWindow(playerService, eventAggregator) { Owner = this };
             settingsWindow.ShowDialog();
         }
     }
