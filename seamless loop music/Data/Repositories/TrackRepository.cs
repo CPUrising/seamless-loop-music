@@ -128,6 +128,14 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
+        public async Task DeleteAsync(int trackId)
+        {
+            using (var db = GetConnection())
+            {
+                await db.ExecuteAsync("DELETE FROM LoopPoints WHERE Id=@Id", new { Id = trackId });
+            }
+        }
+
         public async Task<List<MusicTrack>> GetLovedTracksAsync()
         {
             using (var db = GetConnection())

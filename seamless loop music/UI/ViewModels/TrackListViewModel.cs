@@ -27,6 +27,11 @@ namespace seamless_loop_music.UI.ViewModels
 
         private string[] _currentFilterKeywords = Array.Empty<string>();
         private CategoryItem _selectedCategoryItem;
+        public CategoryItem SelectedCategoryItem
+        {
+            get => _selectedCategoryItem;
+            set => SetProperty(ref _selectedCategoryItem, value);
+        }
         private HashSet<int> _currentPlaylistTrackIds = new HashSet<int>();
 
         private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
@@ -34,6 +39,13 @@ namespace seamless_loop_music.UI.ViewModels
         {
             get => _tracks;
             set => SetProperty(ref _tracks, value);
+        }
+
+        private ObservableCollection<MusicTrack> _selectedTracks = new ObservableCollection<MusicTrack>();
+        public ObservableCollection<MusicTrack> SelectedTracks
+        {
+            get => _selectedTracks;
+            set => SetProperty(ref _selectedTracks, value);
         }
 
         private ICollectionView _tracksView;
@@ -97,6 +109,13 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<MusicTrack> RateCommand { get; }
         public DelegateCommand<MusicTrack> AnalyzeTrackCommand { get; }
 
+        public DelegateCommand<MusicTrack> ShowInExplorerCommand { get; }
+        public DelegateCommand<MusicTrack> AddToPlaylistCommand { get; }
+        public DelegateCommand<MusicTrack> RemoveFromListCommand { get; }
+        public DelegateCommand<MusicTrack> DeleteFromDiskCommand { get; }
+        public DelegateCommand PlaySelectedCommand { get; }
+        public DelegateCommand SelectAllCommand { get; }
+
         public TrackListViewModel(
             ITrackRepository trackRepository, 
             IPlaybackService playbackService, 
@@ -117,6 +136,13 @@ namespace seamless_loop_music.UI.ViewModels
             ToggleLoveCommand = new DelegateCommand<MusicTrack>(OnToggleLove);
             RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
             AnalyzeTrackCommand = new DelegateCommand<MusicTrack>(OnAnalyzeTrack);
+
+            ShowInExplorerCommand = new DelegateCommand<MusicTrack>(OnShowInExplorer);
+            AddToPlaylistCommand = new DelegateCommand<MusicTrack>(OnAddToPlaylist);
+            RemoveFromListCommand = new DelegateCommand<MusicTrack>(OnRemoveFromList);
+            DeleteFromDiskCommand = new DelegateCommand<MusicTrack>(OnDeleteFromDisk);
+            PlaySelectedCommand = new DelegateCommand(OnPlaySelected);
+            SelectAllCommand = new DelegateCommand(OnSelectAll);
 
             // 初始化视图
             TracksView = CollectionViewSource.GetDefaultView(Tracks);
@@ -270,6 +296,97 @@ namespace seamless_loop_music.UI.ViewModels
             // 鉴于目前的 UI 结构，直接跳转到详情页已经让 LoopWorkspace 加载了数据
             // 我们只需要通过事件告诉工作区“开始分析”即可
             _eventAggregator.GetEvent<seamless_loop_music.Events.TrackMetadataChangedEvent>().Publish(track);
+        }
+
+        private void OnShowInExplorer(MusicTrack track)
+        {
+            if (track == null || string.IsNullOrEmpty(track.FilePath)) return;
+            try
+            {
+                System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{track.FilePath}\"");
+            }
+            catch { }
+        }
+
+        private void OnAddToPlaylist(MusicTrack track)
+        {
+            var tracksToAdd = SelectedTracks.Count > 1 ? SelectedTracks.ToList() : new List<MusicTrack> { track ?? SelectedTrack };
+            if (!tracksToAdd.Any() || tracksToAdd.Any(t => t == null)) return;
+
+            var dialog = new Views.AddToPlaylistDialog(_playlistManager, tracksToAdd);
+            dialog.Owner = App.Current.MainWindow;
+            dialog.ShowDialog();
+        }
+
+        private async void OnRemoveFromList(MusicTrack track)
+        {
+            var tracksToRemove = SelectedTracks.Count > 1 ? SelectedTracks.ToList() : new List<MusicTrack> { track ?? SelectedTrack };
+            if (!tracksToRemove.Any() || tracksToRemove.Any(t => t == null)) return;
+
+            if (_selectedCategoryItem != null && _selectedCategoryItem.Type == CategoryType.Playlist && _selectedCategoryItem.Id > 0)
+            {
+                var result = System.Windows.MessageBox.Show($"确定要从播放列表「{_selectedCategoryItem.Name}」中移除选中的 {tracksToRemove.Count} 首曲目吗？", "确认移除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                if (result == System.Windows.MessageBoxResult.Yes)
+                {
+                    foreach (var t in tracksToRemove)
+                    {
+                        await _playlistManager.RemoveTrackFromPlaylistAsync(_selectedCategoryItem.Id, t.Id);
+                    }
+                    await ReloadTracksAsync(); // 重新加载以更新视图
+                }
+            }
+            else
+            {
+                System.Windows.MessageBox.Show("只有在自定义播放列表中才能执行移除操作。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+            }
+        }
+
+        private async void OnDeleteFromDisk(MusicTrack track)
+        {
+            var tracksToDelete = SelectedTracks.Count > 1 ? SelectedTracks.ToList() : new List<MusicTrack> { track ?? SelectedTrack };
+            if (!tracksToDelete.Any() || tracksToDelete.Any(t => t == null)) return;
+
+            var result = System.Windows.MessageBox.Show($"确定要从磁盘删除选中的 {tracksToDelete.Count} 首曲目吗？\n文件将被移动到回收站。", "确认删除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                foreach (var t in tracksToDelete)
+                {
+                    try
+                    {
+                        if (System.IO.File.Exists(t.FilePath))
+                        {
+                            // 使用 Microsoft.VisualBasic 移动到回收站
+                            Microsoft.VisualBasic.FileIO.FileSystem.DeleteFile(t.FilePath, 
+                                Microsoft.VisualBasic.FileIO.UIOption.OnlyErrorDialogs, 
+                                Microsoft.VisualBasic.FileIO.RecycleOption.SendToRecycleBin);
+                        }
+                        await _trackRepository.DeleteAsync(t.Id);
+                    }
+                    catch (Exception ex)
+                    {
+                        System.Windows.MessageBox.Show($"删除文件 {t.FileName} 失败: {ex.Message}");
+                    }
+                }
+                await ReloadTracksAsync();
+            }
+        }
+
+        private void OnPlaySelected()
+        {
+            if (SelectedTracks.Any())
+            {
+                _playbackService.SetQueue(SelectedTracks.ToList(), SelectedTracks.First());
+                _playbackService.LoadTrackAsync(SelectedTracks.First(), true).ConfigureAwait(false);
+            }
+        }
+
+        private void OnSelectAll()
+        {
+            SelectedTracks.Clear();
+            foreach (var track in TracksView.Cast<MusicTrack>())
+            {
+                SelectedTracks.Add(track);
+            }
         }
 
         private void OnTrackMetadataChanged(MusicTrack track)

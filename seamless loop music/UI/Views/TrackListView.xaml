@@ -2,9 +2,14 @@
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:prism="http://prismlibrary.com/"
+             xmlns:controls="clr-namespace:seamless_loop_music.UI.Controls"
+             xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
              prism:ViewModelLocator.AutoWireViewModel="True">
 
     <UserControl.Resources>
+        <!-- BindingProxy：让 ContextMenu 等游离元素能访问 ViewModel -->
+        <converters:BindingProxy x:Key="VmProxy" Data="{Binding}"/>
+
         <!-- 精简版模板：仅保留播放按钮和标题/文件名 -->
         <DataTemplate x:Key="CompactTrackTemplate">
             <Grid Height="55" Margin="10,0">
@@ -204,14 +209,20 @@
             </Grid>
         </Border>
 
-        <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="10,0,10,10"
+        <controls:MultiSelectListBox Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="10,0,10,10"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding TracksView}"
-                 SelectedItem="{Binding SelectedTrack}"
+                 SelectedItemsBinding="{Binding SelectedTracks}"
+                 SelectionMode="Extended"
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling">
-            <ListBox.Style>
+            <controls:MultiSelectListBox.InputBindings>
+                <KeyBinding Key="A" Modifiers="Ctrl" Command="{Binding SelectAllCommand}"/>
+                <KeyBinding Key="Delete" Command="{Binding RemoveFromListCommand}"/>
+                <KeyBinding Key="Delete" Modifiers="Shift" Command="{Binding DeleteFromDiskCommand}"/>
+            </controls:MultiSelectListBox.InputBindings>
+            <controls:MultiSelectListBox.Style>
                 <Style TargetType="ListBox">
                     <Setter Property="ItemTemplate" Value="{StaticResource FullTrackTemplate}"/>
                     <Style.Triggers>
@@ -220,8 +231,8 @@
                         </DataTrigger>
                     </Style.Triggers>
                 </Style>
-            </ListBox.Style>
-            <ListBox.ItemContainerStyle>
+            </controls:MultiSelectListBox.Style>
+            <controls:MultiSelectListBox.ItemContainerStyle>
                 <Style TargetType="ListBoxItem">
                     <Setter Property="Background" Value="Transparent"/>
                     <Setter Property="BorderThickness" Value="0"/>
@@ -229,12 +240,33 @@
                     <Setter Property="Padding" Value="0"/>
                     <Setter Property="ContextMenu">
                         <Setter.Value>
-                            <ContextMenu Background="#313244" BorderThickness="0">
-                                <MenuItem Header="▶ 播放" Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="✎ 编辑属性/歌词" Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
-                                <MenuItem Header="♾️ 寻找循环点 (PyMusicLooper)" Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
-                                <Separator Background="#45475A"/>
-                                <MenuItem Header="❤️ 收藏/取消收藏" Command="{Binding DataContext.ToggleLoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}" CommandParameter="{Binding}"/>
+                            <!-- 通过 VmProxy 访问 ViewModel，PlacementTarget.DataContext 获取当前行 MusicTrack -->
+                            <ContextMenu Background="#313244" BorderThickness="0"
+                                         BorderBrush="#45475A" Padding="4">
+                                <MenuItem Header="▶  播放"
+                                          Command="{Binding Data.PlayCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="▶  播放选中项"
+                                          Command="{Binding Data.PlaySelectedCommand, Source={StaticResource VmProxy}}"/>
+                                <Separator Background="#45475A" Margin="4,2"/>
+                                <MenuItem Header="📁  在资源管理器中显示"
+                                          Command="{Binding Data.ShowInExplorerCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="➕  添加到播放列表..."
+                                          Command="{Binding Data.AddToPlaylistCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <Separator Background="#45475A" Margin="4,2"/>
+                                <MenuItem Header="❤️  收藏/取消收藏"
+                                          Command="{Binding Data.ToggleLoveCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <Separator Background="#45475A" Margin="4,2"/>
+                                <MenuItem Header="➖  从当前列表移除"
+                                          Command="{Binding Data.RemoveFromListCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Header="🗑  从磁盘删除"
+                                          Foreground="#F38BA8"
+                                          Command="{Binding Data.DeleteFromDiskCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
@@ -256,7 +288,7 @@
                         </Setter.Value>
                     </Setter>
                 </Style>
-            </ListBox.ItemContainerStyle>
-        </ListBox>
+            </controls:MultiSelectListBox.ItemContainerStyle>
+        </controls:MultiSelectListBox>
     </Grid>
 </UserControl>
