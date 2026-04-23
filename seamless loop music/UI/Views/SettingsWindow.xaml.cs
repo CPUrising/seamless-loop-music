@@ -68,6 +68,40 @@ namespace seamless_loop_music.UI.Views
             }
         }
 
+        private async void BtnSync_Click(object sender, RoutedEventArgs e)
+        {
+            var openFileDialog = new Microsoft.Win32.OpenFileDialog
+            {
+                Filter = "SQLite Database (*.db)|*.db",
+                Title = "Select Old LoopData.db File"
+            };
+
+            if (openFileDialog.ShowDialog() == true)
+            {
+                btnSync.IsEnabled = false;
+                btnSync.Content = "Syncing...";
+
+                try
+                {
+                    var (tracks, playlists) = await _playerService.SyncDatabaseAsync(openFileDialog.FileName);
+                    
+                    _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
+
+                    MessageBox.Show($"Sync completed successfully!\n\nTracks updated: {tracks}\nPlaylists synced: {playlists}", 
+                        "Data Sync", MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Sync error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                }
+                finally
+                {
+                    btnSync.IsEnabled = true;
+                    btnSync.Content = "Sync from Old Database";
+                }
+            }
+        }
+
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();

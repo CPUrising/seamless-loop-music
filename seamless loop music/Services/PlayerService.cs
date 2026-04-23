@@ -199,6 +199,14 @@ namespace seamless_loop_music.Services
             }
         }
 
+        public async Task<(int tracks, int playlists)> SyncDatabaseAsync(string externalDbPath)
+        {
+            if (string.IsNullOrEmpty(externalDbPath) || !System.IO.File.Exists(externalDbPath))
+                return (0, 0);
+
+            return await Task.Run(() => _databaseHelper.SyncWithExternalDatabase(externalDbPath));
+        }
+
         public void Dispose() { }
     }
 }

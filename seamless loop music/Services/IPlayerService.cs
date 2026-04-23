@@ -63,6 +63,7 @@ namespace seamless_loop_music.Services
         void AddMusicFolder(string folderPath);
         void RemoveMusicFolder(string folderPath);
         Task ScanMusicFoldersAsync();
+        Task<(int tracks, int playlists)> SyncDatabaseAsync(string externalDbPath);
 
         new void Dispose();
     }

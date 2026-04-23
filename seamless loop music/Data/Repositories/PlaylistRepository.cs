@@ -17,7 +17,7 @@ namespace seamless_loop_music.Data.Repositories
                     SELECT 
                         p.Id, 
                         p.Name, 
-                        p.FolderPath AS Path, 
+                        p.FolderPath, 
                         p.IsFolderLinked, 
                         p.CreatedAt,
                         p.SortOrder,

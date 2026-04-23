@@ -5,6 +5,7 @@ using System.Data.SQLite;
 using Dapper;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using seamless_loop_music.Models;
 
 namespace seamless_loop_music.Data
@@ -44,6 +45,9 @@ namespace seamless_loop_music.Data
         List<string> GetMusicFolders();
         void AddMusicFolder(string folderPath);
         void RemoveMusicFolder(string folderPath);
+
+        // 数据库同步
+        (int tracksSynced, int playlistsSynced) SyncWithExternalDatabase(string externalDbPath);
     }
 
     public class DatabaseHelper : IDatabaseHelper
@@ -58,7 +62,7 @@ namespace seamless_loop_music.Data
             if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
 
             _dbPath = Path.Combine(folder, "LoopData.db");
-            _connectionString = $"Data Source={_dbPath};Version=3;";
+            _connectionString = $"Data Source={_dbPath};Version=3;Busy Timeout=5000;";
         }
 
         public IDbConnection GetConnection()
@@ -72,6 +76,10 @@ namespace seamless_loop_music.Data
         {
             using (var db = GetConnection())
             {
+                // 开启 WAL 模式以支持并发读写
+                db.Execute("PRAGMA journal_mode=WAL;");
+                db.Execute("PRAGMA synchronous=NORMAL;");
+
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS LoopPoints (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -254,5 +262,93 @@ namespace seamless_loop_music.Data
 
         public void RemoveMusicFolder(string folderPath)
             => GetConnection().Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = folderPath });
+
+        private class SyncSongDto
+        {
+            public string FileName { get; set; }
+            public long TotalSamples { get; set; }
+        }
+
+        public (int tracksSynced, int playlistsSynced) SyncWithExternalDatabase(string externalDbPath)
+        {
+            int tracksSynced = 0;
+            int playlistsSynced = 0;
+
+            using (var db = GetConnection())
+            {
+                db.Execute($"ATTACH DATABASE '{externalDbPath}' AS ExternalDB");
+                try
+                {
+                    // 1. 更新曲目信息
+                    // 其次：更新那些已经存在的曲目（采用“模糊匹配”：文件名一致 + 采样数误差极小）
+                    tracksSynced = db.Execute(@"
+                        UPDATE LoopPoints
+                        SET 
+                            DisplayName = ext.DisplayName,
+                            Artist = ext.Artist,
+                            Album = ext.Album,
+                            AlbumArtist = ext.AlbumArtist,
+                            LoopStart = ext.LoopStart,
+                            LoopEnd = ext.LoopEnd,
+                            LoopCandidatesJson = ext.LoopCandidatesJson
+                        FROM (
+                            SELECT FileName, TotalSamples, DisplayName, Artist, Album, AlbumArtist, LoopStart, LoopEnd, LoopCandidatesJson 
+                            FROM ExternalDB.LoopPoints
+                        ) AS ext
+                        WHERE LOWER(TRIM(LoopPoints.FileName)) = LOWER(TRIM(ext.FileName)) 
+                          AND ABS(LoopPoints.TotalSamples - ext.TotalSamples) < 10000");
+
+                    // 2. 同步歌单
+                    var externalPlaylists = db.Query<Playlist>("SELECT * FROM ExternalDB.Playlists").ToList();
+                    foreach (var extPl in externalPlaylists)
+                    {
+                        // 查找或创建本地同名歌单
+                        int? localPlId = db.ExecuteScalar<int?>(@"SELECT Id FROM Playlists WHERE Name = @Name LIMIT 1", new { Name = extPl.Name });
+                        
+                        if (!localPlId.HasValue)
+                        {
+                            localPlId = db.ExecuteScalar<int>(@"
+                                INSERT INTO Playlists (Name, FolderPath, IsFolderLinked, SortOrder) 
+                                VALUES (@Name, @FolderPath, @IsFolderLinked, @SortOrder);
+                                SELECT last_insert_rowid();", 
+                                new { Name = extPl.Name, FolderPath = extPl.FolderPath, IsFolderLinked = extPl.IsFolderLinked ? 1 : 0, SortOrder = extPl.SortOrder });
+                        }
+
+                        // 获取外部歌单里的所有歌曲详情
+                        var extSongs = db.Query<SyncSongDto>(@"
+                            SELECT lp.FileName, lp.TotalSamples 
+                            FROM ExternalDB.PlaylistItems pi
+                            JOIN ExternalDB.LoopPoints lp ON pi.SongId = lp.Id
+                            WHERE pi.PlaylistId = @ExtPlId", new { ExtPlId = extPl.Id }).ToList();
+
+                        foreach (var song in extSongs)
+                        {
+                            // 在本地库查找匹配的歌曲 ID（同样采用模糊匹配）
+                            int? localSongId = db.ExecuteScalar<int?>(@"
+                                SELECT Id FROM LoopPoints 
+                                WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) 
+                                  AND ABS(TotalSamples - @TotalSamples) < 10000 
+                                LIMIT 1", 
+                                new { FileName = song.FileName, TotalSamples = song.TotalSamples });
+
+                            if (localSongId.HasValue)
+                            {
+                                // 添加到本地歌单
+                                db.Execute(@"
+                                    INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId) 
+                                    VALUES (@PlId, @SongId)", new { PlId = localPlId.Value, SongId = localSongId.Value });
+                            }
+                        }
+                        playlistsSynced++;
+                    }
+                }
+                finally
+                {
+                    db.Execute("DETACH DATABASE ExternalDB");
+                }
+            }
+
+            return (tracksSynced, playlistsSynced);
+        }
     }
 }

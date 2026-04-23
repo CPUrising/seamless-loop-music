@@ -9,8 +9,9 @@ namespace seamless_loop_music.Models
     {
         public int Id { get; set; }
         public string Name { get; set; }
-        public string Path { get; set; }
+        public string FolderPath { get; set; }
         public bool IsFolderLinked { get; set; }
+        public int SortOrder { get; set; }
         public int SongCount { get; set; }
         public DateTime CreatedAt { get; set; }
 
