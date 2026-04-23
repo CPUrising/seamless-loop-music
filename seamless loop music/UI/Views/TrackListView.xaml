@@ -168,7 +168,12 @@
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding SelectedCategoryItem.Name, FallbackValue='所有曲目'}" Foreground="White" FontSize="28" FontWeight="Bold"/>
-                    <TextBlock Text="{Binding PlaylistStats}" Foreground="#6C7086" FontSize="15" Margin="0,8,0,0"/>
+                    <Grid Margin="0,8,0,0">
+                        <TextBlock Text="{Binding PlaylistStats}" Foreground="#6C7086" FontSize="15" 
+                                   Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="#89B4FA" FontSize="15" FontWeight="Medium"
+                                   Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityConverter}}"/>
+                    </Grid>
                 </StackPanel>
             </StackPanel>
         </Border>
@@ -248,6 +253,8 @@
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <MenuItem Header="▶  播放选中项"
                                           Command="{Binding Data.PlaySelectedCommand, Source={StaticResource VmProxy}}"/>
+                                <MenuItem Header="♾️  批量自动分析 (PyMusicLooper)"
+                                          Command="{Binding Data.BatchAnalyzeCommand, Source={StaticResource VmProxy}}"/>
                                 <Separator Background="#45475A" Margin="4,2"/>
                                 <MenuItem Header="📁  在资源管理器中显示"
                                           Command="{Binding Data.ShowInExplorerCommand, Source={StaticResource VmProxy}}"

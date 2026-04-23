@@ -168,9 +168,9 @@ namespace seamless_loop_music
                 _wavePlayer = new WaveOutEvent
                 {
                     DesiredLatency = 200, 
-                    NumberOfBuffers = 3  
+                    NumberOfBuffers = 3,
+                    Volume = _volume
                 };
-                _wavePlayer.Volume = _volume; // Synchronize volume to new player
                 LogDebug($"WaveOutEvent created with volume {_volume}");
 
                 _wavePlayer.Init(_bufferedProvider);

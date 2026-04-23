@@ -88,6 +88,45 @@ namespace seamless_loop_music.Services
             await Task.Run(() => _databaseHelper.UpdateTrackAnalysis(track));
         }
 
+        public async Task AnalyzeTracksAsync(IEnumerable<MusicTrack> tracks, IProgress<(int current, int total, string fileName)> progress = null)
+        {
+            var trackList = tracks.ToList();
+            int total = trackList.Count;
+            int current = 0;
+
+            foreach (var track in trackList)
+            {
+                current++;
+                progress?.Report((current, total, track.FileName));
+
+                try
+                {
+                    // 获取候选点
+                    var candidates = await _loopAnalysisService.FetchTopLoopCandidatesAsync(track.FilePath);
+                    if (candidates != null && candidates.Any())
+                    {
+                        // 序列化
+                        track.LoopCandidatesJson = _loopAnalysisService.SerializeLoopCandidates(candidates);
+
+                        // 如果当前没设置过循环点 (即 0 -> 总采样数)，则自动应用最佳点
+                        if (track.LoopStart == 0 && track.LoopEnd == track.TotalSamples)
+                        {
+                            var best = candidates.First();
+                            track.LoopStart = best.LoopStart;
+                            track.LoopEnd = best.LoopEnd;
+                        }
+
+                        // 保存到数据库
+                        await Task.Run(() => _databaseHelper.UpdateTrackAnalysis(track));
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"[BatchAnalysis Error] {track.FileName}: {ex.Message}");
+                }
+            }
+        }
+
         private static readonly string[] SupportedExtensions = { ".mp3", ".flac", ".wav", ".m4a", ".ogg", ".wma", ".aiff", ".opus" };
 
         public List<string> GetMusicFolders() => _databaseHelper.GetMusicFolders();

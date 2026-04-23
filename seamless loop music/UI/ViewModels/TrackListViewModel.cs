@@ -24,6 +24,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly ISearchService _searchService;
         private readonly IEventAggregator _eventAggregator;
         private readonly IRegionManager _regionManager;
+        private readonly IPlayerService _playerService;
 
         private string[] _currentFilterKeywords = Array.Empty<string>();
         private CategoryItem _selectedCategoryItem;
@@ -103,6 +104,20 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _playlistStats, value);
         }
 
+        private string _statusMessage;
+        public string StatusMessage
+        {
+            get => _statusMessage;
+            set => SetProperty(ref _statusMessage, value);
+        }
+
+        private bool _isAnalyzing;
+        public bool IsAnalyzing
+        {
+            get => _isAnalyzing;
+            set => SetProperty(ref _isAnalyzing, value);
+        }
+
         public DelegateCommand<MusicTrack> PlayCommand { get; }
         public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
         public DelegateCommand<MusicTrack> ToggleLoveCommand { get; }
@@ -114,6 +129,7 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<MusicTrack> RemoveFromListCommand { get; }
         public DelegateCommand<MusicTrack> DeleteFromDiskCommand { get; }
         public DelegateCommand PlaySelectedCommand { get; }
+        public DelegateCommand BatchAnalyzeCommand { get; }
         public DelegateCommand SelectAllCommand { get; }
 
         public TrackListViewModel(
@@ -122,7 +138,8 @@ namespace seamless_loop_music.UI.ViewModels
             IPlaylistManager playlistManager, 
             ISearchService searchService, 
             IEventAggregator eventAggregator,
-            IRegionManager regionManager)
+            IRegionManager regionManager,
+            IPlayerService playerService)
         {
             _trackRepository = trackRepository;
             _playbackService = playbackService;
@@ -130,6 +147,7 @@ namespace seamless_loop_music.UI.ViewModels
             _searchService = searchService;
             _eventAggregator = eventAggregator;
             _regionManager = regionManager;
+            _playerService = playerService;
 
             PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
@@ -142,6 +160,7 @@ namespace seamless_loop_music.UI.ViewModels
             RemoveFromListCommand = new DelegateCommand<MusicTrack>(OnRemoveFromList);
             DeleteFromDiskCommand = new DelegateCommand<MusicTrack>(OnDeleteFromDisk);
             PlaySelectedCommand = new DelegateCommand(OnPlaySelected);
+            BatchAnalyzeCommand = new DelegateCommand(OnBatchAnalyze);
             SelectAllCommand = new DelegateCommand(OnSelectAll);
 
             // 初始化视图
@@ -296,6 +315,38 @@ namespace seamless_loop_music.UI.ViewModels
             // 鉴于目前的 UI 结构，直接跳转到详情页已经让 LoopWorkspace 加载了数据
             // 我们只需要通过事件告诉工作区“开始分析”即可
             _eventAggregator.GetEvent<seamless_loop_music.Events.TrackMetadataChangedEvent>().Publish(track);
+        }
+
+        private async void OnBatchAnalyze()
+        {
+            var tracksToAnalyze = SelectedTracks.Any() ? SelectedTracks.ToList() : Tracks.ToList();
+            if (!tracksToAnalyze.Any()) return;
+
+            IsAnalyzing = true;
+            StatusMessage = "准备分析...";
+
+            var progress = new Progress<(int current, int total, string fileName)>(p =>
+            {
+                StatusMessage = $"正在分析 ({p.current}/{p.total}): {p.fileName}";
+            });
+
+            try
+            {
+                await _playerService.AnalyzeTracksAsync(tracksToAnalyze, progress);
+                StatusMessage = $"分析完成！共处理 {tracksToAnalyze.Count} 首曲目。";
+                
+                // 延迟清除状态消息
+                await Task.Delay(3000);
+                StatusMessage = string.Empty;
+            }
+            catch (Exception ex)
+            {
+                StatusMessage = $"分析出错: {ex.Message}";
+            }
+            finally
+            {
+                IsAnalyzing = false;
+            }
         }
 
         private void OnShowInExplorer(MusicTrack track)

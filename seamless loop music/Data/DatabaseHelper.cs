@@ -165,6 +165,8 @@ namespace seamless_loop_music.Data
                         Album = @Album, 
                         AlbumArtist = @AlbumArtist, 
                         DisplayName = @DisplayName,
+                        LoopStart = @LoopStart,
+                        LoopEnd = @LoopEnd,
                         LoopCandidatesJson = @LoopCandidatesJson 
                     WHERE Id = @Id", track);
             }
