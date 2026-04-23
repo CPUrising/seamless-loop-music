@@ -1,6 +1,7 @@
 using System;
 using System.IO;
 using System.Linq;
+using Dapper;
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
 
@@ -119,6 +120,9 @@ namespace seamless_loop_music.Services
                         {
                             track.DisplayName = file.Tag.Title;
                         }
+
+                        // 获取封面 (带缓存)
+                        track.CoverPath = GetOrExtractCover(track);
                     }
                 }
             }
@@ -131,6 +135,90 @@ namespace seamless_loop_music.Services
         public void SaveTrack(MusicTrack track)
         {
             if (track != null) _dbHelper.SaveTrack(track);
+        }
+
+        public string GetOrExtractCover(MusicTrack track)
+        {
+            try
+            {
+                if (track == null || string.IsNullOrEmpty(track.FilePath)) return null;
+
+                // 1. 如果数据库已经记录了路径，且文件存在，直接返回
+                if (!string.IsNullOrEmpty(track.CoverPath) && System.IO.File.Exists(track.CoverPath))
+                {
+                    return track.CoverPath;
+                }
+
+                // 2. 尝试寻找同专辑的其他曲目是否已经缓存了封面
+                string albumKey = !string.IsNullOrEmpty(track.Album) ? track.Album : "UnknownAlbum";
+                string artistKey = !string.IsNullOrEmpty(track.Artist) ? track.Artist : "UnknownArtist";
+                
+                // 这种查询比较重，我们可以通过数据库助手找
+                using (var db = _dbHelper.GetConnection())
+                {
+                    string existingPath = db.QueryFirstOrDefault<string>(
+                        "SELECT CoverPath FROM LoopPoints WHERE Album = @Album AND CoverPath IS NOT NULL AND CoverPath != '' LIMIT 1",
+                        new { Album = track.Album });
+
+                    if (!string.IsNullOrEmpty(existingPath) && System.IO.File.Exists(existingPath))
+                    {
+                        track.CoverPath = existingPath;
+                        return existingPath;
+                    }
+                }
+
+                // 3. 准备缓存目录
+                string cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Covers");
+                if (!System.IO.Directory.Exists(cacheDir)) System.IO.Directory.CreateDirectory(cacheDir);
+
+                // 4. 尝试从文件提取 (TagLib)
+                using (var file = TagLib.File.Create(track.FilePath))
+                {
+                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 0)
+                    {
+                        var pic = file.Tag.Pictures[0];
+                        
+                        // 仅使用专辑名计算指纹，符合 CPU 大人的严格要求
+                        string albumId = !string.IsNullOrEmpty(track.Album) ? track.Album : Path.GetFileName(Path.GetDirectoryName(track.FilePath));
+                        string safeId = Convert.ToBase64String(System.Text.Encoding.UTF8.GetBytes(albumId ?? "Unknown"))
+                                        .Replace("/", "_").Replace("+", "-").Replace("=", "");
+                        
+                        if (safeId.Length > 50) safeId = safeId.Substring(0, 50); // 防止路径过长
+
+                        string cachePath = Path.Combine(cacheDir, $"album-{safeId}.jpg");
+                        
+                        // 如果文件已经存在，就没必要再写一次了
+                        if (!System.IO.File.Exists(cachePath))
+                        {
+                            System.IO.File.WriteAllBytes(cachePath, pic.Data.Data);
+                        }
+                        
+                        track.CoverPath = cachePath;
+                        return cachePath;
+                    }
+                }
+
+                // 5. 尝试从本地文件夹匹配常见封面名
+                string trackDir = Path.GetDirectoryName(track.FilePath);
+                if (!string.IsNullOrEmpty(trackDir))
+                {
+                    string[] coverNames = { "cover.jpg", "folder.jpg", "album.jpg", "front.jpg", "cover.png" };
+                    foreach (var name in coverNames)
+                    {
+                        string p = Path.Combine(trackDir, name);
+                        if (System.IO.File.Exists(p))
+                        {
+                            track.CoverPath = p;
+                            return p;
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("Cover Extract Error: " + ex.Message);
+            }
+            return null;
         }
     }
 }

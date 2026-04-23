@@ -15,6 +15,7 @@ namespace seamless_loop_music.Services
         private readonly IDatabaseHelper _databaseHelper;
         private readonly IPlaybackService _playbackService;
         private readonly ILoopAnalysisService _loopAnalysisService;
+        private readonly TrackMetadataService _metadataService;
 
         public List<MusicTrack> Playlist { get; set; } = new List<MusicTrack>();
         public int CurrentIndex { get; set; } = -1;
@@ -29,11 +30,12 @@ namespace seamless_loop_music.Services
         public double MatchWindowSize { get; set; } = 1.0;
         public double MatchSearchRadius { get; set; } = 5.0;
 
-        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService)
+        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, TrackMetadataService metadataService)
         {
             _databaseHelper = databaseHelper;
             _playbackService = playbackService;
             _loopAnalysisService = loopAnalysisService;
+            _metadataService = metadataService;
         }
 
         public void Play() => _playbackService.Play();
@@ -138,8 +140,8 @@ namespace seamless_loop_music.Services
             var folders = GetMusicFolders();
             var existingTracks = _databaseHelper.GetAllTracks().ToDictionary(t => t.FilePath, t => t);
             
-            var allFiles = folders.Where(Directory.Exists)
-                .SelectMany(folder => Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
+            var allFiles = folders.Where(System.IO.Directory.Exists)
+                .SelectMany(folder => System.IO.Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
                 .Where(f => SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
                 .Distinct()
                 .ToList();
@@ -185,6 +187,10 @@ namespace seamless_loop_music.Services
                     LoopEnd = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds),
                     LastModified = System.IO.File.GetLastWriteTime(filePath)
                 };
+
+                // 获取封面
+                track.CoverPath = _metadataService.GetOrExtractCover(track);
+
                 return track;
             }
             catch

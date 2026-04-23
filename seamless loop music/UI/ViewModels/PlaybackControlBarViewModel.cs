@@ -18,6 +18,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IPlaybackService _playbackService;
         private readonly IRegionManager _regionManager;
         private readonly IEventAggregator _eventAggregator;
+        private readonly TrackMetadataService _metadataService;
         private readonly DispatcherTimer _statusTimer;
 
         private MusicTrack _currentTrack;
@@ -72,11 +73,12 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<double?> SeekCommand { get; }
         public DelegateCommand OpenDetailCommand { get; }
 
-        public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator)
+        public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
         {
             _playbackService = playbackService;
             _regionManager = regionManager;
             _eventAggregator = eventAggregator;
+            _metadataService = metadataService;
 
             PlayCommand = new DelegateCommand(OnPlayPause);
             StopCommand = new DelegateCommand(() => _playbackService.Stop());
@@ -153,40 +155,43 @@ namespace seamless_loop_music.UI.ViewModels
             var parameters = new NavigationParameters();
             parameters.Add("track", CurrentTrack);
             parameters.Add("autoPlay", false);
-            _regionManager.RequestNavigate("MainContentRegion", "DetailView", parameters);
+            _regionManager.RequestNavigate("MainContentRegion", "NowPlayingView", parameters);
         }
 
         private void LoadAlbumCover(MusicTrack track)
         {
             try
             {
-                if (track == null || !System.IO.File.Exists(track.FilePath))
+                if (track == null)
                 {
                     AlbumCoverImage = null;
                     return;
                 }
 
-                using (var file = TagLib.File.Create(track.FilePath))
+                // 1. 优先使用已缓存的路径
+                string path = track.CoverPath;
+                
+                // 2. 如果路径为空，尝试寻找/提取 (一个专辑一个图片，GUID命名)
+                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
                 {
-                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 0)
-                    {
-                        var picture = file.Tag.Pictures[0];
-                        var bitmap = new BitmapImage();
-                        bitmap.BeginInit();
-                        bitmap.StreamSource = new MemoryStream(picture.Data.Data);
-                        bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                        bitmap.DecodePixelWidth = 60;
-                        bitmap.EndInit();
-                        bitmap.Freeze();
-                        AlbumCoverImage = bitmap;
-                        return;
-                    }
+                    path = _metadataService.GetOrExtractCover(track);
+                    if (!string.IsNullOrEmpty(path)) _metadataService.SaveTrack(track);
+                }
+
+                if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
+                {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(path);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.DecodePixelWidth = 60;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    AlbumCoverImage = bitmap;
+                    return;
                 }
             }
-            catch (Exception ex)
-            {
-                System.Diagnostics.Debug.WriteLine($"[封面加载失败] {ex.Message}");
-            }
+            catch { }
             AlbumCoverImage = null;
         }
     }

@@ -1,0 +1,151 @@
+using System;
+using System.IO;
+using System.Windows.Media.Imaging;
+using Prism.Mvvm;
+using Prism.Regions;
+using Prism.Commands;
+using Prism.Events;
+using seamless_loop_music.Models;
+using seamless_loop_music.Services;
+
+namespace seamless_loop_music.UI.ViewModels
+{
+    public class NowPlayingViewModel : BindableBase, INavigationAware
+    {
+        private readonly IPlaybackService _playbackService;
+        private readonly IRegionManager _regionManager;
+        private readonly IEventAggregator _eventAggregator;
+        private readonly TrackMetadataService _metadataService;
+        private IRegionNavigationService _navigationService;
+        
+        private MusicTrack _currentTrack;
+        public MusicTrack CurrentTrack
+        {
+            get => _currentTrack;
+            set => SetProperty(ref _currentTrack, value);
+        }
+
+        private BitmapImage _albumCoverImage;
+        public BitmapImage AlbumCoverImage
+        {
+            get => _albumCoverImage;
+            set => SetProperty(ref _albumCoverImage, value);
+        }
+
+        public DelegateCommand GoBackCommand { get; }
+
+        public NowPlayingViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
+        {
+            _playbackService = playbackService;
+            _regionManager = regionManager;
+            _eventAggregator = eventAggregator;
+            _metadataService = metadataService;
+            GoBackCommand = new DelegateCommand(OnGoBack);
+            
+            _playbackService.TrackChanged += OnTrackChanged;
+            _eventAggregator.GetEvent<seamless_loop_music.Events.TrackLoadedEvent>().Subscribe(OnTrackLoaded);
+        }
+
+        private void OnTrackLoaded(MusicTrack track)
+        {
+            if (track == null) return;
+            
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                CurrentTrack = track;
+                LoadAlbumCover(track);
+            });
+        }
+
+        private void OnTrackChanged(MusicTrack track)
+        {
+            if (track == null) return;
+            
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            {
+                CurrentTrack = track;
+                LoadAlbumCover(track);
+            });
+        }
+
+        public void OnNavigatedTo(NavigationContext navigationContext)
+        {
+            _navigationService = navigationContext.NavigationService;
+            
+            // 获取当前正在播放的曲目
+            var track = _playbackService.CurrentTrack;
+            if (track != null)
+            {
+                CurrentTrack = track;
+                LoadAlbumCover(track);
+                
+                // 导航右侧列表区域
+                var listParams = new NavigationParameters();
+                listParams.Add("compact", true);
+                listParams.Add("track", track);
+                _regionManager.RequestNavigate("NowPlayingListRegion", "TrackListView", listParams);
+            }
+        }
+
+        public bool IsNavigationTarget(NavigationContext navigationContext) => true;
+        public void OnNavigatedFrom(NavigationContext navigationContext) { }
+
+        private void LoadAlbumCover(MusicTrack track)
+        {
+            try
+            {
+                if (track == null)
+                {
+                    AlbumCoverImage = null;
+                    return;
+                }
+
+                // 1. 优先使用已缓存的路径
+                string path = track.CoverPath;
+                
+                // 2. 如果路径为空，尝试从文件动态提取（兜底逻辑）
+                if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+                {
+                    // 使用服务进行提取并补充 (一个专辑一个图片，GUID命名)
+                    path = _metadataService.GetOrExtractCover(track);
+                    
+                    if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
+                    {
+                        AlbumCoverImage = null;
+                        return;
+                    }
+                    
+                    // 如果提取成功，保存曲目状态（这样下次就有了）
+                    _metadataService.SaveTrack(track);
+                }
+
+                // 3. 从最终确定的路径加载
+                var bitmap = new BitmapImage();
+                bitmap.BeginInit();
+                bitmap.UriSource = new Uri(path);
+                bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                bitmap.EndInit();
+                bitmap.Freeze();
+                AlbumCoverImage = bitmap;
+                return;
+            }
+            catch
+            {
+                // Ignore errors
+            }
+            AlbumCoverImage = null;
+        }
+
+        private void OnGoBack()
+        {
+            if (_navigationService?.Journal.CanGoBack == true)
+            {
+                _navigationService.Journal.GoBack();
+            }
+            else
+            {
+                _regionManager.RequestNavigate("MainContentRegion", "LibraryView");
+            }
+        }
+    }
+}

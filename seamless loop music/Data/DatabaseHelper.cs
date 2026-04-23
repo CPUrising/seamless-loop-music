@@ -86,8 +86,8 @@ namespace seamless_loop_music.Data
                         AlbumArtist TEXT,
                         LastModified DATETIME,
                         LoopCandidatesJson TEXT,
-                        IsLoved INTEGER DEFAULT 0,
                         Rating INTEGER DEFAULT 0,
+                        CoverPath TEXT,
                         UNIQUE(FileName, TotalSamples)
                     );");
                 
@@ -102,6 +102,10 @@ namespace seamless_loop_music.Data
                 if (!columnNames.Contains("Rating"))
                 {
                     db.Execute("ALTER TABLE LoopPoints ADD COLUMN Rating INTEGER DEFAULT 0;");
+                }
+                if (!columnNames.Contains("CoverPath"))
+                {
+                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN CoverPath TEXT;");
                 }
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS Playlists (
@@ -167,7 +171,8 @@ namespace seamless_loop_music.Data
                         DisplayName = @DisplayName,
                         LoopStart = @LoopStart,
                         LoopEnd = @LoopEnd,
-                        LoopCandidatesJson = @LoopCandidatesJson 
+                        LoopCandidatesJson = @LoopCandidatesJson,
+                        CoverPath = @CoverPath
                     WHERE Id = @Id", track);
             }
         }
@@ -180,15 +185,16 @@ namespace seamless_loop_music.Data
                 {
                     db.Execute(@"
                         INSERT INTO LoopPoints 
-                        (FileName, FilePath, DisplayName, TotalSamples, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson) 
+                        (FileName, FilePath, DisplayName, TotalSamples, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson, CoverPath) 
                         VALUES 
-                        (@FileName, @FilePath, @DisplayName, @TotalSamples, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson)
+                        (@FileName, @FilePath, @DisplayName, @TotalSamples, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson, @CoverPath)
                         ON CONFLICT(FileName, TotalSamples) DO UPDATE SET
                             FilePath = excluded.FilePath,
                             DisplayName = excluded.DisplayName,
                             Artist = excluded.Artist,
                             Album = excluded.Album,
                             AlbumArtist = excluded.AlbumArtist,
+                            CoverPath = excluded.CoverPath,
                             LastModified = excluded.LastModified;", 
                         tracks, transaction: trans);
                     trans.Commit();

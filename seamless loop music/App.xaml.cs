@@ -42,10 +42,12 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IQueueManager, QueueManager>();
             containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
             containerRegistry.RegisterSingleton<ISearchService, SearchService>();
+            containerRegistry.RegisterSingleton<TrackMetadataService>();
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
             containerRegistry.RegisterForNavigation<TrackListView, TrackListViewModel>();
+            containerRegistry.RegisterForNavigation<NowPlayingView, NowPlayingViewModel>();
             
             containerRegistry.RegisterSingleton<LoopWorkspaceViewModel>();
             

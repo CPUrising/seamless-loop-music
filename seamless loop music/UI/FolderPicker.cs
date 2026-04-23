@@ -29,11 +29,9 @@ namespace seamless_loop_music.UI
                 
                 if (allowedMethods == 0) 
                 {
-                    IShellItem item;
-                    dialog.GetResult(out item);
-                    string path;
+                    dialog.GetResult(out IShellItem item);
                     // SIGDN_FILESYSPATH = 0x80058000
-                    item.GetDisplayName(0x80058000, out path);
+                    item.GetDisplayName(0x80058000, out string path);
                     ResultPath = path;
                     return true;
                 }
