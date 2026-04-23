@@ -32,4 +32,9 @@ namespace seamless_loop_music.Events
     /// 当音乐库扫描完成或刷新后发布，通知 UI 重新加载曲目数据
     /// </summary>
     public class LibraryRefreshedEvent : PubSubEvent { }
+
+    /// <summary>
+    /// 当系统有新的状态消息需要显示时发布
+    /// </summary>
+    public class StatusMessageEvent : PubSubEvent<string> { }
 }

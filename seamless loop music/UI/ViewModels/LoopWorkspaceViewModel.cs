@@ -40,6 +40,11 @@ namespace seamless_loop_music.UI.ViewModels
             _eventAggregator.GetEvent<TrackLoadedEvent>().Subscribe(OnTrackLoaded);
             _eventAggregator.GetEvent<LoopPointsChangedEvent>().Subscribe(OnLoopPointsChanged);
             
+            _eventAggregator.GetEvent<StatusMessageEvent>().Subscribe(msg => 
+            {
+                Application.Current.Dispatcher.Invoke(() => StatusMessage = msg);
+            });
+            
             if (_playbackService.CurrentTrack != null)
             {
                 OnTrackLoaded(_playbackService.CurrentTrack);
@@ -116,7 +121,7 @@ namespace seamless_loop_music.UI.ViewModels
         public string StatusMessage
         {
             get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
+            set => Application.Current.Dispatcher.Invoke(() => SetProperty(ref _statusMessage, value));
         }
 
         private string _audioInfo = "";

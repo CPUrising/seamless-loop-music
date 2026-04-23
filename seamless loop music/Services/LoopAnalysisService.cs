@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Prism.Events;
 using seamless_loop_music.Models;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.Services
 {
@@ -14,11 +16,20 @@ namespace seamless_loop_music.Services
     {
         public event Action<string> OnStatusMessage;
         private readonly PyMusicLooperWrapper _pyMusicLooperWrapper;
+        private readonly IEventAggregator _eventAggregator;
 
-        public LoopAnalysisService()
+        public LoopAnalysisService(IEventAggregator eventAggregator)
         {
+            _eventAggregator = eventAggregator;
             _pyMusicLooperWrapper = new PyMusicLooperWrapper();
-            _pyMusicLooperWrapper.OnStatusMessage += msg => OnStatusMessage?.Invoke(msg);
+            _pyMusicLooperWrapper.OnStatusMessage += msg => 
+            {
+                System.Windows.Application.Current?.Dispatcher?.BeginInvoke((Action)(() => 
+                {
+                    OnStatusMessage?.Invoke(msg);
+                    _eventAggregator.GetEvent<StatusMessageEvent>().Publish(msg);
+                }));
+            };
         }
 
         public void SetCustomCachePath(string path)

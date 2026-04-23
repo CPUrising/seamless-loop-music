@@ -49,6 +49,11 @@ namespace seamless_loop_music.Services
                 _eventAggregator.GetEvent<PlaybackStateChangedEvent>().Publish(state);
                 StateChanged?.Invoke(state);
             };
+            
+            _audioLooper.OnStatusChanged += msg =>
+            {
+                _eventAggregator.GetEvent<StatusMessageEvent>().Publish(msg);
+            };
 
             _queueManager.QueueChanged += () =>
             {

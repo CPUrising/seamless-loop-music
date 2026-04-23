@@ -108,7 +108,7 @@ namespace seamless_loop_music.UI.ViewModels
         public string StatusMessage
         {
             get => _statusMessage;
-            set => SetProperty(ref _statusMessage, value);
+            set => App.Current.Dispatcher.Invoke(() => SetProperty(ref _statusMessage, value));
         }
 
         private bool _isAnalyzing;
@@ -184,6 +184,12 @@ namespace seamless_loop_music.UI.ViewModels
                     ? Array.Empty<string>() 
                     : filter.Split(new[] { ' ' }, StringSplitOptions.RemoveEmptyEntries);
                 TracksView.Refresh();
+            });
+
+            // 监听全局状态消息
+            _eventAggregator.GetEvent<StatusMessageEvent>().Subscribe(msg => 
+            {
+                App.Current.Dispatcher.Invoke(() => StatusMessage = msg);
             });
         }
 
@@ -327,21 +333,24 @@ namespace seamless_loop_music.UI.ViewModels
 
             var progress = new Progress<(int current, int total, string fileName)>(p =>
             {
-                StatusMessage = $"正在分析 ({p.current}/{p.total}): {p.fileName}";
+                var msg = $"正在分析 ({p.current}/{p.total}): {p.fileName}";
+                _eventAggregator.GetEvent<StatusMessageEvent>().Publish(msg);
             });
 
             try
             {
                 await _playerService.AnalyzeTracksAsync(tracksToAnalyze, progress);
-                StatusMessage = $"分析完成！共处理 {tracksToAnalyze.Count} 首曲目。";
+                var doneMsg = $"分析完成！共处理 {tracksToAnalyze.Count} 首曲目。";
+                _eventAggregator.GetEvent<StatusMessageEvent>().Publish(doneMsg);
                 
                 // 延迟清除状态消息
                 await Task.Delay(3000);
-                StatusMessage = string.Empty;
+                _eventAggregator.GetEvent<StatusMessageEvent>().Publish(string.Empty);
             }
             catch (Exception ex)
             {
-                StatusMessage = $"分析出错: {ex.Message}";
+                var errMsg = $"分析出错: {ex.Message}";
+                _eventAggregator.GetEvent<StatusMessageEvent>().Publish(errMsg);
             }
             finally
             {
