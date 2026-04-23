@@ -47,51 +47,58 @@
             </Button.Style>
         </Button>
 
-        <Grid Grid.Row="1" Margin="30,10,30,30">
+        <Grid Grid.Row="1" Margin="40,10,40,40">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*"/>
-                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="1.2*"/>
+                <!-- Left: Artwork & Info -->
+                <ColumnDefinition Width="1*"/>
+                <!-- Right: Queue -->
             </Grid.ColumnDefinitions>
 
             <!-- Left: Large Album Cover & Info -->
-            <Grid Grid.Column="0" Margin="0,0,20,0">
+            <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" HorizontalAlignment="Center">
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
-                <Border Grid.Row="0" CornerRadius="20" Background="#181825" Padding="20">
-                    <Grid>
-                        <Border x:Name="CoverBorder" CornerRadius="15" ClipToBounds="True">
-                            <Image Source="{Binding AlbumCoverImage}" Stretch="UniformToFill">
-                                <Image.Effect>
-                                    <DropShadowEffect BlurRadius="30" Color="Black" Opacity="0.5" ShadowDepth="10"/>
-                                </Image.Effect>
-                            </Image>
-                        </Border>
-                        <!-- Fallback Text if no cover -->
-                        <TextBlock Text="🎵" FontSize="120" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#313244"
-                                   Visibility="{Binding AlbumCoverImage, Converter={StaticResource NullToVisibilityInverseConverter}}"/>
-                    </Grid>
-                </Border>
+                <!-- Artwork Container: Centered square -->
+                <Grid Grid.Row="0">
+                    <Border CornerRadius="24" Background="#181825">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="40" Color="Black" Opacity="0.4" ShadowDepth="10"/>
+                        </Border.Effect>
+                        <Grid Width="{Binding ActualHeight, RelativeSource={RelativeSource Self}}" ClipToBounds="True">
+                            <Image Source="{Binding AlbumCoverImage}" Stretch="UniformToFill" />
 
-                <StackPanel Grid.Row="1" Margin="0,25,0,0">
-                    <TextBlock Text="{Binding CurrentTrack.DisplayName}" FontSize="32" FontWeight="Bold" Foreground="White" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding CurrentTrack.Artist}" FontSize="20" Foreground="#BAC2DE" Margin="0,5,0,0" Opacity="0.8"/>
-                    <TextBlock Text="{Binding CurrentTrack.Album}" FontSize="16" Foreground="#9399B2" Margin="0,5,0,0" Opacity="0.6"/>
+                            <!-- Fallback Text if no cover -->
+                            <TextBlock Text="🎵" FontSize="80" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#313244"
+                                       Visibility="{Binding AlbumCoverImage, Converter={StaticResource NullToVisibilityInverseConverter}}"/>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <!-- Track Info: Left aligned relative to artwork -->
+                <StackPanel Grid.Row="1" Margin="0,30,0,0" HorizontalAlignment="Left">
+                    <TextBlock Text="{Binding CurrentTrack.DisplayName}" FontSize="32" FontWeight="Bold" Foreground="White" 
+                               TextTrimming="CharacterEllipsis" MaxWidth="450"/>
+                    <TextBlock Text="{Binding CurrentTrack.Artist}" FontSize="20" Foreground="#BAC2DE" Margin="0,8,0,0" 
+                               Opacity="0.8"/>
+                    <TextBlock Text="{Binding CurrentTrack.Album}" FontSize="16" Foreground="#9399B2" Margin="0,5,0,0" 
+                               Opacity="0.6"/>
                 </StackPanel>
             </Grid>
 
             <!-- Right: Playback Queue -->
-            <Border Grid.Column="1" Background="#181825" CornerRadius="20" Padding="10">
+            <Border Grid.Column="1" Background="#181825" CornerRadius="24" Padding="15" Margin="20,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="*"/>
+                        <RowDefinition/>
                     </Grid.RowDefinitions>
-                    
-                    <TextBlock Grid.Row="0" Text="待播清单" Foreground="White" FontSize="18" FontWeight="SemiBold" Margin="15,10,0,15"/>
-                    
+
+                    <TextBlock Grid.Row="0" Text="待播清单" Foreground="White" FontSize="20" FontWeight="SemiBold" Margin="15,10,0,20"/>
+
                     <ContentControl Grid.Row="1" prism:RegionManager.RegionName="NowPlayingListRegion" />
                 </Grid>
             </Border>
