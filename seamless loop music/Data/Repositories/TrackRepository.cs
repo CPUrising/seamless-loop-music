@@ -277,10 +277,13 @@ namespace seamless_loop_music.Data.Repositories
                     new { Name = artistName }, transaction: trans);
             }
 
-            // Album
+            // Album: 升级为 ON CONFLICT 模式，如果发现新封面则自动补全
             db.Execute(@"
-                INSERT OR IGNORE INTO Albums (Name, ArtistId, CoverPath)
-                VALUES (@Name, @ArtistId, @CoverPath);",
+                INSERT INTO Albums (Name, ArtistId, CoverPath)
+                VALUES (@Name, @ArtistId, @CoverPath)
+                ON CONFLICT(Name, ArtistId) DO UPDATE SET
+                    CoverPath = COALESCE(Albums.CoverPath, excluded.CoverPath)
+                WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';",
                 new { Name = album, ArtistId = artistId, CoverPath = coverPath }, transaction: trans);
 
             return db.ExecuteScalar<int?>(

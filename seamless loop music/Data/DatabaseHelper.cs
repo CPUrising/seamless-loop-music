@@ -146,7 +146,12 @@ namespace seamless_loop_music.Data
             db.Execute("INSERT OR IGNORE INTO Artists (Name) VALUES (@Name)", new { Name = artistName }, transaction: trans);
             int artistId = db.ExecuteScalar<int>("SELECT Id FROM Artists WHERE Name = @Name", new { Name = artistName }, transaction: trans);
 
-            db.Execute("INSERT OR IGNORE INTO Albums (Name, ArtistId, CoverPath) VALUES (@Name, @ArtistId, @Cover)", 
+            db.Execute(@"
+                INSERT INTO Albums (Name, ArtistId, CoverPath)
+                VALUES (@Name, @ArtistId, @Cover)
+                ON CONFLICT(Name, ArtistId) DO UPDATE SET
+                    CoverPath = COALESCE(Albums.CoverPath, excluded.CoverPath)
+                WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';", 
                 new { Name = album, ArtistId = artistId, Cover = coverPath }, transaction: trans);
             return db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name = @Name AND ArtistId = @ArtistId", 
                 new { Name = album, ArtistId = artistId }, transaction: trans);

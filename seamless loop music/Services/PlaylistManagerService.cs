@@ -17,11 +17,13 @@ namespace seamless_loop_music.Services
     public class PlaylistManagerService : IPlaylistManagerService
     {
         private readonly IDatabaseHelper _dbHelper;
+        private readonly TrackMetadataService _metadataService;
         public Action<string> OnStatusMessage { get; set; }
 
-        public PlaylistManagerService(IDatabaseHelper dbHelper)
+        public PlaylistManagerService(IDatabaseHelper dbHelper, TrackMetadataService metadataService)
         {
             _dbHelper = dbHelper;
+            _metadataService = metadataService;
         }
 
         public List<Playlist> GetAllPlaylists()
@@ -107,7 +109,7 @@ namespace seamless_loop_music.Services
                             DisplayName = null,
                             LastModified = DateTime.Now
                         };
-                        FillMetadata(track);
+                        _metadataService.FillMetadata(track);
                         tracksToAdd.Add(track);
                     }
                     catch { /* 忽略损坏文件 */ }
@@ -281,7 +283,7 @@ namespace seamless_loop_music.Services
                                     DisplayName = existingTrack?.DisplayName, // 优先保留数据库已有值，若是新歌则为 null
                                     LastModified = DateTime.Now
                                 };
-                                FillMetadata(track); // FillMetadata 会尝试从标签填充 Title
+                                _metadataService.FillMetadata(track); // FillMetadata 会尝试从标签填充 Title 和 Cover
                                 tracksToSave.Add(track);
                             }
                         } 
@@ -386,29 +388,6 @@ namespace seamless_loop_music.Services
 
         public void UpdateTracksSortOrder(int playlistId, List<int> songIds) => _dbHelper.UpdateTracksSortOrder(playlistId, songIds);
 
-        private void FillMetadata(MusicTrack track)
-        {
-            try
-            {
-                if (!File.Exists(track.FilePath)) return;
 
-                using (var file = TagLib.File.Create(track.FilePath))
-                {
-                    if (file.Tag != null)
-                    {
-                        // 优先使用音频标签中的标题
-                        if (!string.IsNullOrEmpty(file.Tag.Title))
-                        {
-                            track.DisplayName = file.Tag.Title;
-                        }
-
-                        track.Artist = file.Tag.FirstPerformer;
-                        track.Album = file.Tag.Album;
-                        track.AlbumArtist = file.Tag.FirstAlbumArtist;
-                    }
-                }
-            }
-            catch { }
-        }
     }
 }
