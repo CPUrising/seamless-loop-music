@@ -74,7 +74,13 @@ namespace seamless_loop_music.Services
             if (dbTrack != null)
             {
                 currentTrack.Id = dbTrack.Id;
-                currentTrack.DisplayName = dbTrack.DisplayName;
+                
+                // 只有当本地标签没读到 DisplayName，且数据库里有值时，才用数据库的
+                if (string.IsNullOrEmpty(currentTrack.DisplayName))
+                {
+                    currentTrack.DisplayName = dbTrack.DisplayName;
+                }
+                
                 currentTrack.LoopCandidatesJson = dbTrack.LoopCandidatesJson;
                 
                 // A/B 自动修正

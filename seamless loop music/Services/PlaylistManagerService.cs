@@ -104,7 +104,7 @@ namespace seamless_loop_music.Services
                             TotalSamples = samples,
                             LoopEnd = samples,
                             LoopStart = 0,
-                            DisplayName = Path.GetFileNameWithoutExtension(f),
+                            DisplayName = null,
                             LastModified = DateTime.Now
                         };
                         FillMetadata(track);
@@ -278,10 +278,10 @@ namespace seamless_loop_music.Services
                                     TotalSamples = totalSamples,
                                     LoopEnd = totalSamples,
                                     LoopStart = loopStart,
-                                    DisplayName = existingTrack?.DisplayName ?? Path.GetFileNameWithoutExtension(f),
+                                    DisplayName = existingTrack?.DisplayName, // 优先保留数据库已有值，若是新歌则为 null
                                     LastModified = DateTime.Now
                                 };
-                                FillMetadata(track);
+                                FillMetadata(track); // FillMetadata 会尝试从标签填充 Title
                                 tracksToSave.Add(track);
                             }
                         } 
@@ -396,16 +396,15 @@ namespace seamless_loop_music.Services
                 {
                     if (file.Tag != null)
                     {
+                        // 优先使用音频标签中的标题
+                        if (!string.IsNullOrEmpty(file.Tag.Title))
+                        {
+                            track.DisplayName = file.Tag.Title;
+                        }
+
                         track.Artist = file.Tag.FirstPerformer;
                         track.Album = file.Tag.Album;
                         track.AlbumArtist = file.Tag.FirstAlbumArtist;
-
-                        // 仅当没有现有显示名称或显示名称仍是文件名时，才尝试用标题更新
-                        if (string.IsNullOrEmpty(track.DisplayName) || track.DisplayName == Path.GetFileNameWithoutExtension(track.FilePath))
-                        {
-                            if (!string.IsNullOrEmpty(file.Tag.Title))
-                                track.DisplayName = file.Tag.Title;
-                        }
                     }
                 }
             }
