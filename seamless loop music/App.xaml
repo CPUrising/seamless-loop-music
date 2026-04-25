@@ -9,5 +9,6 @@
         <x:Static Member="services:LocalizationService.Instance" x:Key="Loc" />
         <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
         <converters:NullToVisibilityInverseConverter x:Key="NullToVisibilityInverseConverter"/>
+        <converters:BindingProxy x:Key="Proxy" Data="{Binding}"/>
     </Application.Resources>
 </prism:PrismApplication>

@@ -13,6 +13,7 @@ using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Events;
 using seamless_loop_music.Data.Repositories;
+using seamless_loop_music.UI.Views;
 
 namespace seamless_loop_music.UI.ViewModels
 {
@@ -71,6 +72,10 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     // 发布事件通知子区域刷新
                     _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(value);
+                    
+                    // 通知右键菜单状态更新
+                    RenamePlaylistCommand?.RaiseCanExecuteChanged();
+                    DeletePlaylistCommand?.RaiseCanExecuteChanged();
                 }
             }
         }
@@ -116,16 +121,22 @@ namespace seamless_loop_music.UI.ViewModels
                 return false;
             };
 
-            // 设置默认选中
-            SelectedCategory = NavigationCategories.FirstOrDefault();
-
+            // 必须在设置 SelectedCategory 之前初始化命令，因为后者会触发 LoadCategoryItems 并最终调用命令的 RaiseCanExecuteChanged
             PlayCategoryItemCommand = new DelegateCommand<CategoryItem>(OnPlayCategoryItem);
+            RenamePlaylistCommand = new DelegateCommand(OnRenamePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
+            DeletePlaylistCommand = new DelegateCommand(OnDeletePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
+
+            // 设置默认选中（这会触发 LoadCategoryItems）
+            SelectedCategory = NavigationCategories.FirstOrDefault();
 
             // 扫描完成后自动刷新分类列表
             _eventAggregator.GetEvent<LibraryRefreshedEvent>().Subscribe(() => LoadCategoryItems());
         }
 
         public DelegateCommand<CategoryItem> PlayCategoryItemCommand { get; }
+        public DelegateCommand RenamePlaylistCommand { get; }
+        public DelegateCommand DeletePlaylistCommand { get; }
+        public DelegateCommand RefreshPlaylistCommand => new DelegateCommand(() => LoadCategoryItems());
 
         private async void OnPlayCategoryItem(CategoryItem item)
         {
@@ -213,6 +224,41 @@ namespace seamless_loop_music.UI.ViewModels
 
             CategoryItemsView.Refresh();
             SelectedCategoryItem = CategoryItems.FirstOrDefault();
+        }
+
+        private void OnRenamePlaylist()
+        {
+            if (SelectedCategoryItem == null || SelectedCategoryItem.Type != CategoryType.Playlist || SelectedCategoryItem.Id <= 0) return;
+
+            var dialog = new InputDialog("重命名歌单", "请输入新的名称：", SelectedCategoryItem.Name);
+            if (dialog.ShowDialog() == true)
+            {
+                var newName = dialog.InputText;
+                var id = SelectedCategoryItem.Id;
+                Task.Run(async () => {
+                    await _playlistManager.RenamePlaylistAsync(id, newName);
+                    // 刷新列表
+                    App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
+                });
+            }
+        }
+
+        private void OnDeletePlaylist()
+        {
+            if (SelectedCategoryItem == null || SelectedCategoryItem.Type != CategoryType.Playlist || SelectedCategoryItem.Id <= 0) return;
+
+            var result = System.Windows.MessageBox.Show($"确定要删除歌单「{SelectedCategoryItem.Name}」吗喵？(>﹏<)", 
+                "确认删除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            
+            if (result == System.Windows.MessageBoxResult.Yes)
+            {
+                var id = SelectedCategoryItem.Id;
+                Task.Run(async () => {
+                    await _playlistManager.DeletePlaylistAsync(id);
+                    // 刷新列表
+                    App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
+                });
+            }
         }
 
         

@@ -4,10 +4,14 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:seamless_loop_music.UI.Views"
+             xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
              xmlns:prism="http://prismlibrary.com/"
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
+    <UserControl.Resources>
+        <converters:BindingProxy x:Key="LibraryVmProxy" Data="{Binding}"/>
+    </UserControl.Resources>
     <Grid Background="#1E1E2E">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="65"/>  <!-- Column 0: Navigation -->
@@ -83,11 +87,27 @@
                 </ListBox.InputBindings>
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem">
+                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                        <EventSetter Event="PreviewMouseRightButtonDown" Handler="ListBoxItem_PreviewMouseRightButtonDown"/>
+                        <Setter Property="ContextMenu">
+                            <Setter.Value>
+                                <ContextMenu Background="#313244" BorderThickness="0" Padding="4" Foreground="#CDD6F4">
+                                    <MenuItem Header="{Binding [MenuRefresh], Source={StaticResource Loc}}" 
+                                              Command="{Binding Data.RefreshPlaylistCommand, Source={StaticResource LibraryVmProxy}}"/>
+                                    <Separator Background="#45475A" Margin="4,2"/>
+                                    <MenuItem Header="{Binding [MenuRename], Source={StaticResource Loc}}" 
+                                              Command="{Binding Data.RenamePlaylistCommand, Source={StaticResource LibraryVmProxy}}"/>
+                                    <MenuItem Header="{Binding [MenuDelete], Source={StaticResource Loc}}" 
+                                              Command="{Binding Data.DeletePlaylistCommand, Source={StaticResource LibraryVmProxy}}"
+                                              Foreground="#F38BA8"/>
+                                </ContextMenu>
+                            </Setter.Value>
+                        </Setter>
                         <Setter Property="Template">
                             <Setter.Value>
                                 <ControlTemplate TargetType="ListBoxItem">
                                     <Border x:Name="Bg" Background="Transparent" CornerRadius="8" Margin="8,2" Padding="8,6">
-                                        <Grid>
+                                        <Grid Background="Transparent">
                                             <Grid.ColumnDefinitions>
                                                 <ColumnDefinition Width="40"/>
                                                 <ColumnDefinition Width="*"/>

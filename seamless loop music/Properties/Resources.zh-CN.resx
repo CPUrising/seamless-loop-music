@@ -82,4 +82,19 @@
   <data name="ButtonApply" xml:space="preserve">
     <value>应用</value>
   </data>
+  <data name="MyPlaylist" xml:space="preserve">
+    <value>歌单</value>
+  </data>
+  <data name="ToolTipAddPlaylist" xml:space="preserve">
+    <value>添加新歌单</value>
+  </data>
+  <data name="MenuRefresh" xml:space="preserve">
+    <value>刷新列表</value>
+  </data>
+  <data name="MenuRename" xml:space="preserve">
+    <value>重命名</value>
+  </data>
+  <data name="MenuDelete" xml:space="preserve">
+    <value>删除</value>
+  </data>
 </root>
