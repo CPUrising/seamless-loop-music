@@ -79,42 +79,66 @@ namespace seamless_loop_music.Data
                 // 开启 WAL 模式以支持并发读写
                 db.Execute("PRAGMA journal_mode=WAL;");
                 db.Execute("PRAGMA synchronous=NORMAL;");
+                db.Execute("PRAGMA foreign_keys=ON;");
 
+                // 1. Artists 表
                 db.Execute(@"
-                    CREATE TABLE IF NOT EXISTS LoopPoints (
+                    CREATE TABLE IF NOT EXISTS Artists (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Name TEXT NOT NULL UNIQUE,
+                        CoverPath TEXT
+                    );");
+
+                // 2. Albums 表
+                db.Execute(@"
+                    CREATE TABLE IF NOT EXISTS Albums (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        Name TEXT NOT NULL,
+                        ArtistId INTEGER,
+                        CoverPath TEXT,
+                        FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL,
+                        UNIQUE(Name, ArtistId)
+                    );");
+
+                // 3. Tracks 表
+                db.Execute(@"
+                    CREATE TABLE IF NOT EXISTS Tracks (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
                         FileName TEXT NOT NULL,
                         FilePath TEXT,
                         DisplayName TEXT,
-                        LoopStart INTEGER DEFAULT 0,
-                        LoopEnd INTEGER DEFAULT 0,
                         TotalSamples INTEGER DEFAULT 0,
-                        Artist TEXT,
-                        Album TEXT,
-                        AlbumArtist TEXT,
                         LastModified DATETIME,
-                        LoopCandidatesJson TEXT,
-                        Rating INTEGER DEFAULT 0,
                         CoverPath TEXT,
+                        AlbumId INTEGER,
+                        FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL,
                         UNIQUE(FileName, TotalSamples)
                     );");
-                
-                // 自动迁移：检查并添加缺失的字段
-                var columnsResult = db.Query("PRAGMA table_info(LoopPoints)").Cast<System.Collections.Generic.IDictionary<string, object>>();
-                var columnNames = columnsResult.Select(c => c["name"].ToString()).ToList();
 
-                if (!columnNames.Contains("IsLoved"))
-                {
-                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN IsLoved INTEGER DEFAULT 0;");
-                }
-                if (!columnNames.Contains("Rating"))
-                {
-                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN Rating INTEGER DEFAULT 0;");
-                }
-                if (!columnNames.Contains("CoverPath"))
-                {
-                    db.Execute("ALTER TABLE LoopPoints ADD COLUMN CoverPath TEXT;");
-                }
+                // 4. LoopPoints 表 (新版，与 Tracks 1:1)
+                db.Execute(@"
+                    CREATE TABLE IF NOT EXISTS LoopPoints (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        TrackId INTEGER NOT NULL UNIQUE,
+                        LoopStart INTEGER DEFAULT 0,
+                        LoopEnd INTEGER DEFAULT 0,
+                        LoopCandidatesJson TEXT,
+                        AnalysisLastModified DATETIME,
+                        FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE
+                    );");
+
+                // 5. UserRatings 表
+                db.Execute(@"
+                    CREATE TABLE IF NOT EXISTS UserRatings (
+                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                        TrackId INTEGER NOT NULL UNIQUE,
+                        Rating INTEGER DEFAULT 0,
+                        IsLoved INTEGER DEFAULT 0,
+                        LastModified DATETIME,
+                        FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE
+                    );");
+
+                // 6. Playlists 相关表
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS Playlists (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -124,6 +148,7 @@ namespace seamless_loop_music.Data
                         SortOrder INTEGER DEFAULT 0,
                         CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
                     );");
+
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS PlaylistItems (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -131,8 +156,9 @@ namespace seamless_loop_music.Data
                         SongId INTEGER NOT NULL,
                         SortOrder INTEGER DEFAULT 0,
                         FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
-                        FOREIGN KEY(SongId) REFERENCES LoopPoints(Id) ON DELETE CASCADE
+                        FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE
                     );");
+
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS PlaylistFolders (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -142,6 +168,7 @@ namespace seamless_loop_music.Data
                         FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
                         UNIQUE(PlaylistId, FolderPath)
                     );");
+
                 db.Execute(@"
                     CREATE TABLE IF NOT EXISTS MusicFolders (
                         Id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -151,37 +178,70 @@ namespace seamless_loop_music.Data
             }
         }
 
+        private const string FullTrackSelect = @"
+            SELECT
+                t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.LastModified, t.CoverPath,
+                al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist,
+                COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
+                lp.LoopCandidatesJson,
+                COALESCE(ur.IsLoved, 0) AS IsLoved, COALESCE(ur.Rating, 0) AS Rating
+            FROM Tracks t
+            LEFT JOIN Albums al ON t.AlbumId = al.Id
+            LEFT JOIN Artists ar ON al.ArtistId = ar.Id
+            LEFT JOIN LoopPoints lp ON t.Id = lp.TrackId
+            LEFT JOIN UserRatings ur ON t.Id = ur.TrackId";
+
         public IEnumerable<MusicTrack> GetAllTracks() 
-            => GetConnection().Query<MusicTrack>("SELECT * FROM LoopPoints");
+            => GetConnection().Query<MusicTrack>(FullTrackSelect);
 
         public MusicTrack GetTrack(string fullPath, long totalSamples)
         {
             string fileName = Path.GetFileName(fullPath);
             return GetConnection().QueryFirstOrDefault<MusicTrack>(
-                "SELECT * FROM LoopPoints WHERE FileName = @FileName AND TotalSamples = @Total", 
+                FullTrackSelect + " WHERE t.FileName = @FileName AND t.TotalSamples = @Total", 
                 new { FileName = fileName, Total = totalSamples });
         }
 
         public void SaveTrack(MusicTrack track)
         {
-            using (var db = GetConnection()) db.Execute(@"UPDATE LoopPoints SET LoopStart=@LoopStart, LoopEnd=@LoopEnd WHERE Id=@Id", track);
+            using (var db = GetConnection()) 
+            {
+                db.Execute(@"
+                    INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd) 
+                    VALUES (@Id, @LoopStart, @LoopEnd)
+                    ON CONFLICT(TrackId) DO UPDATE SET 
+                        LoopStart = excluded.LoopStart, 
+                        LoopEnd = excluded.LoopEnd", track);
+            }
         }
 
         public void UpdateTrackAnalysis(MusicTrack track)
         {
             using (var db = GetConnection())
             {
-                db.Execute(@"
-                    UPDATE LoopPoints SET 
-                        Artist = @Artist, 
-                        Album = @Album, 
-                        AlbumArtist = @AlbumArtist, 
-                        DisplayName = @DisplayName,
-                        LoopStart = @LoopStart,
-                        LoopEnd = @LoopEnd,
-                        LoopCandidatesJson = @LoopCandidatesJson,
-                        CoverPath = @CoverPath
-                    WHERE Id = @Id", track);
+                using (var trans = db.BeginTransaction())
+                {
+                    int? albumId = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
+                    
+                    db.Execute(@"
+                        UPDATE Tracks SET 
+                            DisplayName = @DisplayName,
+                            CoverPath = @CoverPath,
+                            AlbumId = @AlbumId
+                        WHERE Id = @Id", new { track.DisplayName, track.CoverPath, AlbumId = albumId, track.Id }, transaction: trans);
+
+                    db.Execute(@"
+                        INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
+                        VALUES (@Id, @LoopStart, @LoopEnd, @LoopCandidatesJson, @Now)
+                        ON CONFLICT(TrackId) DO UPDATE SET
+                            LoopStart = excluded.LoopStart,
+                            LoopEnd = excluded.LoopEnd,
+                            LoopCandidatesJson = excluded.LoopCandidatesJson,
+                            AnalysisLastModified = excluded.AnalysisLastModified", 
+                        new { track.Id, track.LoopStart, track.LoopEnd, track.LoopCandidatesJson, Now = DateTime.Now }, transaction: trans);
+                    
+                    trans.Commit();
+                }
             }
         }
 
@@ -191,20 +251,37 @@ namespace seamless_loop_music.Data
             {
                 using (var trans = db.BeginTransaction())
                 {
-                    db.Execute(@"
-                        INSERT INTO LoopPoints 
-                        (FileName, FilePath, DisplayName, TotalSamples, LoopStart, LoopEnd, Artist, Album, AlbumArtist, LastModified, LoopCandidatesJson, CoverPath) 
-                        VALUES 
-                        (@FileName, @FilePath, @DisplayName, @TotalSamples, @LoopStart, @LoopEnd, @Artist, @Album, @AlbumArtist, @LastModified, @LoopCandidatesJson, @CoverPath)
-                        ON CONFLICT(FileName, TotalSamples) DO UPDATE SET
-                            FilePath = excluded.FilePath,
-                            DisplayName = excluded.DisplayName,
-                            Artist = excluded.Artist,
-                            Album = excluded.Album,
-                            AlbumArtist = excluded.AlbumArtist,
-                            CoverPath = excluded.CoverPath,
-                            LastModified = excluded.LastModified;", 
-                        tracks, transaction: trans);
+                    foreach (var track in tracks)
+                    {
+                        int? albumId = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
+
+                        long trackId = db.ExecuteScalar<long>(@"
+                            INSERT INTO Tracks 
+                            (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId) 
+                            VALUES 
+                            (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId)
+                            ON CONFLICT(FileName, TotalSamples) DO UPDATE SET
+                                FilePath = excluded.FilePath,
+                                DisplayName = excluded.DisplayName,
+                                CoverPath = excluded.CoverPath,
+                                LastModified = excluded.LastModified,
+                                AlbumId = excluded.AlbumId;
+                            SELECT Id FROM Tracks WHERE FileName = @FileName AND TotalSamples = @TotalSamples;", 
+                            new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId }, 
+                            transaction: trans);
+
+                        db.Execute(@"
+                            INSERT OR IGNORE INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
+                            VALUES (@TrackId, @LoopStart, @LoopEnd, @Json, @Now)",
+                            new { TrackId = trackId, track.LoopStart, track.LoopEnd, Json = track.LoopCandidatesJson, Now = track.LastModified },
+                            transaction: trans);
+
+                        db.Execute(@"
+                            INSERT OR IGNORE INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
+                            VALUES (@TrackId, @Rating, @IsLoved, @Now)",
+                            new { TrackId = trackId, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = track.LastModified },
+                            transaction: trans);
+                    }
                     trans.Commit();
                 }
             }
@@ -237,7 +314,7 @@ namespace seamless_loop_music.Data
             => GetConnection().Execute("DELETE FROM PlaylistItems WHERE PlaylistId=@Pid AND SongId=@Sid", new { Pid = playlistId, Sid = songId });
 
         public IEnumerable<MusicTrack> GetPlaylistTracks(int playlistId)
-            => GetConnection().Query<MusicTrack>(@"SELECT t.* FROM LoopPoints t JOIN PlaylistItems pi ON t.Id = pi.SongId WHERE pi.PlaylistId = @Id ORDER BY pi.SortOrder", new { Id = playlistId });
+            => GetConnection().Query<MusicTrack>(FullTrackSelect + @" JOIN PlaylistItems pi ON t.Id = pi.SongId WHERE pi.PlaylistId = @Id ORDER BY pi.SortOrder", new { Id = playlistId });
 
         public bool IsSongInPlaylist(int playlistId, int songId)
             => GetConnection().ExecuteScalar<bool>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId=@Pid AND SongId=@Sid", new { Pid = playlistId, Sid = songId });
@@ -279,32 +356,79 @@ namespace seamless_loop_music.Data
                 db.Execute($"ATTACH DATABASE '{externalDbPath}' AS ExternalDB");
                 try
                 {
-                    // 1. 更新曲目信息
-                    // 其次：更新那些已经存在的曲目（采用“模糊匹配”：文件名一致 + 采样数误差极小）
-                    tracksSynced = db.Execute(@"
-                        UPDATE LoopPoints
-                        SET 
-                            DisplayName = ext.DisplayName,
-                            Artist = ext.Artist,
-                            Album = ext.Album,
-                            AlbumArtist = ext.AlbumArtist,
-                            LoopStart = ext.LoopStart,
-                            LoopEnd = ext.LoopEnd,
-                            LoopCandidatesJson = ext.LoopCandidatesJson
-                        FROM (
-                            SELECT FileName, TotalSamples, DisplayName, Artist, Album, AlbumArtist, LoopStart, LoopEnd, LoopCandidatesJson 
-                            FROM ExternalDB.LoopPoints
-                        ) AS ext
-                        WHERE LOWER(TRIM(LoopPoints.FileName)) = LOWER(TRIM(ext.FileName)) 
-                          AND ABS(LoopPoints.TotalSamples - ext.TotalSamples) < 10000");
+                    // 1. 获取外部表信息，处理可能缺失的列
+                    var columns = db.Query<string>("PRAGMA ExternalDB.table_info(LoopPoints)").Select(c => c.ToString()).ToList();
+                    bool hasCandidates = columns.Contains("LoopCandidatesJson");
+                    bool hasRating = columns.Contains("Rating");
+                    bool hasIsLoved = columns.Contains("IsLoved");
+                    bool hasCover = columns.Contains("CoverPath");
+                    bool hasDisplayName = columns.Contains("DisplayName");
 
-                    // 2. 同步歌单
+                    // 2. 同步曲目信息
+                    // 采用“模糊匹配”：文件名一致 + 采样数误差极小 (10000 采样以内)
+                    string syncSql = $@"
+                        SELECT 
+                            FileName, TotalSamples, 
+                            {(hasDisplayName ? "DisplayName" : "FileName AS DisplayName")},
+                            Artist, Album, AlbumArtist, LoopStart, LoopEnd,
+                            {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")},
+                            {(hasRating ? "Rating" : "0 AS Rating")},
+                            {(hasIsLoved ? "IsLoved" : "0 AS IsLoved")},
+                            {(hasCover ? "CoverPath" : "NULL AS CoverPath")}
+                        FROM ExternalDB.LoopPoints";
+
+                    var externalTracks = db.Query<MusicTrack>(syncSql).ToList();
+                    
+                    foreach (var ext in externalTracks)
+                    {
+                        // 在本地库寻找匹配的 Track
+                        var localTrack = db.QueryFirstOrDefault<MusicTrack>(
+                            "SELECT Id FROM Tracks WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) AND ABS(TotalSamples - @TotalSamples) < 10000",
+                            new { ext.FileName, ext.TotalSamples });
+
+                        if (localTrack != null)
+                        {
+                            using (var trans = db.BeginTransaction())
+                            {
+                                int? albumId = UpsertArtistAlbum(db, ext.Artist, ext.AlbumArtist, ext.Album, ext.CoverPath, trans);
+                                
+                                db.Execute(@"
+                                    UPDATE Tracks SET 
+                                        DisplayName = @DisplayName,
+                                        AlbumId = @AlbumId,
+                                        CoverPath = COALESCE(@CoverPath, CoverPath)
+                                    WHERE Id = @Id", new { ext.DisplayName, AlbumId = albumId, ext.CoverPath, Id = localTrack.Id }, transaction: trans);
+
+                                db.Execute(@"
+                                    INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
+                                    VALUES (@Id, @LoopStart, @LoopEnd, @Json, @Now)
+                                    ON CONFLICT(TrackId) DO UPDATE SET
+                                        LoopStart = excluded.LoopStart,
+                                        LoopEnd = excluded.LoopEnd,
+                                        LoopCandidatesJson = COALESCE(excluded.LoopCandidatesJson, LoopCandidatesJson),
+                                        AnalysisLastModified = excluded.AnalysisLastModified",
+                                    new { localTrack.Id, ext.LoopStart, ext.LoopEnd, Json = ext.LoopCandidatesJson, Now = DateTime.Now }, transaction: trans);
+
+                                db.Execute(@"
+                                    INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
+                                    VALUES (@Id, @Rating, @IsLoved, @Now)
+                                    ON CONFLICT(TrackId) DO UPDATE SET
+                                        Rating = excluded.Rating,
+                                        IsLoved = excluded.IsLoved,
+                                        LastModified = excluded.LastModified",
+                                    new { localTrack.Id, ext.Rating, ext.IsLoved, Now = DateTime.Now }, transaction: trans);
+
+                                trans.Commit();
+                                tracksSynced++;
+                            }
+                        }
+                    }
+
+                    // 3. 同步歌单
                     var externalPlaylists = db.Query<Playlist>("SELECT * FROM ExternalDB.Playlists").ToList();
                     foreach (var extPl in externalPlaylists)
                     {
-                        // 查找或创建本地同名歌单
                         int? localPlId = db.ExecuteScalar<int?>(@"SELECT Id FROM Playlists WHERE Name = @Name LIMIT 1", new { Name = extPl.Name });
-                        
                         if (!localPlId.HasValue)
                         {
                             localPlId = db.ExecuteScalar<int>(@"
@@ -314,7 +438,6 @@ namespace seamless_loop_music.Data
                                 new { Name = extPl.Name, FolderPath = extPl.FolderPath, IsFolderLinked = extPl.IsFolderLinked ? 1 : 0, SortOrder = extPl.SortOrder });
                         }
 
-                        // 获取外部歌单里的所有歌曲详情
                         var extSongs = db.Query<SyncSongDto>(@"
                             SELECT lp.FileName, lp.TotalSamples 
                             FROM ExternalDB.PlaylistItems pi
@@ -323,17 +446,15 @@ namespace seamless_loop_music.Data
 
                         foreach (var song in extSongs)
                         {
-                            // 在本地库查找匹配的歌曲 ID（同样采用模糊匹配）
                             int? localSongId = db.ExecuteScalar<int?>(@"
-                                SELECT Id FROM LoopPoints 
+                                SELECT Id FROM Tracks 
                                 WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) 
                                   AND ABS(TotalSamples - @TotalSamples) < 10000 
                                 LIMIT 1", 
-                                new { FileName = song.FileName, TotalSamples = song.TotalSamples });
+                                new { song.FileName, song.TotalSamples });
 
                             if (localSongId.HasValue)
                             {
-                                // 添加到本地歌单
                                 db.Execute(@"
                                     INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId) 
                                     VALUES (@PlId, @SongId)", new { PlId = localPlId.Value, SongId = localSongId.Value });
@@ -349,6 +470,24 @@ namespace seamless_loop_music.Data
             }
 
             return (tracksSynced, playlistsSynced);
+        }
+
+        private int? UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist, string album, string coverPath, IDbTransaction trans)
+        {
+            if (string.IsNullOrWhiteSpace(album)) return null;
+            string artistName = !string.IsNullOrWhiteSpace(albumArtist) ? albumArtist : artist;
+            int? artistId = null;
+            if (!string.IsNullOrWhiteSpace(artistName))
+            {
+                db.Execute("INSERT OR IGNORE INTO Artists (Name) VALUES (@Name)", new { Name = artistName }, transaction: trans);
+                artistId = db.ExecuteScalar<int>("SELECT Id FROM Artists WHERE Name = @Name", new { Name = artistName }, transaction: trans);
+            }
+
+            db.Execute("INSERT OR IGNORE INTO Albums (Name, ArtistId, CoverPath) VALUES (@Name, @ArtistId, @CoverPath)", 
+                new { Name = album, ArtistId = artistId, CoverPath = coverPath }, transaction: trans);
+            
+            return db.ExecuteScalar<int?>("SELECT Id FROM Albums WHERE Name = @Name AND (ArtistId = @ArtistId OR (ArtistId IS NULL AND @ArtistId IS NULL))", 
+                new { Name = album, ArtistId = artistId }, transaction: trans);
         }
     }
 }

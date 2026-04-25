@@ -35,65 +35,95 @@ namespace seamless_loop_music.Data.Repositories
                 using (var conn = GetConnection())
                 {
                     conn.Execute("PRAGMA journal_mode=WAL;");
-                    
+                    conn.Execute("PRAGMA foreign_keys=ON;");
+
+                    // ── Artists 表 ──────────────────────────────────────────
                     conn.Execute(@"
-                        CREATE TABLE IF NOT EXISTS LoopPoints (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            FileName TEXT NOT NULL,
-                            FilePath TEXT,
-                            DisplayName TEXT,
-                            LoopStart INTEGER DEFAULT 0,
-                            LoopEnd INTEGER DEFAULT 0,
-                            TotalSamples INTEGER DEFAULT 0,
-                            Artist TEXT,
-                            Album TEXT,
-                            AlbumArtist TEXT,
-                            LastModified DATETIME,
-                            LoopCandidatesJson TEXT,
-                            IsLoved INTEGER DEFAULT 0,
-                            Rating INTEGER DEFAULT 0,
+                        CREATE TABLE IF NOT EXISTS Artists (
+                            Id      INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Name    TEXT NOT NULL UNIQUE,
+                            CoverPath TEXT
+                        );");
+
+                    // ── Albums 表 ───────────────────────────────────────────
+                    conn.Execute(@"
+                        CREATE TABLE IF NOT EXISTS Albums (
+                            Id        INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Name      TEXT NOT NULL,
+                            ArtistId  INTEGER,
+                            CoverPath TEXT,
+                            FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL,
+                            UNIQUE(Name, ArtistId)
+                        );");
+
+                    // ── Tracks 表（核心实体，FileName+TotalSamples 作为业务主键）──
+                    conn.Execute(@"
+                        CREATE TABLE IF NOT EXISTS Tracks (
+                            Id            INTEGER PRIMARY KEY AUTOINCREMENT,
+                            FileName      TEXT NOT NULL,
+                            FilePath      TEXT,
+                            DisplayName   TEXT,
+                            TotalSamples  INTEGER DEFAULT 0,
+                            LastModified  DATETIME,
+                            CoverPath     TEXT,
+                            AlbumId       INTEGER,
+                            FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL,
                             UNIQUE(FileName, TotalSamples)
                         );");
 
+                    // ── LoopPoints 表（循环点，与 Tracks 1:1）────────────────
+                    conn.Execute(@"
+                        CREATE TABLE IF NOT EXISTS LoopPoints (
+                            Id                    INTEGER PRIMARY KEY AUTOINCREMENT,
+                            TrackId               INTEGER NOT NULL UNIQUE,
+                            LoopStart             INTEGER DEFAULT 0,
+                            LoopEnd               INTEGER DEFAULT 0,
+                            LoopCandidatesJson    TEXT,
+                            AnalysisLastModified  DATETIME,
+                            FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE
+                        );");
+
+                    // ── UserRatings 表（用户评分，与 Tracks 1:1）─────────────
+                    conn.Execute(@"
+                        CREATE TABLE IF NOT EXISTS UserRatings (
+                            Id           INTEGER PRIMARY KEY AUTOINCREMENT,
+                            TrackId      INTEGER NOT NULL UNIQUE,
+                            Rating       INTEGER DEFAULT 0,
+                            IsLoved      INTEGER DEFAULT 0,
+                            LastModified DATETIME,
+                            FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE
+                        );");
+
+                    // ── Playlists & PlaylistItems（播放列表）────────────────
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS Playlists (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
-                            Name TEXT NOT NULL,
-                            FolderPath TEXT,
+                            Id             INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Name           TEXT NOT NULL,
+                            FolderPath     TEXT,
                             IsFolderLinked INTEGER DEFAULT 0,
-                            SortOrder INTEGER DEFAULT 0,
-                            CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP
+                            SortOrder      INTEGER DEFAULT 0,
+                            CreatedAt      DATETIME DEFAULT CURRENT_TIMESTAMP
                         );");
 
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS PlaylistItems (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Id         INTEGER PRIMARY KEY AUTOINCREMENT,
                             PlaylistId INTEGER NOT NULL,
-                            SongId INTEGER NOT NULL,
-                            SortOrder INTEGER DEFAULT 0,
+                            SongId     INTEGER NOT NULL,
+                            SortOrder  INTEGER DEFAULT 0,
                             FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
-                            FOREIGN KEY(SongId) REFERENCES LoopPoints(Id) ON DELETE CASCADE
+                            FOREIGN KEY(SongId)     REFERENCES Tracks(Id)    ON DELETE CASCADE
                         );");
 
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS PlaylistFolders (
-                            Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                            Id         INTEGER PRIMARY KEY AUTOINCREMENT,
                             PlaylistId INTEGER NOT NULL,
                             FolderPath TEXT NOT NULL,
-                            AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP,
+                            AddedAt    DATETIME DEFAULT CURRENT_TIMESTAMP,
                             FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
                             UNIQUE(PlaylistId, FolderPath)
                         );");
-
-                    try
-                    {
-                        var columns = conn.Query<string>("PRAGMA table_info(LoopPoints)").ToList();
-                        if (!columns.Contains("IsLoved"))
-                            conn.Execute("ALTER TABLE LoopPoints ADD COLUMN IsLoved INTEGER DEFAULT 0;");
-                        if (!columns.Contains("Rating"))
-                            conn.Execute("ALTER TABLE LoopPoints ADD COLUMN Rating INTEGER DEFAULT 0;");
-                    }
-                    catch { }
                 }
             }
             catch (Exception ex)
@@ -110,4 +140,3 @@ namespace seamless_loop_music.Data.Repositories
         }
     }
 }
-
