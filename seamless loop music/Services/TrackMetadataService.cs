@@ -4,6 +4,8 @@ using System.Linq;
 using System.Security.Cryptography;
 using System.Text;
 using Dapper;
+using System.Windows.Media;
+using System.Windows.Media.Imaging;
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
 
@@ -210,7 +212,7 @@ namespace seamless_loop_music.Services
                         {
                             if (pic.Data.Data != null && pic.Data.Data.Length > 0)
                             {
-                                System.IO.File.WriteAllBytes(cachePath, pic.Data.Data);
+                                SaveCompressedImage(pic.Data.Data, cachePath);
                             }
                             else
                             {
@@ -248,6 +250,52 @@ namespace seamless_loop_music.Services
             }
             return null;
         }
+
+        /// <summary>
+        /// 压缩并保存图片为 JPEG 格式
+        /// </summary>
+        /// <param name="rawData">原始图片字节数据</param>
+        /// <param name="targetPath">保存路径</param>
+        /// <param name="maxSide">最大边长</param>
+        /// <param name="quality">压缩质量 (1-100)</param>
+        private void SaveCompressedImage(byte[] rawData, string targetPath, int maxSide = 800, int quality = 80)
+        {
+            try
+            {
+                using (var ms = new MemoryStream(rawData))
+                {
+                    // 1. 解码图片
+                    var decoder = BitmapDecoder.Create(ms, BitmapCreateOptions.None, BitmapCacheOption.OnLoad);
+                    if (decoder.Frames.Count == 0) return;
+
+                    var frame = decoder.Frames[0];
+                    BitmapSource source = frame;
+
+                    // 2. 只有当图片长或宽超过最大值时才进行缩放
+                    if (frame.PixelWidth > maxSide || frame.PixelHeight > maxSide)
+                    {
+                        double scale = (double)maxSide / Math.Max(frame.PixelWidth, frame.PixelHeight);
+                        source = new TransformedBitmap(frame, new ScaleTransform(scale, scale));
+                    }
+
+                    // 3. 使用 JPEG 编码器进行压缩
+                    var encoder = new JpegBitmapEncoder { QualityLevel = quality };
+                    encoder.Frames.Add(BitmapFrame.Create(source));
+
+                    using (var fs = File.Create(targetPath))
+                    {
+                        encoder.Save(fs);
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine("SaveCompressedImage Error: " + ex.Message);
+                // 如果压缩失败，尝试原始写入作为保底
+                try { File.WriteAllBytes(targetPath, rawData); } catch { }
+            }
+        }
+
 
         /// <summary>
         /// 检查文件是否有效（存在且大小大于0）
