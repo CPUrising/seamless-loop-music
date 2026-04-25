@@ -1,4 +1,4 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "instructions": ["./progress/项目代码架构概览.md"]
+  "instructions": ["./docs/项目代码架构概览.md"]
 }
