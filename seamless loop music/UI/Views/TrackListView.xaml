@@ -214,14 +214,16 @@
             </Grid>
         </Border>
 
-        <controls:MultiSelectListBox Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="10,0,10,10"
+        <controls:MultiSelectListBox x:Name="TrackList" Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="10,0,10,10"
                  ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                  HorizontalContentAlignment="Stretch"
                  ItemsSource="{Binding TracksView}"
+                 SelectedItem="{Binding SelectedTrack}"
                  SelectedItemsBinding="{Binding SelectedTracks}"
                  SelectionMode="Extended"
                  VirtualizingStackPanel.IsVirtualizing="True"
-                 VirtualizingStackPanel.VirtualizationMode="Recycling">
+                 VirtualizingStackPanel.VirtualizationMode="Recycling"
+                 SelectionChanged="TrackList_SelectionChanged">
             <controls:MultiSelectListBox.InputBindings>
                 <KeyBinding Key="A" Modifiers="Ctrl" Command="{Binding SelectAllCommand}"/>
                 <KeyBinding Key="Delete" Command="{Binding RemoveFromListCommand}"/>
