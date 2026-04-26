@@ -16,6 +16,7 @@ namespace seamless_loop_music.Services
         private readonly IPlaybackService _playbackService;
         private readonly ILoopAnalysisService _loopAnalysisService;
         private readonly TrackMetadataService _metadataService;
+        private readonly IPlaylistManagerService _playlistManager;
 
         public List<MusicTrack> Playlist { get; set; } = new List<MusicTrack>();
         public int CurrentIndex { get; set; } = -1;
@@ -30,12 +31,13 @@ namespace seamless_loop_music.Services
         public double MatchWindowSize { get; set; } = 1.0;
         public double MatchSearchRadius { get; set; } = 5.0;
 
-        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, TrackMetadataService metadataService)
+        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, TrackMetadataService metadataService, IPlaylistManagerService playlistManager)
         {
             _databaseHelper = databaseHelper;
             _playbackService = playbackService;
             _loopAnalysisService = loopAnalysisService;
             _metadataService = metadataService;
+            _playlistManager = playlistManager;
         }
 
         public void Play() => _playbackService.Play();
@@ -57,7 +59,7 @@ namespace seamless_loop_music.Services
         public Task AddFolderToPlaylist(int playlistId, string folderPath) { _databaseHelper.AddPlaylist(playlistId, folderPath); return Task.CompletedTask; }
         public Task RemoveFolderFromPlaylist(int playlistId, string folderPath) => Task.CompletedTask;
         public List<string> GetPlaylistFolders(int playlistId) => _databaseHelper.GetPlaylists(playlistId);
-        public Task RefreshPlaylist(int playlistId) => Task.CompletedTask;
+        public Task RefreshPlaylist(int playlistId) => _playlistManager.RefreshPlaylistAsync(playlistId);
         public List<MusicTrack> LoadPlaylistFromDb(int playlistId) => _databaseHelper.GetPlaylistTracks(playlistId).ToList();
 
         public void UpdatePlaylistsSortOrder(List<int> playlistIds) => _databaseHelper.UpdatePlaylistsSortOrder(playlistIds);

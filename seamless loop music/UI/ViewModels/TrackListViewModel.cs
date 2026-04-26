@@ -270,7 +270,7 @@ namespace seamless_loop_music.UI.ViewModels
         private void OnPlayTrack(MusicTrack track)
         {
             if (track == null) return;
-            _playbackService.SetQueue(Tracks, track);
+            _playbackService.SetQueue(TracksView.Cast<MusicTrack>().ToList(), track);
             _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
         }
 
