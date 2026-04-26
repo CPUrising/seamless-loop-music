@@ -97,4 +97,7 @@
   <data name="MenuDelete" xml:space="preserve">
     <value>Delete</value>
   </data>
+  <data name="MenuNewPlaylist" xml:space="preserve">
+    <value>New Playlist</value>
+  </data>
 </root>

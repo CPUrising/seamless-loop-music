@@ -44,9 +44,12 @@ namespace seamless_loop_music.UI.ViewModels
                 if (SetProperty(ref _selectedCategory, value))
                 {
                     LoadCategoryItems();
+                    RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
                 }
             }
         }
+
+        public bool IsPlaylistCategorySelected => SelectedCategory?.Type == CategoryType.Playlist;
 
         private ObservableCollection<CategoryItem> _categoryItems = new ObservableCollection<CategoryItem>();
         public ObservableCollection<CategoryItem> CategoryItems
@@ -125,6 +128,7 @@ namespace seamless_loop_music.UI.ViewModels
             PlayCategoryItemCommand = new DelegateCommand<CategoryItem>(OnPlayCategoryItem);
             RenamePlaylistCommand = new DelegateCommand(OnRenamePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
             DeletePlaylistCommand = new DelegateCommand(OnDeletePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
+            CreatePlaylistCommand = new DelegateCommand(OnCreatePlaylist);
 
             // 设置默认选中（这会触发 LoadCategoryItems）
             SelectedCategory = NavigationCategories.FirstOrDefault();
@@ -136,6 +140,7 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<CategoryItem> PlayCategoryItemCommand { get; }
         public DelegateCommand RenamePlaylistCommand { get; }
         public DelegateCommand DeletePlaylistCommand { get; }
+        public DelegateCommand CreatePlaylistCommand { get; }
         public DelegateCommand RefreshPlaylistCommand => new DelegateCommand(() => LoadCategoryItems());
 
         private async void OnPlayCategoryItem(CategoryItem item)
@@ -255,6 +260,22 @@ namespace seamless_loop_music.UI.ViewModels
                 var id = SelectedCategoryItem.Id;
                 Task.Run(async () => {
                     await _playlistManager.DeletePlaylistAsync(id);
+                    // 刷新列表
+                    App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
+                });
+            }
+        }
+
+        private void OnCreatePlaylist()
+        {
+            var dialog = new InputDialog("新建歌单", "请输入歌单名称：", "新歌单");
+            if (dialog.ShowDialog() == true)
+            {
+                var name = dialog.InputText;
+                if (string.IsNullOrWhiteSpace(name)) return;
+
+                Task.Run(async () => {
+                    await _playlistManager.CreatePlaylistAsync(name);
                     // 刷新列表
                     App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
                 });

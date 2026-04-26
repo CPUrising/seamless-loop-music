@@ -97,4 +97,7 @@
   <data name="MenuDelete" xml:space="preserve">
     <value>删除</value>
   </data>
+  <data name="MenuNewPlaylist" xml:space="preserve">
+    <value>新建歌单</value>
+  </data>
 </root>
