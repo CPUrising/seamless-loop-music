@@ -33,6 +33,7 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         public DelegateCommand GoBackCommand { get; }
+        public DelegateCommand GoToEditCommand { get; }
 
         public NowPlayingViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
         {
@@ -41,6 +42,7 @@ namespace seamless_loop_music.UI.ViewModels
             _eventAggregator = eventAggregator;
             _metadataService = metadataService;
             GoBackCommand = new DelegateCommand(OnGoBack);
+            GoToEditCommand = new DelegateCommand(OnGoToEdit);
             
             _playbackService.TrackChanged += OnTrackChanged;
             _eventAggregator.GetEvent<seamless_loop_music.Events.TrackLoadedEvent>().Subscribe(OnTrackLoaded);
@@ -145,6 +147,18 @@ namespace seamless_loop_music.UI.ViewModels
             else
             {
                 _regionManager.RequestNavigate("MainContentRegion", "LibraryView");
+            }
+        }
+
+        private void OnGoToEdit()
+        {
+            if (CurrentTrack != null)
+            {
+                var parameters = new NavigationParameters();
+                parameters.Add("track", CurrentTrack);
+                parameters.Add("target", "DetailView");
+                parameters.Add("autoPlay", false); // 关键：不要重新加载和播放
+                _regionManager.RequestNavigate("MainContentRegion", "LibraryView", parameters);
             }
         }
     }

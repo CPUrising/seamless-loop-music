@@ -19,15 +19,18 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly ILoopAnalysisService _loopAnalysisService;
         private readonly IEventAggregator _eventAggregator;
         private readonly IPlayerService _playerService;
+        private readonly TrackMetadataService _metadataService;
 
         private bool _isUpdatingInternally;
+        private MusicTrack _currentTrack;
 
-        public LoopWorkspaceViewModel(IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, IEventAggregator eventAggregator, IPlayerService playerService)
+        public LoopWorkspaceViewModel(IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, IEventAggregator eventAggregator, IPlayerService playerService, TrackMetadataService metadataService)
         {
             _playbackService = playbackService;
             _loopAnalysisService = loopAnalysisService;
             _eventAggregator = eventAggregator;
             _playerService = playerService;
+            _metadataService = metadataService;
 
             AdjustCommand = new DelegateCommand<string>(ExecuteAdjust);
             SmartMatchReverseCommand = new DelegateCommand(ExecuteSmartMatchReverse);
@@ -167,6 +170,7 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnTrackLoaded(MusicTrack track)
         {
+            _currentTrack = track;
             UpdateAudioInfo(track);
             LoopStartSample = track.LoopStart.ToString();
             LoopEndSample = track.LoopEnd.ToString();
@@ -185,7 +189,11 @@ namespace seamless_loop_music.UI.ViewModels
         {
             bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             long total = track?.TotalSamples ?? 0;
-            int rate = _playbackService.SampleRate;
+            
+            // 如果正是正在播的歌，用播放器的采样率；否则从文件读
+            int rate = (_playbackService.CurrentTrack?.Id == track?.Id)
+                ? _playbackService.SampleRate
+                : _metadataService.GetSampleRate(track?.FilePath);
 
             string info = isZh ? 
                 $"音频信息: {total} Samples | 采样率: {rate} Hz" : 
@@ -222,14 +230,17 @@ namespace seamless_loop_music.UI.ViewModels
             string value = parts[1];
 
             long current = target == "Start" ? long.Parse(LoopStartSample) : long.Parse(LoopEndSample);
-            long total = _playbackService.CurrentTrack?.TotalSamples ?? 0;
+            long total = _currentTrack?.TotalSamples ?? 0;
+            int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
+                ? _playbackService.SampleRate
+                : _metadataService.GetSampleRate(_currentTrack?.FilePath);
 
             long targetVal = current;
             if (value == "Min") targetVal = 0;
             else if (value == "Max") targetVal = total;
             else if (double.TryParse(value, out double deltaSec))
             {
-                long delta = (long)(_playbackService.SampleRate * deltaSec);
+                long delta = (long)(rate * deltaSec);
                 targetVal = Math.Max(0, Math.Min(total, current + delta));
             }
 
@@ -299,11 +310,13 @@ namespace seamless_loop_music.UI.ViewModels
 
                 if (candidates == null || candidates.Count == 0)
                 {
+                    // 确保播放服务知道我们在分析哪首歌，但不一定要播放它
+                    // 不过 PyMusicLooper 脚本通常直接读文件，这里可能不需要 LoadTrackAsync
                     candidates = await _playerService.GetLoopCandidatesAsync();
                     
                     if (candidates != null && candidates.Count > 0)
                     {
-                        await _playerService.UpdateTrackLoopCandidatesAsync(_playbackService.CurrentTrack, candidates);
+                        await _playerService.UpdateTrackLoopCandidatesAsync(_currentTrack, candidates);
                     }
                 }
 
@@ -341,15 +354,23 @@ namespace seamless_loop_music.UI.ViewModels
             return false;
         }
 
-        private void ExecuteApplyLoop()
+        private async void ExecuteApplyLoop()
         {
             ApplyLocalSettingsToService();
 
             if (long.TryParse(LoopEndSample, out long end) && long.TryParse(LoopStartSample, out long start))
             {
+                // 核心改动：只有在这里，用户明确想听编辑效果时，才去加载音频
+                // 如果当前播的不是编辑中的这首，先加载它
+                if (_playbackService.CurrentTrack?.Id != _currentTrack?.Id)
+                {
+                    await _playbackService.LoadTrackAsync(_currentTrack, false);
+                }
+
                 _playbackService.SetLoopPoints(start, end);
                 
-                long previewOffset = _playbackService.SampleRate * 3;
+                int rate = _playbackService.SampleRate; // 此时已经加载了，可以用播放器的采样率
+                long previewOffset = rate * 3;
                 long target = end - previewOffset;
                 
                 _playbackService.SeekToSample(target);
@@ -370,7 +391,13 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            int rate = _playbackService.SampleRate > 0 ? _playbackService.SampleRate : 44100;
+            
+            int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
+                ? _playbackService.SampleRate
+                : _metadataService.GetSampleRate(_currentTrack?.FilePath);
+            
+            if (rate <= 0) rate = 44100;
+
             if (long.TryParse(LoopStartSample, out long s)) LoopStartSec = ((double)s / rate).ToString("F3");
             if (long.TryParse(LoopEndSample, out long e)) LoopEndSec = ((double)e / rate).ToString("F3");
             _isUpdatingInternally = false;
@@ -380,8 +407,14 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            int rate = _playbackService.SampleRate > 0 ? _playbackService.SampleRate : 44100;
-            long total = _playbackService.CurrentTrack?.TotalSamples ?? 0;
+
+            int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
+                ? _playbackService.SampleRate
+                : _metadataService.GetSampleRate(_currentTrack?.FilePath);
+            
+            if (rate <= 0) rate = 44100;
+
+            long total = _currentTrack?.TotalSamples ?? 0;
             if (double.TryParse(LoopStartSec, out double sec))
                 LoopStartSample = ((long)Math.Max(0, Math.Min(total, sec * rate))).ToString();
             _isUpdatingInternally = false;
@@ -391,8 +424,14 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
-            int rate = _playbackService.SampleRate > 0 ? _playbackService.SampleRate : 44100;
-            long total = _playbackService.CurrentTrack?.TotalSamples ?? 0;
+
+            int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
+                ? _playbackService.SampleRate
+                : _metadataService.GetSampleRate(_currentTrack?.FilePath);
+            
+            if (rate <= 0) rate = 44100;
+
+            long total = _currentTrack?.TotalSamples ?? 0;
             if (double.TryParse(LoopEndSec, out double sec))
                 LoopEndSample = ((long)Math.Max(0, Math.Min(total, sec * rate))).ToString();
             _isUpdatingInternally = false;

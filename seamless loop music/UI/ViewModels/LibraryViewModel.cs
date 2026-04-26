@@ -163,8 +163,17 @@ namespace seamless_loop_music.UI.ViewModels
 
         public void OnNavigatedTo(NavigationContext navigationContext)
         {
-            // 默认在右侧区域打开歌曲列表
-            _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
+            // 如果指定了目标子视图，则跳转到该视图
+            if (navigationContext.Parameters.ContainsKey("target"))
+            {
+                var target = navigationContext.Parameters["target"] as string;
+                _regionManager.RequestNavigate("LibraryContentRegion", target, navigationContext.Parameters);
+            }
+            else
+            {
+                // 默认在右侧区域打开歌曲列表
+                _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
+            }
         }
 
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;

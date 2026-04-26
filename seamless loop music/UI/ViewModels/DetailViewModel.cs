@@ -33,6 +33,7 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         public DelegateCommand GoBackCommand { get; }
+        public DelegateCommand GoToDetailCommand { get; }
 
         public DetailViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator)
         {
@@ -40,6 +41,7 @@ namespace seamless_loop_music.UI.ViewModels
             _regionManager = regionManager;
             _eventAggregator = eventAggregator;
             GoBackCommand = new DelegateCommand(OnGoBack);
+            GoToDetailCommand = new DelegateCommand(OnGoToDetail);
             _playbackService.TrackChanged += OnTrackChanged;
         }
 
@@ -79,13 +81,8 @@ namespace seamless_loop_music.UI.ViewModels
                     listParams.Add("track", track);
                     _regionManager.RequestNavigate("DetailListRegion", "TrackListView", listParams);
 
-                    // 2. 重要：即使不播放，也要告诉 LoopWorkspace 更新曲目数据
+                    // 2. 重要：告诉 LoopWorkspace 显示该曲目的编辑数据，但不影响当前播放
                     _eventAggregator.GetEvent<seamless_loop_music.Events.TrackLoadedEvent>().Publish(track);
-
-                    if (autoPlay)
-                    {
-                        _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
-                    }
                 }
             }
         }
@@ -114,6 +111,11 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
             }
+        }
+
+        private void OnGoToDetail()
+        {
+            _regionManager.RequestNavigate("MainContentRegion", "NowPlayingView");
         }
     }
 }

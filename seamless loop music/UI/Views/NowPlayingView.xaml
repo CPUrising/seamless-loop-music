@@ -8,44 +8,49 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000">
+    <UserControl.Resources>
+        <Style x:Key="TopBarButtonStyle" TargetType="Button">
+            <Setter Property="Background" Value="#313244"/>
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Padding" Value="15,8"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border Background="{TemplateBinding Background}" 
+                                CornerRadius="10" 
+                                Padding="{TemplateBinding Padding}">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+            <Style.Triggers>
+                <Trigger Property="IsMouseOver" Value="True">
+                    <Setter Property="Background" Value="#45475A"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
+    </UserControl.Resources>
+
     <Grid Background="#1E1E2E">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Top Bar: Back Button -->
-        <Button Grid.Row="0" 
-                Content="← 返回库" 
-                Command="{Binding GoBackCommand}"
-                HorizontalAlignment="Left" 
-                Margin="30,20,0,10"
-                Padding="15,8"
-                Background="#313244" 
-                Foreground="White" 
-                BorderThickness="0"
-                Cursor="Hand">
-            <Button.Style>
-                <Style TargetType="Button">
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="Button">
-                                <Border Background="{TemplateBinding Background}" 
-                                        CornerRadius="10" 
-                                        Padding="{TemplateBinding Padding}">
-                                    <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                </Border>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
-                    <Style.Triggers>
-                        <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#45475A"/>
-                        </Trigger>
-                    </Style.Triggers>
-                </Style>
-            </Button.Style>
-        </Button>
+        <!-- Top Bar: Navigation Buttons -->
+        <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="30,20,0,10">
+            <Button Content="← 返回库" 
+                    Command="{Binding GoBackCommand}"
+                    Style="{StaticResource TopBarButtonStyle}"/>
+            
+            <Button Content="🔄 编辑循环" 
+                    Command="{Binding GoToEditCommand}"
+                    Style="{StaticResource TopBarButtonStyle}"
+                    Margin="15,0,0,0"/>
+        </StackPanel>
 
         <Grid Grid.Row="1" Margin="40,10,40,40">
             <Grid.ColumnDefinitions>

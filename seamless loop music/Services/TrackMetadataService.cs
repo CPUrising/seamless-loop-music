@@ -142,6 +142,22 @@ namespace seamless_loop_music.Services
             }
         }
 
+        public int GetSampleRate(string filePath)
+        {
+            try
+            {
+                if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return 44100;
+                using (var reader = new NAudio.Wave.AudioFileReader(filePath))
+                {
+                    return reader.WaveFormat.SampleRate;
+                }
+            }
+            catch
+            {
+                return 44100; // 默认保底
+            }
+        }
+
         public void SaveTrack(MusicTrack track)
         {
             if (track != null) _dbHelper.SaveTrack(track);

@@ -65,8 +65,15 @@ namespace seamless_loop_music.Services
         {
             if (track == null) return;
 
+            // 如果曲目没变且已经在播放，则不需要重新加载音频流，避免打断
+            bool isAlreadyLoaded = CurrentTrack != null && CurrentTrack.Id == track.Id;
+            
             CurrentTrack = track;
-            await Task.Run(() => _audioLooper.LoadAudio(track.FilePath));
+
+            if (!isAlreadyLoaded)
+            {
+                await Task.Run(() => _audioLooper.LoadAudio(track.FilePath));
+            }
             
             _audioLooper.SetLoopStartSample(track.LoopStart);
             _audioLooper.SetLoopEndSample(track.LoopEnd);
