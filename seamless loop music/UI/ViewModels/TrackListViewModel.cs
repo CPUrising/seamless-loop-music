@@ -63,6 +63,19 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _isCompact, value);
         }
 
+        private int _playingTrackId;
+        public int PlayingTrackId
+        {
+            get => _playingTrackId;
+            set 
+            {
+                if (SetProperty(ref _playingTrackId, value))
+                {
+                    UpdatePlayingStatus();
+                }
+            }
+        }
+
         private MusicTrack _selectedTrack;
         public MusicTrack SelectedTrack
         {
@@ -191,6 +204,26 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 App.Current.Dispatcher.Invoke(() => StatusMessage = msg);
             });
+
+            // 监听播放曲目变更
+            _playbackService.TrackChanged += (track) => 
+            {
+                App.Current.Dispatcher.Invoke(() => PlayingTrackId = track?.Id ?? 0);
+            };
+
+            // 初始化当前播放曲目 ID
+            if (_playbackService.CurrentTrack != null)
+            {
+                PlayingTrackId = _playbackService.CurrentTrack.Id;
+            }
+        }
+
+        private void UpdatePlayingStatus()
+        {
+            foreach (var track in Tracks)
+            {
+                track.IsPlaying = track.Id == _playingTrackId;
+            }
         }
 
         private async void OnCategoryItemSelected(CategoryItem item)
@@ -521,6 +554,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 Tracks.Clear();
                 foreach (var t in results) Tracks.Add(t);
+                UpdatePlayingStatus();
                 UpdateStats();
                 TracksView.Refresh();
             });
