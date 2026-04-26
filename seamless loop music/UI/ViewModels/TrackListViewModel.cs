@@ -195,6 +195,11 @@ namespace seamless_loop_music.UI.ViewModels
 
         private async void OnCategoryItemSelected(CategoryItem item)
         {
+            await ApplyCategoryFilterAsync(item);
+        }
+
+        private async Task ApplyCategoryFilterAsync(CategoryItem item)
+        {
             _selectedCategoryItem = item;
             
             // 如果是常规歌单，需要加载其包含的曲目 ID
@@ -208,9 +213,12 @@ namespace seamless_loop_music.UI.ViewModels
                 _currentPlaylistTrackIds.Clear();
             }
 
-            UpdateSearchPlaceholder();
-            TracksView.Refresh();
-            UpdateStats();
+            App.Current.Dispatcher.Invoke(() => 
+            {
+                UpdateSearchPlaceholder();
+                TracksView.Refresh();
+                UpdateStats();
+            });
         }
 
         private void UpdateSearchPlaceholder()
@@ -288,6 +296,7 @@ namespace seamless_loop_music.UI.ViewModels
             // 重要：在当前区域内进行导航
             var parameters = new NavigationParameters();
             parameters.Add("track", track);
+            parameters.Add("category", _selectedCategoryItem); // 携带当前分类上下文
             parameters.Add("autoPlay", false);
             _regionManager.RequestNavigate("LibraryContentRegion", "DetailView", parameters);
         }
@@ -467,6 +476,13 @@ namespace seamless_loop_music.UI.ViewModels
                 IsCompact = (bool)navigationContext.Parameters["compact"];
             }
 
+            // 优先恢复分类上下文
+            if (navigationContext.Parameters.ContainsKey("category"))
+            {
+                var category = navigationContext.Parameters["category"] as CategoryItem;
+                await ApplyCategoryFilterAsync(category);
+            }
+
             await ReloadTracksAsync();
 
             // 如果导航带了 track 参数，自动选中
@@ -476,8 +492,26 @@ namespace seamless_loop_music.UI.ViewModels
                 if (targetTrack != null)
                 {
                     SelectedTrack = Tracks.FirstOrDefault(t => t.Id == targetTrack.Id);
+                    
+                    // 如果是在侧边栏精简模式，且没有分类参数，尝试自动关联专辑
+                    if (IsCompact && navigationContext.Parameters.ContainsKey("category") == false)
+                    {
+                        var category = new CategoryItem 
+                        { 
+                            Name = targetTrack.Album, 
+                            Type = CategoryType.Album 
+                        };
+                        await ApplyCategoryFilterAsync(category);
+                    }
                 }
             }
+
+            // 确保刷新视图
+            App.Current.Dispatcher.Invoke(() => 
+            {
+                UpdateStats();
+                TracksView.Refresh();
+            });
         }
 
         private async Task ReloadTracksAsync()

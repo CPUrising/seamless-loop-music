@@ -70,15 +70,22 @@ namespace seamless_loop_music.UI.ViewModels
                     autoPlay = (bool)navigationContext.Parameters["autoPlay"];
                 }
                 
+                CategoryItem category = null;
+                if (navigationContext.Parameters.ContainsKey("category"))
+                {
+                    category = navigationContext.Parameters["category"] as CategoryItem;
+                }
+                
                 if (track != null)
                 {
                     CurrentTrack = track;
                     UpdateAlbumInfo(track);
                     
-                    // 1. 将歌曲列表导航到侧边栏区域
+                    // 1. 将歌曲列表导航到侧边栏区域，透传分类上下文
                     var listParams = new NavigationParameters();
                     listParams.Add("compact", true);
                     listParams.Add("track", track);
+                    if (category != null) listParams.Add("category", category);
                     _regionManager.RequestNavigate("DetailListRegion", "TrackListView", listParams);
 
                     // 2. 重要：告诉 LoopWorkspace 显示该曲目的编辑数据，但不影响当前播放
