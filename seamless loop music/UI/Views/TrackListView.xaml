@@ -249,7 +249,7 @@
                         <Setter.Value>
                             <!-- 通过 VmProxy 访问 ViewModel，PlacementTarget.DataContext 获取当前行 MusicTrack -->
                             <ContextMenu Background="#313244" BorderThickness="0"
-                                         BorderBrush="#45475A" Padding="4">
+                                         BorderBrush="#45475A" Padding="4" Foreground="#CDD6F4">
                                 <MenuItem Header="▶  播放"
                                           Command="{Binding Data.PlayCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -265,9 +265,19 @@
                                           Command="{Binding Data.AddToPlaylistCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <Separator Background="#45475A" Margin="4,2"/>
-                                <MenuItem Header="❤️  收藏/取消收藏"
-                                          Command="{Binding Data.ToggleLoveCommand, Source={StaticResource VmProxy}}"
-                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
+                                <MenuItem Command="{Binding Data.ToggleLoveCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
+                                    <MenuItem.Style>
+                                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
+                                            <Setter Property="Header" Value="❤️  收藏"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsLoved, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
+                                                    <Setter Property="Header" Value="💔  取消收藏"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </MenuItem.Style>
+                                </MenuItem>
                                 <Separator Background="#45475A" Margin="4,2"/>
                                 <MenuItem Header="➖  从当前列表移除"
                                           Command="{Binding Data.RemoveFromListCommand, Source={StaticResource VmProxy}}"
