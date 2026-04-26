@@ -1,10 +1,9 @@
 # Seamless Loop Music 项目代码架构概览
 
 ---
-
 **编写者**: 莱芙・泽诺 (Lev Zenith)
-**日期**: 2026-04-25
-**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。
+**日期**: 2026-04-26
+**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。
 
 ---
 
@@ -13,7 +12,6 @@
 本项目是一个基于 **.NET Framework 4.8 (WPF)** 开发的高保真音乐播放器，核心特色是支持**无缝循环 (Seamless Looping)**，并集成了 **PyMusicLooper** 库进行自动化音频循环点分析。
 
 **技术亮点**：
-
 - **Prism.Unity 8.1.97** — MVVM 框架，区域导航与依赖注入
 - **MaterialDesignThemes 5.3.1** — Material Design UI 风格
 - **Repository 仓储模式** — 清晰的数据访问层分离
@@ -22,34 +20,29 @@
 ## 2. 模块化设计
 
 ### 📂 Core (核心引擎层)
-
 这是项目的"心脏"，负责最底层的声音处理。
-
 - `AudioLooper.cs`: 核心控制中心，处理播放状态（Play/Pause/Stop）以及精细的采样跳转逻辑。为了维护方便，已拆分为 `Analysis`（分析）、`Loader`（加载）和 `Mixing`（混音）等分部类。
 - `LoopStream.cs`: 自定义的音频流包装类，确保在到达循环终点时能实现毫秒级的无感跳转。
 
 ### 📂 Events (事件通信层) — Prism EventAggregator
-
 项目的"神经网络"，负责各层之间的消息传递。
-
 - `CoreEvents.cs`: 定义全局事件（TrackLoadedEvent、PlaybackStateChangedEvent、LoopPointsChangedEvent、PlaylistChangedEvent、TrackMetadataChangedEvent、LibraryRefreshedEvent），用于 UI、Services、Core 之间的解耦通信。
 - `CategoryItemSelectedEvent.cs`: 分类项选中事件，用于触发曲目列表按 Album / Artist / Playlist 过滤。
 
 ### 📂 Models (数据模型层)
-
 项目的"零件包"，定义了程序中流转的数据结构。
-
 - `MusicTrack.cs`: 代表一首歌曲，包含采样率、开始/结束循环点、收藏状态、评分等核心数据信息。
 - `PlaylistFolder.cs`: 代表一个播放列表。
 - `LoopCandidate.cs`: 存储分析出来的潜在循环点数据。
 - `PlayMode.cs`: 播放模式枚举（单曲循环、列表循环、随机播放等）。
 - `CategoryItem.cs`: 分类项模型，支持 Album / Artist / Playlist 三种分类类型，包含封面图片路径（ImagePath）等扩展属性。
 - `CategoryNavTarget.cs`: 分类导航目标模型，用于侧边栏导航菜单。
+- `Album.cs`: 专辑数据模型，包含专辑名称、封面路径等信息。
+- `Artist.cs`: 艺术家数据模型，包含艺术家名称、封面路径等信息。
+- `UserRating.cs`: 用户评分模型，用于存储曲目评分（Rating）和收藏（IsLoved）状态。
 
 ### 📂 Data (持久化层) - Repository 仓储模式
-
 项目的"档案室"，确保存档数据不丢失。
-
 - `DatabaseHelper.cs`: 封装了 SQLite 的所有操作。包括 `MusicTracks` 表（存储循环参数）和 `Playlists` 表（存储播放列表结构）。
 - `Repositories/BaseRepository.cs`: 仓储基类，提供通用 CRUD 操作。
 - `Repositories/ITrackRepository.cs`: 曲目仓储接口，包含 `UpdateMetadataAsync` 方法。
@@ -58,9 +51,7 @@
 - `Repositories/PlaylistRepository.cs`: 播放列表仓储实现。
 
 ### 📂 Services (业务逻辑层)
-
 项目的"参谋部"，处理各种复杂的逻辑运算。
-
 - `PlayerService.cs`: 顶层业务管理器，协调 UI、音频引擎和数据库。
 - `IPlayerService.cs`: 播放器服务抽象接口。
 - `PlaybackService.cs`: 播放控制服务实现。
@@ -78,22 +69,19 @@
 - `TrackMetadataService.cs`: 处理音频文件的元数据提取。
 - `SearchService.cs`: 搜索服务，实现 0.4 秒防抖延迟的多关键词搜索。
 - `ISearchService.cs`: 搜索服务接口。
+- `PlaybackQueueService.cs`: 播放队列服务，负责管理播放列表、当前索引、播放模式以及切歌逻辑。
 
 ### 📂 UI (展示层) - Prism MVVM + Material Design
-
 项目的"门面"，负责与 **cpu 大人** 互动。
 
 **窗口层**：
-
 - `MainWindow.xaml`: 主控制中心。
 - `LoopListWindow.xaml`: 专门用于显示和选择分析出来的多个循环点方案。
 - `FolderManagerWindow.xaml`: 管理被扫描的音乐文件夹。
 - `FolderPicker.cs`: 界面层的文件夹选择辅助工具。
 
 **视图层 (Views)**：
-
 - `Views/LoopWorkspace.xaml[.cs]`: 循环点编辑工作区。
-- `Views/PlaylistSidebar.xaml[.cs]`: 播放列表侧边栏。
 - `Views/PlaybackControlBar.xaml[.cs]`: 播放控制条。
 - `Views/LibraryView.xaml[.cs]`: 音乐库视图（Prism 区域容器）。
 - `Views/DetailView.xaml[.cs]`: 曲目详情视图。
@@ -104,47 +92,39 @@
 - `Views/SettingsWindow.xaml[.cs]`: 设置窗口。
 
 **视图模型层 (ViewModels)** — Prism `INavigationAware` 支持：
-
 - `ViewModels/LoopWorkspaceViewModel.cs`: 循环工作区的数据绑定与逻辑。
 - `ViewModels/PlaybackControlBarViewModel.cs`: 播放控制条的 ViewModel。
-- `ViewModels/PlaylistSidebarViewModel.cs`: 播放列表侧边栏的 ViewModel。
 - `ViewModels/LibraryViewModel.cs`: 音乐库视图的 ViewModel（Prism 区域导航）。
 - `ViewModels/DetailViewModel.cs`: 曲目详情视图的 ViewModel。
 - `ViewModels/TrackListViewModel.cs`: 曲目列表的 ViewModel（实现 `INavigationAware`，支持分类过滤、收藏、评分、防抖搜索）。
 - `ViewModels/NowPlayingViewModel.cs`: 当前播放视图的 ViewModel。
 
 **控件与工具类**：
-
 - `Controls/MultiSelectListBox.cs`: 多选列表框控件。
 - `UI/Converters/VisibilityConverters.cs`: 值转换器（NullToVisibilityConverter、NullToVisibilityInverseConverter）。
 - `UI/Converters/BindingProxy.cs`: 绑定代理器（用于 MultiBinding）。
 
 ### 📂 App 入口
-
 - `App.xaml`: 定义全局样式（Material Design 暗色皮肤）。
 - `App.xaml.cs`: 应用入口，实现**单实例互斥锁**（防止多开），全局异常捕获，已实例存在时自动唤醒置顶，**Prism UnityContainer 依赖注入配置**。
 
 ### 📂 测试项目 (SeamlessLoop.Tests)
-
 - `SeamlessLoop.Tests.csproj`: 单元测试项目文件。
 - `UnitTest1.cs`: 测试用例。
 
 ## 3. Prism 框架集成
 
 ### 依赖注入
-
 - 所有服务接口通过 Prism `UnityContainer` 注册
 - ViewModels 通过构造函数注入服务依赖
 - 支持接口替换和单元测试Mock
 
 ### 区域导航
-
 - `LibraryView` 作为区域容器（Region）
 - `TrackListView` 和 `DetailView` 作为区域视图
 - `TrackListViewModel` 实现 `INavigationAware` 接口处理导航生命周期
 
 ### 事件聚合器 (EventAggregator)
-
 - `CategoryItemSelectedEvent`: 分类选中 → 触发曲目列表过滤
 - `TrackMetadataChangedEvent`: 元数据变更 → 同步更新列表
 - `TrackLoadedEvent`: 曲目加载完成
@@ -154,7 +134,6 @@
 - `LibraryRefreshedEvent`: 音乐库刷新 → 通知侧边栏和列表刷新
 
 ## 4. 项目资产与资源
-
 - `Properties/Resources.resx` / `Resources.zh-CN.resx`: 存储中英文多语言文本，配套 `Resources.Designer.cs` 自动生成访问类。
 - `.venv`: 独立的 Python 运行环境（用于 PyMusicLooper）。
 - `DEVELOPER_MANUAL.md`: 详细的开发者手册，记录了技术细节。
