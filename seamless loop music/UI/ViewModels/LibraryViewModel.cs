@@ -248,6 +248,16 @@ namespace seamless_loop_music.UI.ViewModels
             if (dialog.ShowDialog() == true)
             {
                 var newName = dialog.InputText;
+                if (string.IsNullOrWhiteSpace(newName)) return;
+
+                // 检查同名冲突（排除自己）
+                if (CategoryItems.Any(i => i.Type == CategoryType.Playlist && i.Id != SelectedCategoryItem.Id && string.Equals(i.Name, newName, StringComparison.OrdinalIgnoreCase)))
+                {
+                    System.Windows.MessageBox.Show($"已经有一个叫「{newName}」的歌单了喵！换个名字吧 (´w｀)", 
+                        "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
+
                 var id = SelectedCategoryItem.Id;
                 Task.Run(async () => {
                     await _playlistManager.RenamePlaylistAsync(id, newName);
@@ -282,6 +292,14 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 var name = dialog.InputText;
                 if (string.IsNullOrWhiteSpace(name)) return;
+
+                // 检查同名冲突
+                if (CategoryItems.Any(i => i.Type == CategoryType.Playlist && string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase)))
+                {
+                    System.Windows.MessageBox.Show($"歌单「{name}」已经存在了喵！换个名字吧 (´w｀)", 
+                        "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
+                    return;
+                }
 
                 Task.Run(async () => {
                     await _playlistManager.CreatePlaylistAsync(name);

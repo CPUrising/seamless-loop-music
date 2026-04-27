@@ -233,19 +233,25 @@ namespace seamless_loop_music.UI.ViewModels
 
         private async Task ApplyCategoryFilterAsync(CategoryItem item)
         {
-            _selectedCategoryItem = item;
-            
+            // 深度修复：先准备好过滤数据，再切换分类状态，防止竞态条件下过滤器看到空的 ID 集合
+            HashSet<int> newPlaylistIds = new HashSet<int>();
+
             // 如果是常规歌单，需要加载其包含的曲目 ID
             if (item != null && item.Type == CategoryType.Playlist && item.Id > 0)
             {
                 var tracks = await _playlistManager.GetTracksInPlaylistAsync(item.Id);
-                _currentPlaylistTrackIds = new HashSet<int>(tracks.Select(t => t.Id));
+                newPlaylistIds = new HashSet<int>(tracks.Select(t => t.Id));
             }
-            else
+            else if (item != null && item.Type == CategoryType.Playlist && item.Id == -2)
             {
-                _currentPlaylistTrackIds.Clear();
+                // “我的收藏”特殊处理已经在 TracksFilter 里了，这里只需要确保集合不干扰
+                newPlaylistIds.Clear();
             }
 
+            // 更新状态
+            _currentPlaylistTrackIds = newPlaylistIds;
+            _selectedCategoryItem = item;
+            
             App.Current.Dispatcher.Invoke(() => 
             {
                 UpdateSearchPlaceholder();

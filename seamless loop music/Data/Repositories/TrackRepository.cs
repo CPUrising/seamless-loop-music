@@ -33,7 +33,7 @@ namespace seamless_loop_music.Data.Repositories
             LEFT JOIN Albums    al ON al.Id = t.AlbumId
             LEFT JOIN Artists   ar ON ar.Id = al.ArtistId
             LEFT JOIN LoopPoints lp ON lp.TrackId = t.Id
-            LEFT JOIN UserRatings ur ON ur.TrackId = t.Id";
+            LEFT JOIN UserRatings ur ON ur.TrackId = t.Id ";
 
         // ────────────────────────────────────────────────────────────────────
         public IEnumerable<MusicTrack> GetAll()

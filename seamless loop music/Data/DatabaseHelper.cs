@@ -79,7 +79,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, IsLoved INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, FolderPath TEXT, IsFolderLinked INTEGER DEFAULT 0, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE, FolderPath TEXT, IsFolderLinked INTEGER DEFAULT 0, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, PlaylistId INTEGER NOT NULL, FolderPath TEXT NOT NULL, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, UNIQUE(PlaylistId, FolderPath));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
@@ -337,9 +337,17 @@ namespace seamless_loop_music.Data
                     }
                     
                     // --- 3. 歌单同步（模糊关联本地 ID） ---
-                    db.Execute("INSERT OR IGNORE INTO Playlists (Name, FolderPath, IsFolderLinked, SortOrder) SELECT Name, FolderPath, IsFolderLinked, SortOrder FROM ExternalDB.Playlists");
+                    // 改进：使用 WHERE 子句防止插入同名歌单，因为 Playlists.Name 目前没有 UNIQUE 约束
+                    db.Execute(@"
+                        INSERT INTO Playlists (Name, FolderPath, IsFolderLinked, SortOrder) 
+                        SELECT Name, FolderPath, IsFolderLinked, SortOrder 
+                        FROM ExternalDB.Playlists 
+                        WHERE Name NOT IN (SELECT Name FROM Playlists)");
                     
-                    var playlistMap = db.Query<PlaylistDto>("SELECT Name, Id FROM Playlists").ToDictionary(row => row.Name, row => row.Id);
+                    // 改进：增加 GroupBy 防止数据库中已有的重名歌单导致 ToDictionary 报错
+                    var playlistMap = db.Query<PlaylistDto>("SELECT Name, Id FROM Playlists")
+                                        .GroupBy(x => x.Name)
+                                        .ToDictionary(g => g.Key, g => g.First().Id);
                     var externalPlaylists = db.Query<PlaylistDto>("SELECT Id, Name FROM ExternalDB.Playlists");
 
                     foreach (var extPl in externalPlaylists)

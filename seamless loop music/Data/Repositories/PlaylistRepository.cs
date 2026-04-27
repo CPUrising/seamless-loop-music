@@ -21,7 +21,7 @@ namespace seamless_loop_music.Data.Repositories
             LEFT JOIN Albums al ON t.AlbumId = al.Id
             LEFT JOIN Artists ar ON al.ArtistId = ar.Id
             LEFT JOIN LoopPoints lp ON t.Id = lp.TrackId
-            LEFT JOIN UserRatings ur ON t.Id = ur.TrackId";
+            LEFT JOIN UserRatings ur ON t.Id = ur.TrackId ";
 
         public async Task<List<Playlist>> GetAllAsync()
         {
@@ -86,6 +86,7 @@ namespace seamless_loop_music.Data.Repositories
             using (var db = GetConnection())
             {
                 // 使用 JOIN 关联 PlaylistItems，并应用统一的 3NF 选择器
+                // 显式选择 t.Id 确保 Dapper 映射到 MusicTrack.Id
                 string sql = FullTrackSelect + @"
                     JOIN PlaylistItems pi ON t.Id = pi.SongId
                     WHERE pi.PlaylistId = @Pid
