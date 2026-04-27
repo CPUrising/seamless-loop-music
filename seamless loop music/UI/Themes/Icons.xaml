@@ -18,4 +18,29 @@
     <system:String x:Key="IconDisc">💿</system:String>
     <system:String x:Key="IconMusic">🎵</system:String>
 
+    <!-- Vector Icons for Taskbar Buttons -->
+    <DrawingImage x:Key="DrawingIconPlay">
+        <DrawingImage.Drawing>
+            <GeometryDrawing Brush="#89B4FA" Geometry="M 0,0 L 20,10 L 0,20 Z" />
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DrawingIconPause">
+        <DrawingImage.Drawing>
+            <GeometryDrawing Brush="#89B4FA" Geometry="M 0,0 H 6 V 20 H 0 Z M 14,0 H 20 V 20 H 14 Z" />
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DrawingIconPrev">
+        <DrawingImage.Drawing>
+            <GeometryDrawing Brush="#CDD6F4" Geometry="M 20,0 L 5,10 L 20,20 Z M 0,0 H 4 V 20 H 0 Z" />
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
+    <DrawingImage x:Key="DrawingIconNext">
+        <DrawingImage.Drawing>
+            <GeometryDrawing Brush="#CDD6F4" Geometry="M 0,0 L 15,10 L 0,20 Z M 16,0 H 20 V 20 H 16 Z" />
+        </DrawingImage.Drawing>
+    </DrawingImage>
+
 </ResourceDictionary>

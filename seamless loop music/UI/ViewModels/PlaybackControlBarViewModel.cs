@@ -32,9 +32,21 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         private string _playState;
-        public string PlayState { get => _playState; set { if (SetProperty(ref _playState, value)) RaisePropertyChanged(nameof(PlayButtonContent)); } }
+        public string PlayState 
+        { 
+            get => _playState; 
+            set 
+            { 
+                if (SetProperty(ref _playState, value)) 
+                {
+                    RaisePropertyChanged(nameof(PlayButtonContent)); 
+                    RaisePropertyChanged(nameof(IsPlaying));
+                }
+            } 
+        }
 
-        public string PlayButtonContent => PlayState == "Playing" ? "||" : ">";
+        public bool IsPlaying => PlayState == "Playing";
+        public string PlayButtonContent => IsPlaying ? "||" : ">";
 
         private string _currentTimeStr = "00:00";
         private string _totalTimeStr = "00:00";
@@ -206,6 +218,11 @@ namespace seamless_loop_music.UI.ViewModels
             }
             catch { }
             AlbumCoverImage = null;
+        }
+
+        public void SeekToProgress(double value)
+        {
+            OnSeek(value);
         }
     }
 }

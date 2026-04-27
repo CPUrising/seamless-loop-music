@@ -23,44 +23,42 @@ namespace seamless_loop_music.UI.Views
 
         private void SetGeometry()
         {
-            // Get working area (desktop area minus taskbar)
-            var workingArea = SystemParameters.WorkArea;
-            var screenWidth = SystemParameters.PrimaryScreenWidth;
-            var screenHeight = SystemParameters.PrimaryScreenHeight;
+            var screen = System.Windows.Forms.Screen.PrimaryScreen;
+            var workingArea = screen.WorkingArea;
+            var bounds = screen.Bounds;
 
-            double left = workingArea.Right - this.Width;
-            double top = workingArea.Bottom - this.Height;
+            double left = 0;
+            double top = 0;
 
-            // Detect taskbar position
-            if (workingArea.Top > 0) // Taskbar at top
+            // Detect taskbar position based on working area vs screen bounds
+            if (workingArea.Bottom < bounds.Bottom) // Bottom
             {
-                left = workingArea.Right - this.Width;
-                top = workingArea.Top;
+                left = workingArea.Right - this.Width - 10;
+                top = workingArea.Bottom - this.Height - 5;
             }
-            else if (workingArea.Left > 0) // Taskbar at left
+            else if (workingArea.Top > bounds.Top) // Top
             {
-                left = workingArea.Left;
-                top = workingArea.Bottom - this.Height;
+                left = workingArea.Right - this.Width - 10;
+                top = workingArea.Top + 5;
             }
-            else if (workingArea.Right < screenWidth) // Taskbar at right
+            else if (workingArea.Left > bounds.Left) // Left
             {
-                left = workingArea.Right - this.Width;
-                top = workingArea.Bottom - this.Height;
+                left = workingArea.Left + 5;
+                top = workingArea.Bottom - this.Height - 10;
             }
-            else // Taskbar at bottom (default)
+            else if (workingArea.Right < bounds.Right) // Right
             {
-                left = workingArea.Right - this.Width;
-                top = workingArea.Bottom - this.Height;
+                left = workingArea.Right - this.Width - 5;
+                top = workingArea.Bottom - this.Height - 10;
+            }
+            else // Default to Bottom
+            {
+                left = workingArea.Right - this.Width - 10;
+                top = workingArea.Bottom - this.Height - 5;
             }
 
-            // Add small offset from edges
-            this.Left = left - 5;
-            this.Top = top - 5;
-
-            // Adjust for taskbar at top
-            if (workingArea.Top > 0) this.Top += 10;
-            // Adjust for taskbar at left
-            if (workingArea.Left > 0) this.Left += 10;
+            this.Left = left;
+            this.Top = top;
         }
 
         private void Window_Deactivated(object sender, EventArgs e)

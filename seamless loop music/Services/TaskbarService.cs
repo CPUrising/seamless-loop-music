@@ -32,6 +32,19 @@ namespace seamless_loop_music.Services
         public void Initialize(TaskbarItemInfo taskbarItemInfo)
         {
             _taskbarItemInfo = taskbarItemInfo;
+            
+            if (_taskbarItemInfo.ThumbButtonInfos.Count >= 3)
+            {
+                _taskbarItemInfo.ThumbButtonInfos[0].Click += (s, e) => _playbackService.Previous();
+                _taskbarItemInfo.ThumbButtonInfos[1].Click += (s, e) => {
+                    if (_playbackService.PlaybackState == PlaybackState.Playing)
+                        _playbackService.Pause();
+                    else
+                        _playbackService.Play();
+                };
+                _taskbarItemInfo.ThumbButtonInfos[2].Click += (s, e) => _playbackService.Next();
+            }
+
             UpdateTaskbarState(_playbackService.PlaybackState);
         }
 
@@ -51,6 +64,22 @@ namespace seamless_loop_music.Services
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
+                // Update Play/Pause icon
+                if (_taskbarItemInfo.ThumbButtonInfos.Count >= 2)
+                {
+                    var playPauseBtn = _taskbarItemInfo.ThumbButtonInfos[1];
+                    if (state == PlaybackState.Playing)
+                    {
+                        playPauseBtn.ImageSource = (System.Windows.Media.ImageSource)System.Windows.Application.Current.FindResource("DrawingIconPause");
+                        playPauseBtn.Description = "Pause";
+                    }
+                    else
+                    {
+                        playPauseBtn.ImageSource = (System.Windows.Media.ImageSource)System.Windows.Application.Current.FindResource("DrawingIconPlay");
+                        playPauseBtn.Description = "Play";
+                    }
+                }
+
                 switch (state)
                 {
                     case PlaybackState.Playing:

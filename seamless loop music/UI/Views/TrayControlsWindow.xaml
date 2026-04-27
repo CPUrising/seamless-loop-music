@@ -3,7 +3,8 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
-        Title="TrayControls" Height="220" Width="320"
+        xmlns:controls="clr-namespace:seamless_loop_music.UI.Controls"
+        Title="TaskbarPreview" Height="255" Width="300"
         WindowStyle="None" AllowsTransparency="True" Background="Transparent"
         ShowInTaskbar="False" Topmost="True" ResizeMode="NoResize"
         Deactivated="Window_Deactivated">
@@ -14,69 +15,31 @@
             <ResourceDictionary.MergedDictionaries>
                 <ResourceDictionary Source="../Themes/Colors.xaml" />
                 <ResourceDictionary Source="../Themes/Controls.xaml" />
+                <ResourceDictionary Source="../Themes/Icons.xaml" />
             </ResourceDictionary.MergedDictionaries>
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="#1E1E2E" CornerRadius="12" BorderThickness="1" BorderBrush="#313244" Margin="5" Padding="15">
+    <Border Background="#1E1E2E" CornerRadius="16" BorderThickness="1" BorderBrush="#313244" Margin="10">
         <Border.Effect>
-            <DropShadowEffect BlurRadius="10" ShadowDepth="0" Color="Black" Opacity="0.5"/>
+            <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.6"/>
         </Border.Effect>
         
-        <Grid>
+        <Grid Margin="15">
             <Grid.RowDefinitions>
-                <RowDefinition Height="*"/>
-                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/> <!-- Track Info -->
+                <RowDefinition Height="*"/>    <!-- Progress -->
+                <RowDefinition Height="Auto"/> <!-- Controls -->
             </Grid.RowDefinitions>
 
-            <!-- Track Info Area -->
-            <Grid Grid.Row="0">
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="100"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
+            <!-- Track Info -->
+            <controls:TrackInfoControl Grid.Row="0" ArtSize="80" TitleFontSize="16" SubtitleFontSize="13" ShowAlbum="True" Margin="0,0,0,15" CoverImage="{Binding CurrentTrack.ImagePath}"/>
 
-                <!-- Album Art -->
-                <Border CornerRadius="8" Background="#181825" Width="100" Height="100" VerticalAlignment="Top">
-                    <Grid>
-                        <materialDesign:PackIcon Kind="Music" Width="48" Height="48" Foreground="#45475A" 
-                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
-                        <Image Source="{Binding CurrentTrack.ImagePath}" Stretch="UniformToFill">
-                            <Image.Clip>
-                                <RectangleGeometry Rect="0,0,100,100" RadiusX="8" RadiusY="8"/>
-                            </Image.Clip>
-                        </Image>
-                    </Grid>
-                </Border>
-
-                <!-- Texts -->
-                <StackPanel Grid.Column="1" Margin="15,0,0,0" VerticalAlignment="Center">
-                    <TextBlock Text="{Binding CurrentTrack.Title, FallbackValue='Not Playing'}" 
-                             FontSize="16" FontWeight="Bold" Foreground="#CDD6F4" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding CurrentTrack.Artist, FallbackValue='Unknown Artist'}" 
-                             FontSize="13" Foreground="#A6ADC8" Margin="0,4,0,0" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding CurrentTrack.Album, FallbackValue='Unknown Album'}" 
-                             FontSize="12" Foreground="#7F849C" Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
-                </StackPanel>
-            </Grid>
+            <!-- Progress -->
+            <controls:ProgressControls Grid.Row="1" VerticalAlignment="Center" Margin="0,5"/>
 
             <!-- Playback Controls -->
-            <StackPanel Grid.Row="1" Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,10,0,0">
-                <Button Command="{Binding PreviousCommand}" Style="{StaticResource MaterialDesignIconButton}" Foreground="#CDD6F4">
-                    <materialDesign:PackIcon Kind="SkipPrevious" Width="24" Height="24"/>
-                </Button>
-                
-                <Button Command="{Binding PlayPauseCommand}" Margin="10,0" 
-                        Style="{StaticResource MaterialDesignFloatingActionMiniButton}"
-                        Background="#89B4FA" BorderBrush="#89B4FA">
-                    <materialDesign:PackIcon Kind="{Binding IsPlaying, Converter={StaticResource PlayPauseIconConverter}}" 
-                                           Width="24" Height="24" Foreground="#11111B"/>
-                </Button>
-
-                <Button Command="{Binding NextCommand}" Style="{StaticResource MaterialDesignIconButton}" Foreground="#CDD6F4">
-                    <materialDesign:PackIcon Kind="SkipNext" Width="24" Height="24"/>
-                </Button>
-            </StackPanel>
+            <controls:PlaybackControls Grid.Row="2" PlayButtonWidth="100" PlayButtonHeight="45" Margin="0,15"/>
         </Grid>
     </Border>
 </Window>

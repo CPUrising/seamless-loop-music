@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:seamless_loop_music.UI.Views"
+             xmlns:controls="clr-namespace:seamless_loop_music.UI.Controls"
              xmlns:prism="http://prismlibrary.com/"
              xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              prism:ViewModelLocator.AutoWireViewModel="True"
@@ -41,46 +42,17 @@
         </Grid.RowDefinitions>
 
         <!-- Progress Area -->
-        <StackPanel Grid.Row="0" Margin="0,15">
-            <TextBlock Text="{Binding TimeDisplay}" HorizontalAlignment="Right" FontSize="18" FontWeight="Light" Foreground="{StaticResource BrushTextPrimary}"/>
-            <Slider x:Name="ProgressBar" Value="{Binding ProgressValue}" Maximum="1000" IsMoveToPointEnabled="True" Margin="0,5,0,0"
-                    Thumb.DragStarted="ProgressBar_DragStarted" Thumb.DragCompleted="ProgressBar_DragCompleted"
-                    ValueChanged="ProgressBar_ValueChanged"/>
-        </StackPanel>
+        <controls:ProgressControls Grid.Row="0" Margin="0,10"/>
 
         <!-- Bottom Bar: Playback Controls -->
         <Grid Grid.Row="1" Margin="0,0,0,10">
-            <!-- Left: Current Track Info (Clickable) -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <Border Width="45" Height="45" CornerRadius="4" Margin="10,0,10,0" Background="{StaticResource BrushSurface}">
-                    <Image Source="{Binding AlbumCoverImage}" Stretch="UniformToFill"/>
-                </Border>
-                <Button Command="{Binding OpenDetailCommand}" 
-                        Background="Transparent" BorderThickness="0" 
-                        Cursor="Hand" Padding="5" VerticalAlignment="Center"
-                        ToolTip="{Binding CurrentTrack.DisplayName}"
-                        ToolTipService.InitialShowDelay="0">
-                    <StackPanel>
-                        <TextBlock Text="{Binding CurrentTrack.DisplayName, FallbackValue='未选择曲目'}" 
-                                   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" 
-                                   MaxWidth="200" TextTrimming="CharacterEllipsis"/>
-                        <TextBlock Text="{Binding CurrentTrack.Artist, FallbackValue='未知艺术家'}" 
-                                   FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Opacity="0.6"
-                                   MaxWidth="200" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
-                    </StackPanel>
-                </Button>
-            </StackPanel>
+            <!-- Left: Current Track Info -->
+            <controls:TrackInfoControl HorizontalAlignment="Left" ArtSize="45" IsClickable="True" ShowAlbum="False" CoverImage="{Binding AlbumCoverImage}"/>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Style="{StaticResource GhostIconButton}" Content="⏮" Command="{Binding PrevCommand}" Margin="5"/>
-                <Button Style="{StaticResource PrimaryButton}" 
-                        Content="{Binding PlayButtonContent}" 
-                        Command="{Binding PlayCommand}" 
-                        Width="100" Height="40" Margin="15,0" 
-                        FontSize="16"/>
-                <Button Style="{StaticResource GhostIconButton}" Content="⏭" Command="{Binding NextCommand}" Margin="5"/>
-            </StackPanel>
+            <!-- Center: Controls -->
+            <controls:PlaybackControls HorizontalAlignment="Center"/>
 
+            <!-- Right: Extras & Volume -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <ToggleButton IsChecked="{Binding IsFeatureLoopEnabled}"
                                Style="{StaticResource ControlToggleStyle}"
@@ -88,8 +60,7 @@
                                ToolTip="{Binding [FeatureLoop], Source={StaticResource Loc}}">
                     <md:PackIcon Kind="Infinity" Width="22" Height="22"/>
                 </ToggleButton>
-                <TextBlock Text="Vol:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11" Opacity="0.5" Foreground="{StaticResource BrushTextPrimary}"/>
-                <Slider Width="80" Minimum="0" Maximum="100" Value="{Binding VolumeValue}" IsMoveToPointEnabled="True"/>
+                <controls:VolumeControls SliderWidth="80"/>
             </StackPanel>
         </Grid>
     </Grid>

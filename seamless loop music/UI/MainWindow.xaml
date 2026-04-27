@@ -8,7 +8,19 @@
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterScreen">
     <Window.TaskbarItemInfo>
-        <TaskbarItemInfo x:Name="MainTaskbarItemInfo"/>
+        <TaskbarItemInfo x:Name="MainTaskbarItemInfo">
+            <TaskbarItemInfo.ThumbButtonInfos>
+                <ThumbButtonInfo x:Name="ThumbPrev"
+                                 Description="Previous"
+                                 ImageSource="{StaticResource DrawingIconPrev}"/>
+                <ThumbButtonInfo x:Name="ThumbPlayPause"
+                                 Description="Play/Pause"
+                                 ImageSource="{StaticResource DrawingIconPlay}"/>
+                <ThumbButtonInfo x:Name="ThumbNext"
+                                 Description="Next"
+                                 ImageSource="{StaticResource DrawingIconNext}"/>
+            </TaskbarItemInfo.ThumbButtonInfos>
+        </TaskbarItemInfo>
     </Window.TaskbarItemInfo>
     <Window.Resources>
         <!-- Keep existing styles for now, but consolidate later -->
