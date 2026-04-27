@@ -516,7 +516,11 @@ namespace seamless_loop_music.UI.ViewModels
                 await ApplyCategoryFilterAsync(category);
             }
 
-            await ReloadTracksAsync();
+            // 只有在列表为空时才重新加载，防止返回时丢失位置
+            if (Tracks.Count == 0)
+            {
+                await ReloadTracksAsync();
+            }
 
             // 如果导航带了 track 参数，自动选中
             if (navigationContext.Parameters.ContainsKey("track"))
@@ -549,11 +553,19 @@ namespace seamless_loop_music.UI.ViewModels
 
         private async Task ReloadTracksAsync()
         {
+            var oldSelectedId = SelectedTrack?.Id;
             var results = await _trackRepository.GetAllAsync();
+            
             App.Current.Dispatcher.Invoke(() =>
             {
                 Tracks.Clear();
                 foreach (var t in results) Tracks.Add(t);
+                
+                if (oldSelectedId.HasValue)
+                {
+                    SelectedTrack = Tracks.FirstOrDefault(t => t.Id == oldSelectedId.Value);
+                }
+
                 UpdatePlayingStatus();
                 UpdateStats();
                 TracksView.Refresh();

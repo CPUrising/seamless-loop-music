@@ -110,14 +110,7 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnGoBack()
         {
-            if (_navigationService?.Journal.CanGoBack == true)
-            {
-                _navigationService.Journal.GoBack();
-            }
-            else
-            {
-                _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
-            }
+            _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
         }
 
         private void OnGoToDetail()
