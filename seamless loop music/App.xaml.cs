@@ -43,6 +43,8 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
             containerRegistry.RegisterSingleton<ISearchService, SearchService>();
             containerRegistry.RegisterSingleton<TrackMetadataService>();
+            containerRegistry.RegisterSingleton<ITaskbarService, TaskbarService>();
+            containerRegistry.RegisterSingleton<INotifyIconService, NotifyIconService>();
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
@@ -50,6 +52,8 @@ namespace seamless_loop_music
             containerRegistry.RegisterForNavigation<NowPlayingView, NowPlayingViewModel>();
             
             containerRegistry.RegisterSingleton<LoopWorkspaceViewModel>();
+            containerRegistry.RegisterSingleton<TrayControlsViewModel>();
+            containerRegistry.RegisterSingleton<TrayControlsWindow>();
             
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
@@ -70,7 +74,10 @@ namespace seamless_loop_music
                 base.OnInitialized();
 
                 var regionManager = Container.Resolve<IRegionManager>();
-                regionManager.RequestNavigate("MainContentRegion", "LibraryView"); 
+                regionManager.RequestNavigate("MainContentRegion", "LibraryView");
+
+                var notifyIconService = Container.Resolve<INotifyIconService>();
+                notifyIconService.Initialize();
             }
             catch (Exception ex)
             {

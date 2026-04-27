@@ -7,6 +7,9 @@
         Icon="/Resources/app_icon.png"
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterScreen">
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo x:Name="MainTaskbarItemInfo"/>
+    </Window.TaskbarItemInfo>
     <Window.Resources>
         <!-- Keep existing styles for now, but consolidate later -->
     </Window.Resources>

@@ -7,9 +7,10 @@ namespace seamless_loop_music
 {
     public partial class MainWindow : Window
     {
-        public MainWindow()
+        public MainWindow(ITaskbarService taskbarService)
         {
             InitializeComponent();
+            taskbarService.Initialize(this.MainTaskbarItemInfo);
         }
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)

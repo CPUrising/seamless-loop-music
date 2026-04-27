@@ -10,7 +10,7 @@ namespace seamless_loop_music.Services
         private readonly List<MusicTrack> _queue = new List<MusicTrack>();
         private readonly Random _random = new Random();
         private int _currentIndex = -1;
-        private PlayMode _playMode = PlayMode.SingleLoop;
+        private PlayMode _playMode = PlayMode.ListLoop;
 
         public IReadOnlyList<MusicTrack> Queue => _queue.AsReadOnly();
         public int CurrentIndex => _currentIndex;

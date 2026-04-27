@@ -214,6 +214,8 @@ namespace seamless_loop_music.Data.Repositories
                                 LastModified = excluded.LastModified;",
                             new { TrackId = trackId, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = track.LastModified },
                             transaction: trans);
+
+                        track.Id = (int)trackId;
                     }
                     trans.Commit();
                 }

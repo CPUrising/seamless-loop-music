@@ -178,8 +178,12 @@ namespace seamless_loop_music.Data
                         SELECT Id FROM Tracks WHERE FileName=@FileName AND TotalSamples=@TotalSamples;", 
                         new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId }, transaction: trans);
 
+                    track.Id = (int)trackId;
                     db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@TrackId, @LoopStart, @LoopEnd, @LoopCandidatesJson) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", 
                         new { TrackId = trackId, track.LoopStart, track.LoopEnd, track.LoopCandidatesJson }, transaction: trans);
+                    db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified) VALUES (@TrackId, @Rating, @IsLoved, @Now) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating, IsLoved=excluded.IsLoved, LastModified = excluded.LastModified;",
+                        new { TrackId = trackId, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = track.LastModified },
+                        transaction: trans);
                 }
                 trans.Commit();
             }

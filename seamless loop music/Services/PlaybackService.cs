@@ -80,14 +80,12 @@ namespace seamless_loop_music.Services
                 string partB = _metadataService.FindPartB(track.FilePath);
                 await Task.Run(() => _audioLooper.LoadAudio(track.FilePath, partB));
 
-                // 核心逻辑：如果是 A/B 融合模式，且数据库记录的长度与实际拼接后的长度差异显著（说明是旧的单曲记录或完全不符）
-                // 允许 0.5s (22050采样) 以内的微差，防止误重置同步过来的循环点
+                // 核心逻辑：如果是 A/B 融合模式，且数据库记录的长度与实际拼接后的长度差异显著
                 if (_audioLooper.IsABFusionLoaded && (track.LoopEnd <= 0 || Math.Abs(track.TotalSamples - _audioLooper.TotalSamples) > 10000))
                 {
                     track.LoopStart = _audioLooper.LoopStartSample;
                     track.LoopEnd = _audioLooper.LoopEndSample;
                     track.TotalSamples = _audioLooper.TotalSamples;
-                    // 同步到数据库，避免下次还错
                     _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
                 }
                 else
@@ -95,11 +93,6 @@ namespace seamless_loop_music.Services
                     _audioLooper.SetLoopStartSample(track.LoopStart);
                     _audioLooper.SetLoopEndSample(track.LoopEnd);
                 }
-            }
-            else
-            {
-                _audioLooper.SetLoopStartSample(track.LoopStart);
-                _audioLooper.SetLoopEndSample(track.LoopEnd);
             }
 
             TrackChanged?.Invoke(track);
