@@ -38,7 +38,6 @@ namespace seamless_loop_music.UI.ViewModels
             ResetABCommand = new DelegateCommand(ExecuteResetAB);
             PyRankingCommand = new DelegateCommand(ExecutePyRanking);
             ApplyLoopCommand = new DelegateCommand(ExecuteApplyLoop);
-            ChangePlayModeCommand = new DelegateCommand(ExecuteChangePlayMode);
 
             _eventAggregator.GetEvent<TrackLoadedEvent>().Subscribe(OnTrackLoaded);
             _eventAggregator.GetEvent<LoopPointsChangedEvent>().Subscribe(OnLoopPointsChanged);
@@ -113,13 +112,6 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
-        private string _loopLimit = "0";
-        public string LoopLimit
-        {
-            get => _loopLimit;
-            set => SetProperty(ref _loopLimit, value);
-        }
-
         private string _statusMessage = "";
         public string StatusMessage
         {
@@ -132,13 +124,6 @@ namespace seamless_loop_music.UI.ViewModels
         {
             get => _audioInfo;
             set => SetProperty(ref _audioInfo, value);
-        }
-
-        private string _playModeText = "Loop";
-        public string PlayModeText
-        {
-            get => _playModeText;
-            set => SetProperty(ref _playModeText, value);
         }
 
         public bool IsABMode => _playbackService.IsABFusionLoaded;
@@ -166,7 +151,6 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand ResetABCommand { get; }
         public DelegateCommand PyRankingCommand { get; }
         public DelegateCommand ApplyLoopCommand { get; }
-        public DelegateCommand ChangePlayModeCommand { get; }
 
         private void OnTrackLoaded(MusicTrack track)
         {
@@ -201,24 +185,6 @@ namespace seamless_loop_music.UI.ViewModels
                 $"Audio Info: {total} Samples | Rate: {rate} Hz";
             
             AudioInfo = info;
-        }
-
-        private void ExecuteChangePlayMode()
-        {
-            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
-            switch (PlayModeText)
-            {
-                case "Loop":
-                    PlayModeText = isZh ? "单曲" : "Single";
-                    break;
-                case "Single":
-                case "单曲":
-                    PlayModeText = isZh ? "列表" : "List";
-                    break;
-                default:
-                    PlayModeText = "Loop";
-                    break;
-            }
         }
 
         private void ExecuteAdjust(string parameter)

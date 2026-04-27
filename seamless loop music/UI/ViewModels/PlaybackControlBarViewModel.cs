@@ -97,6 +97,10 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand NextCommand { get; }
         public DelegateCommand<double?> SeekCommand { get; }
         public DelegateCommand OpenDetailCommand { get; }
+        public DelegateCommand ChangePlayModeCommand { get; }
+
+        private string _playModeText;
+        public string PlayModeText { get => _playModeText; set => SetProperty(ref _playModeText, value); }
 
         public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
         {
@@ -111,6 +115,9 @@ namespace seamless_loop_music.UI.ViewModels
             NextCommand = new DelegateCommand(() => _playbackService.Next());
             SeekCommand = new DelegateCommand<double?>(OnSeek);
             OpenDetailCommand = new DelegateCommand(OnOpenDetail);
+            ChangePlayModeCommand = new DelegateCommand(OnExecuteChangePlayMode);
+
+            UpdatePlayModeText();
 
             _playbackService.TrackChanged += track => 
             {
@@ -223,6 +230,31 @@ namespace seamless_loop_music.UI.ViewModels
         public void SeekToProgress(double value)
         {
             OnSeek(value);
+        }
+
+        private void OnExecuteChangePlayMode()
+        {
+            var nextMode = _playbackService.PlayMode switch
+            {
+                PlayMode.SingleLoop => PlayMode.ListLoop,
+                PlayMode.ListLoop => PlayMode.Shuffle,
+                PlayMode.Shuffle => PlayMode.SingleLoop,
+                _ => PlayMode.SingleLoop
+            };
+            _playbackService.PlayMode = nextMode;
+            UpdatePlayModeText();
+        }
+
+        private void UpdatePlayModeText()
+        {
+            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
+            PlayModeText = _playbackService.PlayMode switch
+            {
+                PlayMode.SingleLoop => isZh ? "单曲" : "Single",
+                PlayMode.ListLoop => isZh ? "列表" : "List",
+                PlayMode.Shuffle => isZh ? "随机" : "Shuffle",
+                _ => "Single"
+            };
         }
     }
 }

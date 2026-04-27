@@ -112,4 +112,25 @@
   <data name="ResetABToolTip" xml:space="preserve">
     <value>Reset loop points to the A/B seam point.</value>
   </data>
+  <data name="PlayModeToolTip" xml:space="preserve">
+    <value>Switch playback mode (Single, List, Shuffle).</value>
+  </data>
+  <data name="MatchStartToolTip" xml:space="preserve">
+    <value>Search backward for a matching start point.</value>
+  </data>
+  <data name="MatchEndToolTip" xml:space="preserve">
+    <value>Search forward for a matching end point.</value>
+  </data>
+  <data name="PyRanking" xml:space="preserve">
+    <value>Auto Analyze</value>
+  </data>
+  <data name="PyRankingToolTip" xml:space="preserve">
+    <value>Use PyMusicLooper to find best loop points automatically.</value>
+  </data>
+  <data name="MatchStart" xml:space="preserve">
+    <value>Match Start</value>
+  </data>
+  <data name="MatchEnd" xml:space="preserve">
+    <value>Match End</value>
+  </data>
 </root>

@@ -115,31 +115,29 @@
             </Grid>
 
             <StackPanel Grid.Row="1" Margin="0,20,0,0">
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,15">
-                    <Button Content="{Binding PlayModeText}" Command="{Binding ChangePlayModeCommand}" Style="{StaticResource SecondaryButton}" Width="120" Margin="0,0,20,0"/>
-                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="{Binding [LabelLoop], Source={StaticResource Loc}}" VerticalAlignment="Center" FontSize="13" Opacity="0.7" Margin="0,0,8,0" Foreground="{StaticResource BrushTextPrimary}"/>
-                        <TextBox Width="45" Text="{Binding LoopLimit, UpdateSourceTrigger=PropertyChanged}" Height="30" TextAlignment="Center" 
-                                 Style="{StaticResource ModernTextBox}"/>
+                <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
+                    <!-- Row 1: Match controls -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
+                        <Button Content="{Binding [MatchStart], Source={StaticResource Loc}}" Command="{Binding SmartMatchReverseCommand}" Width="110" Height="42"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#89DCEB" Foreground="#11111B"
+                                ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
+                        <Button Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Command="{Binding SmartMatchForwardCommand}" Width="110" Height="42"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,0,0" Background="#94E2D5" Foreground="#11111B"
+                                ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
                     </StackPanel>
-                </StackPanel>
 
-                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                    <Button Content="{Binding [MatchStart], Source={StaticResource Loc}}" Command="{Binding SmartMatchReverseCommand}" Width="100" Height="40"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#89DCEB" Foreground="#11111B"
-                            ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
-                    <Button Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Command="{Binding SmartMatchForwardCommand}" Width="100" Height="40"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#94E2D5" Foreground="#11111B"
-                            ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
-                    <Button Content="{Binding [ResetAB], Source={StaticResource Loc}}" Command="{Binding ResetABCommand}" Width="100" Height="40"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#F5C2E7" Foreground="#11111B"
-                            IsEnabled="{Binding IsABMode}"
-                            ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
-                    <Button Content="{Binding [PyRanking], Source={StaticResource Loc}}" Command="{Binding PyRankingCommand}" Width="100" Height="40"
-                            Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#F2CDCD" Foreground="#11111B"
-                            ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
-                    <Button Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Command="{Binding ApplyLoopCommand}" Width="130" Height="40"
-                            Style="{StaticResource PrimaryButton}" FontWeight="Bold" Background="{StaticResource BrushAccent}"/>
+                    <!-- Row 2: Action controls -->
+                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                        <Button Content="{Binding [ResetAB], Source={StaticResource Loc}}" Command="{Binding ResetABCommand}" Width="100" Height="42"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#F5C2E7" Foreground="#11111B"
+                                IsEnabled="{Binding IsABMode}"
+                                ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
+                        <Button Content="{Binding [PyRanking], Source={StaticResource Loc}}" Command="{Binding PyRankingCommand}" Width="100" Height="42"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#F2CDCD" Foreground="#11111B"
+                                ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
+                        <Button Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Command="{Binding ApplyLoopCommand}" Width="130" Height="42"
+                                Style="{StaticResource PrimaryButton}" FontWeight="Bold" Background="{StaticResource BrushAccent}"/>
+                    </StackPanel>
                 </StackPanel>
 
                 <Grid Width="400" HorizontalAlignment="Center" Margin="0,15,0,0">

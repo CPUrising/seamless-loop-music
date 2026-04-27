@@ -112,4 +112,25 @@
   <data name="ResetABToolTip" xml:space="preserve">
     <value>将循环点重置为 A/B 拼接处。</value>
   </data>
+  <data name="PlayModeToolTip" xml:space="preserve">
+    <value>切换播放模式（单曲循环、列表循环、随机播放）。</value>
+  </data>
+  <data name="MatchStartToolTip" xml:space="preserve">
+    <value>向后搜索匹配的循环起点。</value>
+  </data>
+  <data name="MatchEndToolTip" xml:space="preserve">
+    <value>向前搜索匹配的循环终点。</value>
+  </data>
+  <data name="PyRanking" xml:space="preserve">
+    <value>方案分析</value>
+  </data>
+  <data name="PyRankingToolTip" xml:space="preserve">
+    <value>使用 PyMusicLooper 自动分析最佳循环方案。</value>
+  </data>
+  <data name="MatchStart" xml:space="preserve">
+    <value>开始匹配</value>
+  </data>
+  <data name="MatchEnd" xml:space="preserve">
+    <value>结束匹配</value>
+  </data>
 </root>

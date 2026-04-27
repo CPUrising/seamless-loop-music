@@ -35,6 +35,7 @@ namespace seamless_loop_music.Services
 
         public IReadOnlyList<MusicTrack> Queue => _queueManager.Queue;
         public int CurrentIndex => _queueManager.CurrentIndex;
+        public PlayMode PlayMode { get => _queueManager.PlayMode; set => _queueManager.PlayMode = value; }
 
         public event Action<MusicTrack> TrackChanged;
         public event Action<PlaybackState> StateChanged;

@@ -22,6 +22,8 @@ namespace seamless_loop_music.Services
         MusicTrack GetPreviousTrack();
         MusicTrack GetTrackAt(int index);
 
+        PlayMode PlayMode { get; set; }
+        
         void MoveTo(int fromIndex, int toIndex);
     }
 }

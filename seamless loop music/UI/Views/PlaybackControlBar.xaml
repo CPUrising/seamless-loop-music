@@ -34,6 +34,27 @@
                 </Setter.Value>
             </Setter>
         </Style>
+        <Style x:Key="ControlButtonStyle" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="BorderThickness" Value="0"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="Padding" Value="5"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="Button">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="6">
+                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSurface}"/>
+                                <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
     </UserControl.Resources>
     <Grid>
         <Grid.RowDefinitions>
@@ -54,6 +75,12 @@
 
             <!-- Right: Extras & Volume -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <Button Content="{Binding PlayModeText}" 
+                        Command="{Binding ChangePlayModeCommand}"
+                        Style="{StaticResource ControlButtonStyle}"
+                        Foreground="{StaticResource BrushTextSecondary}"
+                        Margin="0,0,8,0" Padding="4,0" Height="28" FontSize="12"
+                        ToolTip="{Binding [PlayModeToolTip], Source={StaticResource Loc}}"/>
                 <ToggleButton IsChecked="{Binding IsFeatureLoopEnabled}"
                                Style="{StaticResource ControlToggleStyle}"
                                Margin="0,0,10,0"

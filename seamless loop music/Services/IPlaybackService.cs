@@ -22,6 +22,7 @@ namespace seamless_loop_music.Services
 
         IReadOnlyList<MusicTrack> Queue { get; }
         int CurrentIndex { get; }
+        PlayMode PlayMode { get; set; }
 
         event Action<MusicTrack> TrackChanged;
         event Action<PlaybackState> StateChanged;
