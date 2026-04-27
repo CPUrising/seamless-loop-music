@@ -104,6 +104,18 @@ namespace seamless_loop_music
             SetLoopEndSample(endSample);
         }
 
+        private void SyncLoopConfig()
+        {
+            if (_audioStream == null || _loopStream == null) return;
+            
+            _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
+            long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
+            if (_loopEndSample <= 0 || endPos > _audioStream.Length)
+                _loopStream.LoopEndPosition = _audioStream.Length;
+            else
+                _loopStream.LoopEndPosition = endPos;
+        }
+
         /// <summary>
         /// 开始播放（支持从暂停处继续）
         /// </summary>
@@ -115,40 +127,56 @@ namespace seamless_loop_music
                 return;
             }
 
+            // 如果已经在播放，也同步一次配置
+            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
+            {
+                 SyncLoopConfig();
+                 return;
+            }
+
             // 如果是暂停状态，直接恢复播放
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Paused)
             {
-                // 强制同步一次配置，防止意外
-                if (_loopStream != null)
+                try
                 {
-                     _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
-                     // 同步 LoopEnd
-                     long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
-                     if (_loopEndSample <= 0 || endPos > _audioStream.Length)
-                         _loopStream.LoopEndPosition = _audioStream.Length;
-                     else
-                         _loopStream.LoopEndPosition = endPos;
+                    SyncLoopConfig();
+                    _wavePlayer.Play();
+                    OnPlayStateChanged?.Invoke(PlaybackState.Playing);
+                    OnStatusChanged?.Invoke("Resuming...");
+                    return;
                 }
-                
-                _wavePlayer.Play();
-                OnPlayStateChanged?.Invoke(PlaybackState.Playing);
-                OnStatusChanged?.Invoke("Resuming...");
-                return;
-            }
-
-            // 如果已经在播放，也同步一次配置? 
-            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
-            {
-                 if (_loopStream != null)
-                 {
-                      _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
-                      long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
-                      if (_loopEndSample <= 0 || endPos > _audioStream.Length)
-                          _loopStream.LoopEndPosition = _audioStream.Length;
-                      else
-                          _loopStream.LoopEndPosition = endPos;
-                 }
-                 return;
+                catch (Exception ex)
+                {
+                    LogDebug($"Resume failed (device lost?): {ex.Message}. Attempting light recovery...");
+                    
+                    // 核心改进：轻量级恢复。仅重建播放器实例，不重载流和缓冲区
+                    try
+                    {
+                        float currentVolume = _volume;
+                        _wavePlayer?.Dispose();
+                        
+                        _wavePlayer = new WaveOutEvent
+                        {
+                            DesiredLatency = 200, 
+                            NumberOfBuffers = 3,
+                            Volume = currentVolume
+                        };
+                        _wavePlayer.Init(_bufferedProvider);
+                        _wavePlayer.PlaybackStopped += WavePlayer_PlaybackStopped;
+                        
+                        _wavePlayer.Play();
+                        OnPlayStateChanged?.Invoke(PlaybackState.Playing);
+                        OnStatusChanged?.Invoke("Playback recovered from driver error.");
+                        return;
+                    }
+                    catch (Exception fatalEx)
+                    {
+                        LogDebug($"Recovery failed: {fatalEx.Message}");
+                        OnStatusChanged?.Invoke($"Critical Error: {fatalEx.Message}");
+                        Stop();
+                        return;
+                    }
+                }
             }
 
             try
@@ -174,23 +202,7 @@ namespace seamless_loop_music
                 LogDebug($"WaveOutEvent created with volume {_volume}");
 
                 _wavePlayer.Init(_bufferedProvider);
-                _wavePlayer.PlaybackStopped += (s, e) =>
-                {
-                    if (_isLoading) return;
-                    
-                    // 核心健壮性改进：捕获底层异常
-                    if (e.Exception != null)
-                    {
-                        OnPlaybackError?.Invoke(e.Exception);
-                        OnStatusChanged?.Invoke($"[Critical Error]: {e.Exception.Message}");
-                    }
-                    
-                    if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
-                    {
-                        OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
-                        OnStatusChanged?.Invoke("Playback stopped.");
-                    }
-                };
+                _wavePlayer.PlaybackStopped += WavePlayer_PlaybackStopped;
 
                 // 启动后台填充任务
                 StartFillerTask();
@@ -226,9 +238,36 @@ namespace seamless_loop_music
         {
             if (_wavePlayer == null || _wavePlayer.PlaybackState == PlaybackState.Stopped) return;
 
-            _wavePlayer?.Stop();
+            try
+            {
+                _wavePlayer?.Stop();
+            }
+            catch (Exception ex)
+            {
+                LogDebug($"Stop failed: {ex.Message}");
+            }
+            
             OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
             OnStatusChanged?.Invoke("Stopped.");
+        }
+
+        private void WavePlayer_PlaybackStopped(object sender, StoppedEventArgs e)
+        {
+            if (_isLoading) return;
+
+            // 核心健壮性改进：捕获底层异常
+            if (e.Exception != null)
+            {
+                OnPlaybackError?.Invoke(e.Exception);
+                OnStatusChanged?.Invoke($"[Critical Error]: {e.Exception.Message}");
+                LogDebug($"Playback Error Exception: {e.Exception.Message}");
+            }
+
+            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Stopped)
+            {
+                OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
+                OnStatusChanged?.Invoke("Playback stopped.");
+            }
         }
 
         private float _volume = 1.0f;
