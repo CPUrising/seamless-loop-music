@@ -53,6 +53,15 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
+        public async Task<MusicTrack> GetByIdAsync(int id)
+        {
+            using (var db = GetConnection())
+            {
+                return await db.QueryFirstOrDefaultAsync<MusicTrack>(
+                    FullTrackSelect + " WHERE t.Id = @Id", new { Id = id });
+            }
+        }
+
         public MusicTrack GetByFingerprint(string fileName, long totalSamples)
         {
             using (var db = GetConnection())

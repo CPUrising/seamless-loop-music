@@ -138,6 +138,16 @@ namespace seamless_loop_music.UI.ViewModels
                 LoadAlbumCover(track);
             };
             _playbackService.StateChanged += state => PlayState = state.ToString();
+            _playbackService.VolumeChanged += volume => 
+            {
+                App.Current.Dispatcher.Invoke(() => VolumeValue = volume * 100);
+            };
+            _playbackService.SeamlessLoopChanged += _ => RaisePropertyChanged(nameof(IsSeamlessLoopEnabled));
+            _playbackService.FeatureLoopChanged += _ => RaisePropertyChanged(nameof(IsFeatureLoopEnabled));
+            _playbackService.PlayModeChanged += mode => 
+            {
+                App.Current.Dispatcher.Invoke(() => UpdatePlayModeText());
+            };
             
             _volumeValue = _playbackService.Volume * 100;
 

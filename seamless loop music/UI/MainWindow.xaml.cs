@@ -11,6 +11,15 @@ namespace seamless_loop_music
         {
             InitializeComponent();
             taskbarService.Initialize(this.MainTaskbarItemInfo);
+
+            this.Closing += MainWindow_Closing;
+        }
+
+        private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
+        {
+            var container = ((Prism.Unity.PrismApplication)Application.Current).Container;
+            var appState = container.Resolve<IAppStateService>();
+            await appState.SaveCurrentStateAsync();
         }
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)

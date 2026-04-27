@@ -25,18 +25,69 @@ namespace seamless_loop_music.Services
         public MusicTrack CurrentTrack { get; private set; }
         public PlaybackState PlaybackState => _audioLooper?.PlaybackState ?? PlaybackState.Stopped;
         public TimeSpan CurrentTime => _audioLooper?.CurrentTime ?? TimeSpan.Zero;
+        public long CurrentSample => _audioLooper != null ? (long)(_audioLooper.CurrentTime.TotalSeconds * _audioLooper.SampleRate) : 0;
         public TimeSpan TotalTime => _audioLooper?.TotalTime ?? TimeSpan.Zero;
         public int SampleRate => _audioLooper?.SampleRate ?? 44100;
         public bool IsABFusionLoaded => _audioLooper?.IsABFusionLoaded ?? false;
-        public float Volume { get => _audioLooper.Volume; set => _audioLooper.Volume = value; }
-        public bool IsSeamlessLoopEnabled { get => _audioLooper.IsSeamlessLoopEnabled; set => _audioLooper.IsSeamlessLoopEnabled = value; }
-        public bool IsFeatureLoopEnabled { get => _audioLooper.IsFeatureLoopEnabled; set => _audioLooper.IsFeatureLoopEnabled = value; }
+        public float Volume 
+        { 
+            get => _audioLooper.Volume; 
+            set 
+            { 
+                if (_audioLooper.Volume != value)
+                {
+                    _audioLooper.Volume = value; 
+                    VolumeChanged?.Invoke(value);
+                }
+            } 
+        }
+        public event Action<float> VolumeChanged;
+        public bool IsSeamlessLoopEnabled 
+        { 
+            get => _audioLooper.IsSeamlessLoopEnabled; 
+            set 
+            { 
+                if (_audioLooper.IsSeamlessLoopEnabled != value)
+                {
+                    _audioLooper.IsSeamlessLoopEnabled = value; 
+                    SeamlessLoopChanged?.Invoke(value);
+                }
+            } 
+        }
+        public event Action<bool> SeamlessLoopChanged;
+
+        public bool IsFeatureLoopEnabled 
+        { 
+            get => _audioLooper.IsFeatureLoopEnabled; 
+            set 
+            { 
+                if (_audioLooper.IsFeatureLoopEnabled != value)
+                {
+                    _audioLooper.IsFeatureLoopEnabled = value; 
+                    FeatureLoopChanged?.Invoke(value);
+                }
+            } 
+        }
+        public event Action<bool> FeatureLoopChanged;
+        
         public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
         public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
 
         public IReadOnlyList<MusicTrack> Queue => _queueManager.Queue;
         public int CurrentIndex => _queueManager.CurrentIndex;
-        public PlayMode PlayMode { get => _queueManager.PlayMode; set => _queueManager.PlayMode = value; }
+        public PlayMode PlayMode 
+        { 
+            get => _queueManager.PlayMode; 
+            set 
+            { 
+                if (_queueManager.PlayMode != value)
+                {
+                    _queueManager.PlayMode = value; 
+                    PlayModeChanged?.Invoke(value);
+                }
+            } 
+        }
+        public event Action<PlayMode> PlayModeChanged;
 
         public event Action<MusicTrack> TrackChanged;
         public event Action<PlaybackState> StateChanged;

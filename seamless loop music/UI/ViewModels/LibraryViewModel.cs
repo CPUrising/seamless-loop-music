@@ -26,6 +26,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly ISearchService _searchService;
         private readonly IEventAggregator _eventAggregator;
         
+        private bool _isInternalSelectionChange = false;
         
         // --- 三栏式导航新增属性 ---
         private ObservableCollection<CategoryNavTarget> _navigationCategories;
@@ -43,7 +44,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (SetProperty(ref _selectedCategory, value))
                 {
-                    LoadCategoryItems();
+                    _ = LoadCategoryItems();
                     RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
                 }
             }
@@ -73,8 +74,11 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (SetProperty(ref _selectedCategoryItem, value))
                 {
-                    // 发布事件通知子区域刷新
-                    _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(value);
+                    if (!_isInternalSelectionChange && value != null)
+                    {
+                        // 发布事件通知子区域刷新
+                        _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(value);
+                    }
                     
                     // 通知右键菜单状态更新
                     RenamePlaylistCommand?.RaiseCanExecuteChanged();
@@ -124,17 +128,50 @@ namespace seamless_loop_music.UI.ViewModels
                 return false;
             };
 
-            // 必须在设置 SelectedCategory 之前初始化命令，因为后者会触发 LoadCategoryItems 并最终调用命令的 RaiseCanExecuteChanged
+            // 初始化命令后设置默认选中（触发 LoadCategoryItems）
             PlayCategoryItemCommand = new DelegateCommand<CategoryItem>(OnPlayCategoryItem);
             RenamePlaylistCommand = new DelegateCommand(OnRenamePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
             DeletePlaylistCommand = new DelegateCommand(OnDeletePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
             CreatePlaylistCommand = new DelegateCommand(OnCreatePlaylist);
-
-            // 设置默认选中（这会触发 LoadCategoryItems）
+            
+            // 设置默认选中（这会触发初始加载）
             SelectedCategory = NavigationCategories.FirstOrDefault();
 
             // 扫描完成后自动刷新分类列表
-            _eventAggregator.GetEvent<LibraryRefreshedEvent>().Subscribe(() => LoadCategoryItems());
+            _eventAggregator.GetEvent<LibraryRefreshedEvent>().Subscribe(() => { var _ = LoadCategoryItems(); });
+
+            // 监听外部触发的分类选中（用于状态还原）
+            _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Subscribe(async item => 
+            {
+                if (item == null || _isInternalSelectionChange) return;
+
+                _isInternalSelectionChange = true;
+                try
+                {
+                    // 如果当前选中的分类大类不对，则先切换大类
+                    if (SelectedCategory == null || SelectedCategory.Type != item.Type)
+                    {
+                        var targetNav = NavigationCategories.FirstOrDefault(n => n.Type == item.Type);
+                        if (targetNav != null)
+                        {
+                            _selectedCategory = targetNav; // 直接设字段，避免 setter 触发额外的 Load
+                            RaisePropertyChanged(nameof(SelectedCategory));
+                            RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
+                            await LoadCategoryItems(item);
+                        }
+                    }
+                    else if (SelectedCategoryItem == null || 
+                            (SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id != item.Id) ||
+                            (SelectedCategoryItem.Type != CategoryType.Playlist && SelectedCategoryItem.Name != item.Name))
+                    {
+                        await LoadCategoryItems(item);
+                    }
+                }
+                finally
+                {
+                    _isInternalSelectionChange = false;
+                }
+            }, ThreadOption.UIThread);
         }
 
         public DelegateCommand<CategoryItem> PlayCategoryItemCommand { get; }
@@ -179,7 +216,7 @@ namespace seamless_loop_music.UI.ViewModels
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;
         public void OnNavigatedFrom(NavigationContext navigationContext) { }
 
-        private async void LoadCategoryItems()
+        private async Task LoadCategoryItems(CategoryItem targetToSelect = null)
         {
             CategoryItems.Clear();
             var allTracks = await _trackRepository.GetAllAsync();
@@ -237,6 +274,22 @@ namespace seamless_loop_music.UI.ViewModels
             }
 
             CategoryItemsView.Refresh();
+
+            // 如果有指定要选中的项，则选中它
+            if (targetToSelect != null)
+            {
+                var found = CategoryItems.FirstOrDefault(i => 
+                    (i.Type == CategoryType.Playlist && i.Id == targetToSelect.Id) || 
+                    (i.Type != CategoryType.Playlist && i.Name == targetToSelect.Name));
+                
+                if (found != null)
+                {
+                    SelectedCategoryItem = found;
+                    return;
+                }
+            }
+
+            // 否则默认选中第一项
             SelectedCategoryItem = CategoryItems.FirstOrDefault();
         }
 
@@ -264,7 +317,7 @@ namespace seamless_loop_music.UI.ViewModels
 
                     await _playlistManager.RenamePlaylistAsync(id, newName);
                     // 刷新列表
-                    App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
+                    App.Current.Dispatcher.Invoke(() => { _ = LoadCategoryItems(); });
                 });
             }
         }
@@ -282,7 +335,7 @@ namespace seamless_loop_music.UI.ViewModels
                 Task.Run(async () => {
                     await _playlistManager.DeletePlaylistAsync(id);
                     // 刷新列表
-                    App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
+                    App.Current.Dispatcher.Invoke(() => { _ = LoadCategoryItems(); });
                 });
             }
         }
@@ -308,7 +361,7 @@ namespace seamless_loop_music.UI.ViewModels
 
                     await _playlistManager.CreatePlaylistAsync(name);
                     // 刷新列表
-                    App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
+                    App.Current.Dispatcher.Invoke(() => { _ = LoadCategoryItems(); });
                 });
             }
         }

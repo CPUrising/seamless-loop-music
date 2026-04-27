@@ -1,5 +1,6 @@
 using System;
 using System.Windows;
+using System.Threading.Tasks;
 using Prism.Unity;
 using Prism.Ioc;
 using Prism.Modularity;
@@ -57,6 +58,7 @@ namespace seamless_loop_music
             
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
+            containerRegistry.RegisterSingleton<IAppStateService, AppStateService>();
         }
 
         protected override void OnInitialized()
@@ -78,6 +80,15 @@ namespace seamless_loop_music
 
                 var notifyIconService = Container.Resolve<INotifyIconService>();
                 notifyIconService.Initialize();
+
+                // Restore last app state
+                Task.Run(async () => 
+                {
+                    // Delay slightly to ensure UI regions are ready
+                    await Task.Delay(200);
+                    var appState = Container.Resolve<IAppStateService>();
+                    await appState.RestoreStateAsync();
+                });
             }
             catch (Exception ex)
             {

@@ -64,10 +64,11 @@
                 </Grid>
             </Border>
 
-            <ListBox Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="5,0,5,10"
+            <ListBox x:Name="CategoryListBox" Grid.Row="1" Background="Transparent" BorderThickness="0" Margin="5,0,5,10"
                      ItemsSource="{Binding CategoryItemsView}"
                      SelectedItem="{Binding SelectedCategoryItem}"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     SelectionChanged="CategoryListBox_SelectionChanged">
                 <ListBox.InputBindings>
                     <MouseBinding Gesture="LeftDoubleClick" 
                                   Command="{Binding PlayCategoryItemCommand}" 

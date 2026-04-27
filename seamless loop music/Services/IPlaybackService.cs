@@ -11,6 +11,7 @@ namespace seamless_loop_music.Services
         MusicTrack CurrentTrack { get; }
         PlaybackState PlaybackState { get; }
         TimeSpan CurrentTime { get; }
+        long CurrentSample { get; }
         TimeSpan TotalTime { get; }
         int SampleRate { get; }
         bool IsABFusionLoaded { get; }
@@ -26,6 +27,10 @@ namespace seamless_loop_music.Services
 
         event Action<MusicTrack> TrackChanged;
         event Action<PlaybackState> StateChanged;
+        event Action<float> VolumeChanged;
+        event Action<PlayMode> PlayModeChanged;
+        event Action<bool> SeamlessLoopChanged;
+        event Action<bool> FeatureLoopChanged;
         event Action QueueChanged;
 
         Task LoadTrackAsync(MusicTrack track, bool autoPlay = false);

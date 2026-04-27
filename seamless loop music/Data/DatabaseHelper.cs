@@ -40,6 +40,11 @@ namespace seamless_loop_music.Data
         void AddMusicFolder(string folderPath);
         void RemoveMusicFolder(string folderPath);
         
+        
+        // Settings
+        string GetSetting(string key, string defaultValue = null);
+        void SetSetting(string key, string value);
+        
         (int tracksSynced, int playlistsSynced) SyncWithExternalDatabase(string externalDbPath);
     }
 
@@ -83,6 +88,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, PlaylistId INTEGER NOT NULL, FolderPath TEXT NOT NULL, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, UNIQUE(PlaylistId, FolderPath));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT);");
 
                 // 执行迁移（加约束、查重等）
                 ApplyMigrations(db);
@@ -262,6 +268,23 @@ namespace seamless_loop_music.Data
         public void RemoveMusicFolder(string folderPath)
         {
             using (var db = GetConnection()) db.Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = folderPath });
+        }
+
+        public string GetSetting(string key, string defaultValue = null)
+        {
+            using (var db = GetConnection())
+            {
+                return db.QueryFirstOrDefault<string>("SELECT Value FROM AppSettings WHERE Key = @Key", new { Key = key }) ?? defaultValue;
+            }
+        }
+
+        public void SetSetting(string key, string value)
+        {
+            using (var db = GetConnection())
+            {
+                db.Execute("INSERT INTO AppSettings (Key, Value) VALUES (@Key, @Value) ON CONFLICT(Key) DO UPDATE SET Value = excluded.Value", 
+                    new { Key = key, Value = value });
+            }
         }
 
         private class PlaylistDto { public int Id { get; set; } public string Name { get; set; } }
