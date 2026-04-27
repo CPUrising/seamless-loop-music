@@ -101,10 +101,10 @@
     <value>新建歌单</value>
   </data>
   <data name="FeatureLoop" xml:space="preserve">
-    <value>特色循环</value>
+    <value>无缝循环</value>
   </data>
   <data name="FeatureLoopToolTip" xml:space="preserve">
-    <value>在 A/B 融合模式下切换：开启时循环 B 段，关闭时循环全曲 A+B。</value>
+    <value>在局部循环与全曲大循环之间切换。</value>
   </data>
   <data name="ResetAB" xml:space="preserve">
     <value>恢复 AB 衔接</value>

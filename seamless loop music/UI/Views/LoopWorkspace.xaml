@@ -9,6 +9,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <Style x:Key="SideButtonStyle" TargetType="Button">
+            <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
             <Setter Property="Background" Value="#313244"/>
             <Setter Property="Foreground" Value="#CDD6F4"/>
             <Setter Property="BorderThickness" Value="0"/>
