@@ -208,7 +208,18 @@ namespace seamless_loop_music.UI.ViewModels
             // 监听播放曲目变更
             _playbackService.TrackChanged += (track) => 
             {
-                App.Current.Dispatcher.Invoke(() => PlayingTrackId = track?.Id ?? 0);
+                App.Current.Dispatcher.Invoke(() => 
+                {
+                    PlayingTrackId = track?.Id ?? 0;
+                    if (track != null)
+                    {
+                        var playingTrack = Tracks.FirstOrDefault(t => t.Id == track.Id);
+                        if (playingTrack != null)
+                        {
+                            _eventAggregator.GetEvent<ScrollToTrackEvent>().Publish(playingTrack);
+                        }
+                    }
+                });
             };
 
             // 初始化当前播放曲目 ID
@@ -554,6 +565,20 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 UpdateStats();
                 TracksView.Refresh();
+
+                // 进入页面时，通知视图滚动到正在播放的曲目（如果在这张列表里的话）
+                if (_playbackService.CurrentTrack != null)
+                {
+                    var playingTrack = Tracks.FirstOrDefault(t => t.Id == _playbackService.CurrentTrack.Id);
+                    if (playingTrack != null)
+                    {
+                        Task.Run(async () => 
+                        {
+                            await Task.Delay(100);
+                            _eventAggregator.GetEvent<ScrollToTrackEvent>().Publish(playingTrack);
+                        });
+                    }
+                }
             });
         }
 
@@ -575,6 +600,21 @@ namespace seamless_loop_music.UI.ViewModels
                 UpdatePlayingStatus();
                 UpdateStats();
                 TracksView.Refresh();
+
+                // 列表加载完成后，通知视图滚动到正在播放的曲目（如果在这张列表里的话）
+                if (_playbackService.CurrentTrack != null)
+                {
+                    var playingTrack = Tracks.FirstOrDefault(t => t.Id == _playbackService.CurrentTrack.Id);
+                    if (playingTrack != null)
+                    {
+                        // 稍微延迟确保容器已经开始生成
+                        Task.Run(async () => 
+                        {
+                            await Task.Delay(100);
+                            _eventAggregator.GetEvent<ScrollToTrackEvent>().Publish(playingTrack);
+                        });
+                    }
+                }
             });
         }
 

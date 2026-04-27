@@ -37,4 +37,9 @@ namespace seamless_loop_music.Events
     /// 当系统有新的状态消息需要显示时发布
     /// </summary>
     public class StatusMessageEvent : PubSubEvent<string> { }
+
+    /// <summary>
+    /// 请求 UI 将列表滚动到指定曲目位置时发布
+    /// </summary>
+    public class ScrollToTrackEvent : PubSubEvent<MusicTrack> { }
 }
