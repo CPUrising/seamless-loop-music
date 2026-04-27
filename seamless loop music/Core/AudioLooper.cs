@@ -22,6 +22,7 @@ namespace seamless_loop_music
         private volatile bool _isSeeking = false;
         public bool IsSeeking => _isSeeking;
         private volatile bool _isEndingNaturally = false;
+        private volatile bool _hasLoopedSinceSeek = false;
 
         private volatile bool _isSeamlessLoopEnabled = true;
         public bool IsSeamlessLoopEnabled
@@ -247,7 +248,12 @@ namespace seamless_loop_music
                 // 全新开始：创建循环流
                 _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
                 SyncLoopConfig(); // 必须调用同步，以应用特色循环开关等动态配置
-                _loopStream.OnLoopCompleted += () => OnLoopCycleCompleted?.Invoke();
+                _hasLoopedSinceSeek = false;
+                _loopStream.OnLoopCompleted += () =>
+                {
+                    _hasLoopedSinceSeek = true;
+                    OnLoopCycleCompleted?.Invoke();
+                };
 
                 // --- 异步缓冲系统配置 ---
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
@@ -388,16 +394,13 @@ namespace seamless_loop_music
                             long loopEnd = _loopStream.LoopEndPosition;
                             long loopLen = loopEnd - loopStart;
 
-                            if (loopLen > 0 && _isSeamlessLoopEnabled)
+                            if (loopLen > 0 && _isSeamlessLoopEnabled && _hasLoopedSinceSeek)
                             {
-                                // 如果播放位置跌出了循环起点，但填充器已经跳回循环区了
+                                // 只有确认至少发生过一次循环跳转后，才需要补偿
+                                // 这样在 Intro 阶段（0 → loopStart）不会误触发
                                 if (speakerPos < loopStart && fillerPos >= loopStart)
                                 {
-                                    // 判定：加上一个循环长度后，如果它还在合理的循环区间内，说明需要补偿
-                                    if (speakerPos + loopLen < loopEnd + (long)(_audioStream.WaveFormat.AverageBytesPerSecond * 5))
-                                    {
-                                        speakerPos += loopLen;
-                                    }
+                                    speakerPos += loopLen;
                                 }
                             }
                         }
@@ -454,6 +457,7 @@ namespace seamless_loop_music
                     _isSeeking = true;
                     _bufferedProvider.ClearBuffer(); 
                     Interlocked.Exchange(ref _totalBytesReadSinceSeek, 0);
+                    _hasLoopedSinceSeek = false;
 
                     long position = sample * _audioStream.WaveFormat.BlockAlign;
                     if (position < 0) position = 0;
