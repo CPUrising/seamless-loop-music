@@ -13,7 +13,9 @@ namespace seamless_loop_music.Services
         TimeSpan CurrentTime { get; }
         TimeSpan TotalTime { get; }
         int SampleRate { get; }
+        bool IsABFusionLoaded { get; }
         float Volume { get; set; }
+        bool IsSeamlessLoopEnabled { get; set; }
         double MatchWindowSize { get; set; }
         double MatchSearchRadius { get; set; }
 
@@ -34,6 +36,7 @@ namespace seamless_loop_music.Services
         void SeekToSample(long sample);
         
         void SetLoopPoints(long startSample, long endSample);
+        void ResetABLoopPoints();
         Task<(long Start, long End)> FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart);
 
         Task EnqueueArtistAsync(string artistName);

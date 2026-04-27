@@ -19,13 +19,16 @@ namespace seamless_loop_music.Services
         private readonly IEventAggregator _eventAggregator;
         private readonly IPlaylistManager _playlistManager;
         private readonly IQueueManager _queueManager;
+        private readonly TrackMetadataService _metadataService;
 
         public MusicTrack CurrentTrack { get; private set; }
         public PlaybackState PlaybackState => _audioLooper?.PlaybackState ?? PlaybackState.Stopped;
         public TimeSpan CurrentTime => _audioLooper?.CurrentTime ?? TimeSpan.Zero;
         public TimeSpan TotalTime => _audioLooper?.TotalTime ?? TimeSpan.Zero;
         public int SampleRate => _audioLooper?.SampleRate ?? 44100;
+        public bool IsABFusionLoaded => _audioLooper?.IsABFusionLoaded ?? false;
         public float Volume { get => _audioLooper.Volume; set => _audioLooper.Volume = value; }
+        public bool IsSeamlessLoopEnabled { get => _audioLooper.IsSeamlessLoopEnabled; set => _audioLooper.IsSeamlessLoopEnabled = value; }
         public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
         public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
 
@@ -36,12 +39,13 @@ namespace seamless_loop_music.Services
         public event Action<PlaybackState> StateChanged;
         public event Action QueueChanged;
 
-        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator, IQueueManager queueManager)
+        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator, IQueueManager queueManager, TrackMetadataService metadataService)
         {
             _trackRepository = trackRepository;
             _playlistManager = playlistManager;
             _eventAggregator = eventAggregator;
             _queueManager = queueManager;
+            _metadataService = metadataService;
             _audioLooper = new AudioLooper();
 
             _audioLooper.OnPlayStateChanged += state =>
@@ -72,11 +76,30 @@ namespace seamless_loop_music.Services
 
             if (!isAlreadyLoaded)
             {
-                await Task.Run(() => _audioLooper.LoadAudio(track.FilePath));
+                string partB = _metadataService.FindPartB(track.FilePath);
+                await Task.Run(() => _audioLooper.LoadAudio(track.FilePath, partB));
+
+                // 核心逻辑：如果是 A/B 融合模式，且数据库记录的长度与实际拼接后的长度不符（说明是旧的单曲记录）
+                // 则自动采用引擎生成的 A/B 默认循环点（循环 Part B）
+                if (_audioLooper.IsABFusionLoaded && (track.LoopEnd <= 0 || track.TotalSamples < _audioLooper.TotalSamples))
+                {
+                    track.LoopStart = _audioLooper.LoopStartSample;
+                    track.LoopEnd = _audioLooper.LoopEndSample;
+                    track.TotalSamples = _audioLooper.TotalSamples;
+                    // 同步到数据库，避免下次还错
+                    _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
+                }
+                else
+                {
+                    _audioLooper.SetLoopStartSample(track.LoopStart);
+                    _audioLooper.SetLoopEndSample(track.LoopEnd);
+                }
             }
-            
-            _audioLooper.SetLoopStartSample(track.LoopStart);
-            _audioLooper.SetLoopEndSample(track.LoopEnd);
+            else
+            {
+                _audioLooper.SetLoopStartSample(track.LoopStart);
+                _audioLooper.SetLoopEndSample(track.LoopEnd);
+            }
 
             TrackChanged?.Invoke(track);
             _eventAggregator.GetEvent<TrackLoadedEvent>().Publish(track);
@@ -132,6 +155,18 @@ namespace seamless_loop_music.Services
             }
             
             _eventAggregator.GetEvent<LoopPointsChangedEvent>().Publish((startSample, endSample));
+        }
+
+        public void ResetABLoopPoints()
+        {
+            _audioLooper.ResetABLoopPoints();
+            if (CurrentTrack != null)
+            {
+                CurrentTrack.LoopStart = _audioLooper.LoopStartSample;
+                CurrentTrack.LoopEnd = _audioLooper.LoopEndSample;
+                _trackRepository.UpdateLoopPoints(CurrentTrack.Id, CurrentTrack.LoopStart, CurrentTrack.LoopEnd);
+            }
+            _eventAggregator.GetEvent<LoopPointsChangedEvent>().Publish((_audioLooper.LoopStartSample, _audioLooper.LoopEndSample));
         }
 
         public async Task<(long Start, long End)> FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart)

@@ -22,6 +22,19 @@ namespace seamless_loop_music
         private volatile bool _isSeeking = false;
         public bool IsSeeking => _isSeeking;
 
+        private volatile bool _isSeamlessLoopEnabled = true;
+        public bool IsSeamlessLoopEnabled
+        {
+            get => _isSeamlessLoopEnabled;
+            set
+            {
+                _isSeamlessLoopEnabled = value;
+                SyncLoopConfig();
+            }
+        }
+
+        public bool IsABFusionLoaded => _abSeamSample >= 0;
+
         // 匹配长度配置 (秒)
         public double MatchWindowSize { get; set; } = 1.0; 
         public double MatchSearchRadius { get; set; } = 5.0; 
@@ -30,6 +43,7 @@ namespace seamless_loop_music
         // 公开读写接口
         public long LoopStartSample => _loopStartSample;
         public long LoopEndSample => _loopEndSample;
+        public long TotalSamples => _totalSamples;
         public int SampleRate => _audioStream?.WaveFormat.SampleRate ?? 44100;
 
         // 状态回调事件
@@ -42,6 +56,7 @@ namespace seamless_loop_music
         private string _currentFilePath; 
         private string _partBFilePath;   
         private bool _isLoading = false; 
+        private long _abSeamSample = -1; // 记录 A/B 拼接点
 
 
         /// <summary>
@@ -102,6 +117,23 @@ namespace seamless_loop_music
         {
             SetLoopStartSample(startSample);
             SetLoopEndSample(endSample);
+        }
+
+        /// <summary>
+        /// 重置为原始 A/B 衔接点
+        /// </summary>
+        public void ResetABLoopPoints()
+        {
+            if (_abSeamSample >= 0)
+            {
+                SetLoopPoints(_abSeamSample, _totalSamples);
+                OnStatusChanged?.Invoke("Loop points reset to A/B seam.");
+            }
+            else
+            {
+                SetLoopPoints(0, _totalSamples);
+                OnStatusChanged?.Invoke("Loop points reset to song start/end.");
+            }
         }
 
         private void SyncLoopConfig()

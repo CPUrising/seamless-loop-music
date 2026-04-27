@@ -157,6 +157,7 @@
                             ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
                     <Button Content="{Binding [ResetAB], Source={StaticResource Loc}}" Command="{Binding ResetABCommand}" Width="90" Height="36"
                             Background="#F5C2E7" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"
+                            IsEnabled="{Binding IsABMode}"
                             ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
                     <Button Content="{Binding [PyRanking], Source={StaticResource Loc}}" Command="{Binding PyRankingCommand}" Width="90" Height="36"
                             Background="#F2CDCD" Foreground="#11111B" Style="{StaticResource SideButtonStyle}" Margin="0,0,8,0"

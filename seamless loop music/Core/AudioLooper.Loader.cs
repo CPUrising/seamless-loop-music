@@ -44,40 +44,39 @@ namespace seamless_loop_music
                 }
                 else
                 {
-                    // 强制方案：物理预合并 A + B
-                    OnStatusChanged?.Invoke("Merging A/B parts in memory for perfect seamlessness...");
+                    // 逻辑拼接方案：使用 ConcatenatedStream 实现 A + B
+                    OnStatusChanged?.Invoke("Fusing A/B parts logically...");
                     
-                    using (var readerA = CreateAudioStream(firstFilePath))
-                    using (var readerB = CreateAudioStream(secondFilePath))
+                    var readerA = CreateAudioStream(firstFilePath);
+                    var readerB = CreateAudioStream(secondFilePath);
+
+                    if (readerA == null || readerB == null)
                     {
-                        if (readerA == null || readerB == null)
-                        {
-                            OnStatusChanged?.Invoke("Failed to load one of the A/B parts.");
-                            return;
-                        }
-
-                        if (readerA.WaveFormat.SampleRate != readerB.WaveFormat.SampleRate || 
-                            readerA.WaveFormat.Channels != readerB.WaveFormat.Channels)
-                        {
-                            OnStatusChanged?.Invoke("A/B parts format mismatch! Falling back to Part A.");
-                            LoadAudio(firstFilePath);
-                            return;
-                        }
-
-                        // 创建内存流并拼接
-                        var memStream = new MemoryStream();
-                        readerA.CopyTo(memStream);
-                        long lengthA = memStream.Position; // 记录切分点
-                        readerB.CopyTo(memStream);
-                        memStream.Position = 0;
-
-                        // 封装为原始音频流。这对于系统来说，这就是一段完整的、物理上连续的长音频。
-                        _audioStream = new RawSourceWaveStream(memStream, readerA.WaveFormat);
-                        
-                        _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
-                        _loopStartSample = lengthA / _audioStream.WaveFormat.BlockAlign; // 自动校准 B 开始
-                        _loopEndSample = _totalSamples;
+                        readerA?.Dispose();
+                        readerB?.Dispose();
+                        OnStatusChanged?.Invoke("Failed to load one of the A/B parts.");
+                        return;
                     }
+
+                    if (readerA.WaveFormat.SampleRate != readerB.WaveFormat.SampleRate || 
+                        readerA.WaveFormat.Channels != readerB.WaveFormat.Channels)
+                    {
+                        OnStatusChanged?.Invoke("A/B parts format mismatch! Falling back to Part A.");
+                        readerA.Dispose();
+                        readerB.Dispose();
+                        LoadAudio(firstFilePath);
+                        return;
+                    }
+
+                    // 记录分界点 (Part A 的结束位置)
+                    _abSeamSample = readerA.Length / readerA.WaveFormat.BlockAlign;
+
+                    // 使用自定义的拼接流
+                    _audioStream = new ConcatenatedStream(readerA, readerB);
+                    
+                    _totalSamples = _audioStream.Length / _audioStream.WaveFormat.BlockAlign;
+                    _loopStartSample = _abSeamSample; // 默认循环 Part B
+                    _loopEndSample = _totalSamples;
                 }
 
                 var waveFormat = _audioStream.WaveFormat;

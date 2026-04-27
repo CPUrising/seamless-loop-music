@@ -28,6 +28,7 @@ namespace seamless_loop_music.Services
         public int SampleRate => _playbackService.SampleRate;
 
         public float Volume { get => _playbackService.Volume; set => _playbackService.Volume = value; }
+        public bool IsSeamlessLoopEnabled { get => _playbackService.IsSeamlessLoopEnabled; set => _playbackService.IsSeamlessLoopEnabled = value; }
         public double MatchWindowSize { get; set; } = 1.0;
         public double MatchSearchRadius { get; set; } = 5.0;
 
@@ -68,7 +69,7 @@ namespace seamless_loop_music.Services
         public void SetLoopStart(long sample) => _playbackService.SetLoopPoints(sample, LoopEndSample);
         public void SetLoopEnd(long sample) => _playbackService.SetLoopPoints(LoopStartSample, sample);
         public void ApplyLoopCandidate(LoopCandidate candidate) { if (candidate != null) _playbackService.SetLoopPoints(candidate.LoopStart, candidate.LoopEnd); }
-        public void ResetABLoopPoints() => _playbackService.SetLoopPoints(0, 0);
+        public void ResetABLoopPoints() => _playbackService.ResetABLoopPoints();
 
         public async Task<List<LoopCandidate>> GetLoopCandidatesAsync()
         {
@@ -148,9 +149,26 @@ namespace seamless_loop_music.Services
                 .Distinct()
                 .ToList();
 
-            var filesToScan = allFiles.Where(f => 
+            // --- A/B 融合探测与过滤 ---
+            var filesToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var abPairs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // A -> B
+
+            foreach (var f in allFiles)
+            {
+                string partB = _metadataService.FindPartB(f);
+                if (!string.IsNullOrEmpty(partB) && allFiles.Contains(partB, StringComparer.OrdinalIgnoreCase))
+                {
+                    filesToIgnore.Add(partB);
+                    abPairs[f] = partB;
+                }
+            }
+
+            var filteredFiles = allFiles.Where(f => !filesToIgnore.Contains(f)).ToList();
+
+            var filesToScan = filteredFiles.Where(f => 
                 !existingTracks.TryGetValue(f, out var existing) || 
-                System.IO.File.GetLastWriteTime(f) > existing.LastModified
+                System.IO.File.GetLastWriteTime(f) > existing.LastModified ||
+                (abPairs.ContainsKey(f) && existing.LoopStart == 0) // 如果是 A/B 但之前没设置过循环点，也重新扫一次
             ).ToList();
 
             if (filesToScan.Count == 0) return;
@@ -158,24 +176,34 @@ namespace seamless_loop_music.Services
             var newOrUpdatedTracks = await Task.Run(() => 
                 filesToScan.AsParallel()
                 .WithDegreeOfParallelism(Environment.ProcessorCount)
-                .Select(CreateTrackFromFile)
+                .Select(f => CreateTrackFromFile(f, abPairs.ContainsKey(f) ? abPairs[f] : null))
                 .Where(t => t != null)
                 .ToList()
             );
 
             if (newOrUpdatedTracks.Count > 0)
             {
-                // 对于已存在的轨道，数据库层面会处理元数据更新，但我们在这里也可以确保状态字段不丢
-                // 实际上在上一步的 BulkInsert 中使用 ON CONFLICT 已经处理了大部分逻辑
                 _databaseHelper.BulkInsert(newOrUpdatedTracks);
             }
         }
 
-        private MusicTrack CreateTrackFromFile(string filePath)
+        private MusicTrack CreateTrackFromFile(string filePath, string partBPath = null)
         {
             try
             {
                 using var audioFile = TagLib.File.Create(filePath);
+                long samplesA = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds);
+                long totalSamples = samplesA;
+                long loopStart = 0;
+
+                if (!string.IsNullOrEmpty(partBPath) && System.IO.File.Exists(partBPath))
+                {
+                    using var partBFile = TagLib.File.Create(partBPath);
+                    long samplesB = (long)(partBFile.Properties.AudioSampleRate * partBFile.Properties.Duration.TotalSeconds);
+                    totalSamples += samplesB;
+                    loopStart = samplesA; // 默认循环起点设在衔接处
+                }
+
                 var track = new MusicTrack
                 {
                     FilePath = filePath,
@@ -184,9 +212,9 @@ namespace seamless_loop_music.Services
                     Artist = audioFile.Tag.FirstPerformer,
                     Album = audioFile.Tag.Album,
                     AlbumArtist = audioFile.Tag.FirstAlbumArtist,
-                    TotalSamples = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds),
-                    LoopStart = 0,
-                    LoopEnd = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds),
+                    TotalSamples = totalSamples,
+                    LoopStart = loopStart,
+                    LoopEnd = totalSamples,
                     LastModified = System.IO.File.GetLastWriteTime(filePath)
                 };
 

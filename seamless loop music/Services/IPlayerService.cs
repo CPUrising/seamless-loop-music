@@ -50,6 +50,7 @@ namespace seamless_loop_music.Services
         void ResetABLoopPoints();
         
         float Volume { get; set; }
+        bool IsSeamlessLoopEnabled { get; set; }
         double MatchWindowSize { get; set; }
         double MatchSearchRadius { get; set; }
         

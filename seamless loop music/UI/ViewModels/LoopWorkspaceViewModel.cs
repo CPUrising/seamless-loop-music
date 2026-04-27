@@ -141,7 +141,7 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _playModeText, value);
         }
 
-        public bool IsABMode => false;
+        public bool IsABMode => _playbackService.IsABFusionLoaded;
 
         private double _matchWindowSize = 1.0;
         public double MatchWindowSize
@@ -175,6 +175,7 @@ namespace seamless_loop_music.UI.ViewModels
             LoopStartSample = track.LoopStart.ToString();
             LoopEndSample = track.LoopEnd.ToString();
             FilePath = track.FilePath;
+            RaisePropertyChanged(nameof(IsABMode));
         }
 
         private void OnLoopPointsChanged((long start, long end) points)
