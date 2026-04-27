@@ -485,6 +485,7 @@ namespace seamless_loop_music
             // 核心修复：彻底重置进度的相关内部状态，确保新歌加载后计算准确
             _seekTargetSample = 0;
             _isSeeking = false;
+            _isEndingNaturally = false;
             Interlocked.Exchange(ref _totalBytesReadSinceSeek, 0);
         }
 

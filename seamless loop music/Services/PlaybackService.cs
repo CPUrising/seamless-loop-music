@@ -72,15 +72,19 @@ namespace seamless_loop_music.Services
 
         private void OnTrackEnded()
         {
-            if (PlayMode == PlayMode.SingleLoop)
+            // 必须在 UI 线程执行，因为 NAudio 回调在后台线程触发
+            App.Current.Dispatcher.BeginInvoke(new Action(() =>
             {
-                SeekToSample(0);
-                Play();
-            }
-            else
-            {
-                Next();
-            }
+                if (PlayMode == PlayMode.SingleLoop)
+                {
+                    SeekToSample(0);
+                    Play();
+                }
+                else
+                {
+                    Next();
+                }
+            }));
         }
 
         public async Task LoadTrackAsync(MusicTrack track, bool autoPlay = false)
