@@ -1,21 +1,19 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
 
-    <!-- ToolTip Styles (Consolidated from App.xaml) -->
-    <Style TargetType="{x:Type Control}">
-        <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
-        <Setter Property="ToolTipService.BetweenShowDelay" Value="0" />
-        <Setter Property="ToolTipService.ShowDuration" Value="60000" />
-    </Style>
-    
-    <Style TargetType="{x:Type FrameworkElement}">
+    <!-- Shared ToolTip Settings -->
+    <Style x:Key="ImmediateToolTipStyle" TargetType="FrameworkElement">
         <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
         <Setter Property="ToolTipService.BetweenShowDelay" Value="0" />
         <Setter Property="ToolTipService.ShowDuration" Value="60000" />
     </Style>
 
+    <!-- Implicit Styles for unstyled elements -->
+    <Style TargetType="Control" BasedOn="{StaticResource ImmediateToolTipStyle}"/>
+    <Style TargetType="FrameworkElement" BasedOn="{StaticResource ImmediateToolTipStyle}"/>
+
     <!-- Dialog Buttons -->
-    <Style x:Key="PrimaryButton" TargetType="Button">
+    <Style x:Key="PrimaryButton" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="Background" Value="{StaticResource BrushAccent}"/>
         <Setter Property="Foreground" Value="{StaticResource BrushBackground}"/>
         <Setter Property="FontWeight" Value="SemiBold"/>
@@ -42,7 +40,7 @@
         </Setter>
     </Style>
 
-    <Style x:Key="SecondaryButton" TargetType="Button">
+    <Style x:Key="SecondaryButton" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="Background" Value="{StaticResource BrushSurface}"/>
         <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
         <Setter Property="FontSize" Value="13"/>

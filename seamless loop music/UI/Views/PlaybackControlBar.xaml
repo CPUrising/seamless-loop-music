@@ -10,7 +10,7 @@
              mc:Ignorable="d" 
              d:DesignHeight="100" d:DesignWidth="800">
     <UserControl.Resources>
-        <Style x:Key="ControlToggleStyle" TargetType="ToggleButton">
+        <Style x:Key="ControlToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource ImmediateToolTipStyle}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
             <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
@@ -57,7 +57,9 @@
                 </Border>
                 <Button Command="{Binding OpenDetailCommand}" 
                         Background="Transparent" BorderThickness="0" 
-                        Cursor="Hand" Padding="5" VerticalAlignment="Center">
+                        Cursor="Hand" Padding="5" VerticalAlignment="Center"
+                        ToolTip="{Binding CurrentTrack.DisplayName}"
+                        ToolTipService.InitialShowDelay="0">
                     <StackPanel>
                         <TextBlock Text="{Binding CurrentTrack.DisplayName, FallbackValue='未选择曲目'}" 
                                    FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" 
