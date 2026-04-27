@@ -59,7 +59,8 @@ namespace seamless_loop_music.Data.Repositories
             {
                 return db.QueryFirstOrDefault<MusicTrack>(
                     FullTrackSelect + @"
-                    WHERE t.FileName = @FileName AND t.TotalSamples = @Total",
+                    WHERE LOWER(TRIM(t.FileName)) = LOWER(TRIM(@FileName)) 
+                      AND ABS(t.TotalSamples - @Total) < 10000",
                     new { FileName = fileName, Total = totalSamples });
             }
         }
@@ -160,28 +161,57 @@ namespace seamless_loop_music.Data.Repositories
                     {
                         int? albumId = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
 
-                        long trackId = db.ExecuteScalar<long>(@"
-                            INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId)
-                            VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId)
-                            ON CONFLICT(FileName, TotalSamples) DO UPDATE SET
-                                FilePath     = excluded.FilePath,
-                                DisplayName  = excluded.DisplayName,
-                                CoverPath    = excluded.CoverPath,
-                                LastModified = excluded.LastModified,
-                                AlbumId      = excluded.AlbumId;
-                            SELECT Id FROM Tracks WHERE FileName = @FileName AND TotalSamples = @TotalSamples;",
-                            new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId },
-                            transaction: trans);
+                        // --- 核心优化：先尝试进行模糊查重，防止产生采样数微差的影子记录 ---
+                        var existingId = db.ExecuteScalar<long?>(@"
+                            SELECT Id FROM Tracks 
+                            WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) 
+                              AND ABS(TotalSamples - @TotalSamples) < 10000",
+                            new { track.FileName, track.TotalSamples }, transaction: trans);
+
+                        long trackId;
+                        if (existingId.HasValue)
+                        {
+                            trackId = existingId.Value;
+                            db.Execute(@"
+                                UPDATE Tracks SET
+                                    FilePath     = @FilePath,
+                                    DisplayName  = @DisplayName,
+                                    CoverPath    = @CoverPath,
+                                    LastModified = @LastModified,
+                                    AlbumId      = @AlbumId,
+                                    TotalSamples = @TotalSamples  -- 更新为最新的物理采样数
+                                WHERE Id = @Id;",
+                                new { track.FilePath, track.DisplayName, track.CoverPath, track.LastModified, AlbumId = albumId, Id = trackId, track.TotalSamples },
+                                transaction: trans);
+                        }
+                        else
+                        {
+                            trackId = db.ExecuteScalar<long>(@"
+                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId)
+                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId);
+                                SELECT last_insert_rowid();",
+                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId },
+                                transaction: trans);
+                        }
 
                         db.Execute(@"
-                            INSERT OR IGNORE INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
-                            VALUES (@TrackId, @LoopStart, @LoopEnd, @Json, @Now);",
+                            INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
+                            VALUES (@TrackId, @LoopStart, @LoopEnd, @Json, @Now)
+                            ON CONFLICT(TrackId) DO UPDATE SET
+                                LoopStart            = excluded.LoopStart,
+                                LoopEnd              = excluded.LoopEnd,
+                                LoopCandidatesJson   = excluded.LoopCandidatesJson,
+                                AnalysisLastModified = excluded.AnalysisLastModified;",
                             new { TrackId = trackId, track.LoopStart, track.LoopEnd, Json = track.LoopCandidatesJson, Now = track.LastModified },
                             transaction: trans);
 
                         db.Execute(@"
-                            INSERT OR IGNORE INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
-                            VALUES (@TrackId, @Rating, @IsLoved, @Now);",
+                            INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
+                            VALUES (@TrackId, @Rating, @IsLoved, @Now)
+                            ON CONFLICT(TrackId) DO UPDATE SET
+                                Rating       = excluded.Rating,
+                                IsLoved      = excluded.IsLoved,
+                                LastModified = excluded.LastModified;",
                             new { TrackId = trackId, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = track.LastModified },
                             transaction: trans);
                     }

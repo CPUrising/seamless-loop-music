@@ -268,20 +268,60 @@ namespace seamless_loop_music.Data
                 db.Execute($"ATTACH DATABASE '{externalDbPath}' AS ExternalDB");
                 try
                 {
-                    var columnsResult = db.Query("PRAGMA ExternalDB.table_info(LoopPoints)").Cast<IDictionary<string, object>>();
-                    var columns = columnsResult.Select(c => c["name"].ToString()).ToList();
-                    bool hasDisplayName = columns.Contains("DisplayName");
-                    bool hasCandidates = columns.Contains("LoopCandidatesJson");
-                    bool hasRating = columns.Contains("Rating");
-                    bool hasIsLoved = columns.Contains("IsLoved");
-                    bool hasCover = columns.Contains("CoverPath");
-
-                    string syncSql = $@"SELECT FileName, TotalSamples, {(hasDisplayName ? "DisplayName" : "FileName AS DisplayName")}, Artist, Album, AlbumArtist, LoopStart, LoopEnd, {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")}, {(hasRating ? "Rating" : "0 AS Rating")}, {(hasIsLoved ? "IsLoved" : "0 AS IsLoved")}, {(hasCover ? "CoverPath" : "NULL AS CoverPath")} FROM ExternalDB.LoopPoints";
-                    var externalTracks = db.Query<MusicTrack>(syncSql).ToList();
+                    // --- 1. 架构自适应探测 ---
+                    var tables = db.Query<string>("SELECT name FROM ExternalDB.sqlite_master WHERE type='table'").ToList();
+                    bool is3NF = tables.Contains("Tracks") && tables.Contains("Artists");
                     
+                    List<MusicTrack> externalTracks;
+                    if (is3NF)
+                    {
+                        // 外部库是新版 3NF 架构
+                        string syncSql3NF = @"
+                            SELECT 
+                                t.FileName, t.TotalSamples, t.DisplayName, 
+                                ar.Name AS Artist, al.Name AS Album, ar.Name AS AlbumArtist,
+                                lp.LoopStart, lp.LoopEnd, lp.LoopCandidatesJson,
+                                ur.Rating, ur.IsLoved, t.CoverPath
+                            FROM ExternalDB.Tracks t
+                            LEFT JOIN ExternalDB.Albums al ON t.AlbumId = al.Id
+                            LEFT JOIN ExternalDB.Artists ar ON al.ArtistId = ar.Id
+                            LEFT JOIN ExternalDB.LoopPoints lp ON t.Id = lp.TrackId
+                            LEFT JOIN ExternalDB.UserRatings ur ON t.Id = ur.TrackId";
+                        externalTracks = db.Query<MusicTrack>(syncSql3NF).ToList();
+                    }
+                    else
+                    {
+                        // 外部库是旧版 Flat 架构
+                        var columnsResult = db.Query("PRAGMA ExternalDB.table_info(LoopPoints)").Cast<IDictionary<string, object>>();
+                        var columns = columnsResult.Select(c => c["name"].ToString()).ToList();
+                        bool hasDisplayName = columns.Contains("DisplayName");
+                        bool hasCandidates = columns.Contains("LoopCandidatesJson");
+                        bool hasRating = columns.Contains("Rating");
+                        bool hasIsLoved = columns.Contains("IsLoved");
+                        bool hasCover = columns.Contains("CoverPath");
+
+                        string syncSqlFlat = $@"
+                            SELECT 
+                                FileName, TotalSamples, 
+                                {(hasDisplayName ? "DisplayName" : "FileName AS DisplayName")}, 
+                                Artist, Album, AlbumArtist, LoopStart, LoopEnd, 
+                                {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")}, 
+                                {(hasRating ? "Rating" : "0 AS Rating")}, 
+                                {(hasIsLoved ? "IsLoved" : "0 AS IsLoved")}, 
+                                {(hasCover ? "CoverPath" : "NULL AS CoverPath")} 
+                            FROM ExternalDB.LoopPoints";
+                        externalTracks = db.Query<MusicTrack>(syncSqlFlat).ToList();
+                    }
+
+                    // --- 2. 曲目同步（模糊匹配） ---
                     foreach (var ext in externalTracks)
                     {
-                        var localTrack = db.QueryFirstOrDefault<MusicTrack>("SELECT Id FROM Tracks WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) AND ABS(TotalSamples - @TotalSamples) < 10000", new { ext.FileName, ext.TotalSamples });
+                        var localTrack = db.QueryFirstOrDefault<MusicTrack>(@"
+                            SELECT Id FROM Tracks 
+                            WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) 
+                              AND ABS(TotalSamples - @TotalSamples) < 10000", 
+                            new { ext.FileName, ext.TotalSamples });
+                        
                         if (localTrack != null)
                         {
                             using (var trans = db.BeginTransaction())
@@ -296,7 +336,7 @@ namespace seamless_loop_music.Data
                         }
                     }
                     
-                    // 同步歌单
+                    // --- 3. 歌单同步（模糊关联本地 ID） ---
                     db.Execute("INSERT OR IGNORE INTO Playlists (Name, FolderPath, IsFolderLinked, SortOrder) SELECT Name, FolderPath, IsFolderLinked, SortOrder FROM ExternalDB.Playlists");
                     
                     var playlistMap = db.Query<PlaylistDto>("SELECT Name, Id FROM Playlists").ToDictionary(row => row.Name, row => row.Id);
@@ -306,14 +346,30 @@ namespace seamless_loop_music.Data
                     {
                         if (playlistMap.TryGetValue(extPl.Name, out int localPlId))
                         {
-                            string itemSyncSql = @"
-                                INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
-                                SELECT @LocalPlId, t.Id, epi.SortOrder
-                                FROM ExternalDB.PlaylistItems epi
-                                JOIN ExternalDB.LoopPoints elp ON epi.SongId = elp.Id
-                                JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(elp.FileName)) 
-                                             AND ABS(t.TotalSamples - elp.TotalSamples) < 10000
-                                WHERE epi.PlaylistId = @ExtPlId";
+                            // 根据外部架构决定如何获取外部歌曲的文件名和采样数
+                            string itemSyncSql;
+                            if (is3NF)
+                            {
+                                itemSyncSql = @"
+                                    INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
+                                    SELECT @LocalPlId, t.Id, epi.SortOrder
+                                    FROM ExternalDB.PlaylistItems epi
+                                    JOIN ExternalDB.Tracks ext_t ON epi.SongId = ext_t.Id
+                                    JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(ext_t.FileName)) 
+                                                 AND ABS(t.TotalSamples - ext_t.TotalSamples) < 10000
+                                    WHERE epi.PlaylistId = @ExtPlId";
+                            }
+                            else
+                            {
+                                itemSyncSql = @"
+                                    INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
+                                    SELECT @LocalPlId, t.Id, epi.SortOrder
+                                    FROM ExternalDB.PlaylistItems epi
+                                    JOIN ExternalDB.LoopPoints elp ON epi.SongId = elp.Id
+                                    JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(elp.FileName)) 
+                                                 AND ABS(t.TotalSamples - elp.TotalSamples) < 10000
+                                    WHERE epi.PlaylistId = @ExtPlId";
+                            }
                             
                             db.Execute(itemSyncSql, new { LocalPlId = localPlId, ExtPlId = extPl.Id });
                         }
