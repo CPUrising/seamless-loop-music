@@ -32,6 +32,7 @@ namespace seamless_loop_music
                 if (string.IsNullOrEmpty(secondFilePath))
                 {
                     // 普通单文件加载模式
+                    _abSeamSample = -1; 
                     _audioStream = CreateAudioStream(firstFilePath);
                     if (_audioStream == null)
                     {
