@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -54,6 +55,15 @@ namespace seamless_loop_music.UI.Views
 
             var name = TxtNewPlaylistName.Text?.Trim();
             if (string.IsNullOrEmpty(name)) return;
+
+            // 查重逻辑
+            var allPlaylists = await _playlistManager.GetAllPlaylistsAsync();
+            if (allPlaylists.Any(p => string.Equals(p.Name, name, System.StringComparison.OrdinalIgnoreCase)))
+            {
+                MessageBox.Show($"已经有一个叫「{name}」的歌单了喵！换个名字吧", 
+                    "名称重复", MessageBoxButton.OK, MessageBoxImage.Warning);
+                return;
+            }
 
             var newPlaylist = await _playlistManager.CreatePlaylistAsync(name);
             SelectedPlaylist = newPlaylist;

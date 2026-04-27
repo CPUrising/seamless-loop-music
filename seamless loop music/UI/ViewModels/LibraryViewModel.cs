@@ -250,16 +250,18 @@ namespace seamless_loop_music.UI.ViewModels
                 var newName = dialog.InputText;
                 if (string.IsNullOrWhiteSpace(newName)) return;
 
-                // 检查同名冲突（排除自己）
-                if (CategoryItems.Any(i => i.Type == CategoryType.Playlist && i.Id != SelectedCategoryItem.Id && string.Equals(i.Name, newName, StringComparison.OrdinalIgnoreCase)))
-                {
-                    System.Windows.MessageBox.Show($"已经有一个叫「{newName}」的歌单了喵！换个名字吧 (´w｀)", 
-                        "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
                 var id = SelectedCategoryItem.Id;
                 Task.Run(async () => {
+                    // 全局查重（直接查数据库）
+                    var allPlaylists = await _playlistManager.GetAllPlaylistsAsync();
+                    if (allPlaylists.Any(p => p.Id != id && string.Equals(p.Name, newName, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        App.Current.Dispatcher.Invoke(() => 
+                            System.Windows.MessageBox.Show($"已经有一个叫「{newName}」的歌单了喵！换个名字吧 (´w｀)", 
+                            "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
+                        return;
+                    }
+
                     await _playlistManager.RenamePlaylistAsync(id, newName);
                     // 刷新列表
                     App.Current.Dispatcher.Invoke(() => LoadCategoryItems());
@@ -293,15 +295,17 @@ namespace seamless_loop_music.UI.ViewModels
                 var name = dialog.InputText;
                 if (string.IsNullOrWhiteSpace(name)) return;
 
-                // 检查同名冲突
-                if (CategoryItems.Any(i => i.Type == CategoryType.Playlist && string.Equals(i.Name, name, StringComparison.OrdinalIgnoreCase)))
-                {
-                    System.Windows.MessageBox.Show($"歌单「{name}」已经存在了喵！换个名字吧 (´w｀)", 
-                        "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning);
-                    return;
-                }
-
                 Task.Run(async () => {
+                    // 全局查重（直接查数据库）
+                    var allPlaylists = await _playlistManager.GetAllPlaylistsAsync();
+                    if (allPlaylists.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
+                    {
+                        App.Current.Dispatcher.Invoke(() => 
+                            System.Windows.MessageBox.Show($"歌单「{name}」已经存在了喵！换个名字吧 (´w｀)", 
+                            "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
+                        return;
+                    }
+
                     await _playlistManager.CreatePlaylistAsync(name);
                     // 刷新列表
                     App.Current.Dispatcher.Invoke(() => LoadCategoryItems());

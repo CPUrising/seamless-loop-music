@@ -79,10 +79,13 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, IsLoved INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE, FolderPath TEXT, IsFolderLinked INTEGER DEFAULT 0, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, FolderPath TEXT, IsFolderLinked INTEGER DEFAULT 0, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, PlaylistId INTEGER NOT NULL, FolderPath TEXT NOT NULL, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, UNIQUE(PlaylistId, FolderPath));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
+
+                // 执行迁移（加约束、查重等）
+                ApplyMigrations(db);
 
                 // --- 性能索引优化 ---
                 db.Execute("CREATE INDEX IF NOT EXISTS idx_tracks_albumid ON Tracks(AlbumId);");
@@ -388,6 +391,24 @@ namespace seamless_loop_music.Data
                 finally { db.Execute("DETACH DATABASE ExternalDB"); }
             }
             return (tracksSynced, playlistsSynced);
+        }
+
+        private void ApplyMigrations(IDbConnection db)
+        {
+            // 1. 歌单查重与合并 (针对已存在数据的用户)
+            // 将重复歌单里的歌曲搬运到 ID 最小的那个同名歌单里
+            db.Execute(@"
+                INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
+                SELECT (SELECT MIN(Id) FROM Playlists p2 WHERE p2.Name = p.Name), pi.SongId, pi.SortOrder
+                FROM PlaylistItems pi
+                JOIN Playlists p ON pi.PlaylistId = p.Id
+                WHERE p.Id NOT IN (SELECT MIN(Id) FROM Playlists GROUP BY Name)");
+
+            // 删除已经被搬空的重复歌单
+            db.Execute(@"DELETE FROM Playlists WHERE Id NOT IN (SELECT MIN(Id) FROM Playlists GROUP BY Name)");
+
+            // 2. 强制创建唯一索引（如果不存在），确保未来不会再出现重名
+            db.Execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_playlists_name ON Playlists(Name)");
         }
     }
 }
