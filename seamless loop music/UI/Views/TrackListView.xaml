@@ -10,6 +10,12 @@
         <!-- BindingProxy：让 ContextMenu 等游离元素能访问 ViewModel -->
         <converters:BindingProxy x:Key="VmProxy" Data="{Binding}"/>
 
+        <!-- 播放按钮样式 (复用 IconButton) -->
+        <Style x:Key="TrackPlayButton" TargetType="Button" BasedOn="{StaticResource GhostIconButton}">
+            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+            <Setter Property="FontSize" Value="18"/>
+        </Style>
+
         <!-- 精简版模板：仅保留播放按钮和标题/文件名 -->
         <DataTemplate x:Key="CompactTrackTemplate">
             <Grid Height="55" Margin="10,0">
@@ -18,20 +24,20 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"
-                        Background="Transparent" BorderThickness="0" Padding="0">
-                    <TextBlock Text="▶" Foreground="#89B4FA" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
+                <Button Grid.Column="0" 
+                        Style="{StaticResource TrackPlayButton}"
+                        Content="{StaticResource IconPlay}"
+                        Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                        CommandParameter="{Binding}"/>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
                     <TextBlock Text="{Binding Title}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding FileName}" Foreground="#6C7086" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                 </StackPanel>
             </Grid>
         </DataTemplate>
 
-        <!-- 完整版模板 (从原 ListBox.ItemTemplate 提取) -->
+        <!-- 完整版模板 -->
         <DataTemplate x:Key="FullTrackTemplate">
             <Grid Height="55" Margin="12,0">
                 <Grid.ColumnDefinitions>
@@ -44,24 +50,27 @@
                     <ColumnDefinition Width="Auto"/> <!-- Action -->
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"
-                        Background="Transparent" BorderThickness="0" Padding="0">
-                    <TextBlock Text="▶" Foreground="#89B4FA" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                </Button>
+                <!-- Play Button -->
+                <Button Grid.Column="0" 
+                        Style="{StaticResource TrackPlayButton}"
+                        Content="{StaticResource IconPlay}"
+                        Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                        CommandParameter="{Binding}"/>
 
-                <Button Grid.Column="1" Command="{Binding DataContext.ToggleLoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                <!-- Love Button -->
+                <Button Grid.Column="1" 
+                        Command="{Binding DataContext.ToggleLoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                         CommandParameter="{Binding}"
-                        Background="Transparent" BorderThickness="0">
+                        Background="Transparent" BorderThickness="0" Cursor="Hand">
                     <TextBlock FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center">
                         <TextBlock.Style>
                             <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="♡"/>
-                                <Setter Property="Foreground" Value="#585B70"/>
+                                <Setter Property="Text" Value="{StaticResource IconLove}"/>
+                                <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
                                 <Style.Triggers>
                                     <DataTrigger Binding="{Binding IsLoved}" Value="True">
-                                        <Setter Property="Text" Value="❤️"/>
-                                        <Setter Property="Foreground" Value="#F38BA8"/>
+                                        <Setter Property="Text" Value="{StaticResource IconLoved}"/>
+                                        <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
                                     </DataTrigger>
                                 </Style.Triggers>
                             </Style>
@@ -69,77 +78,43 @@
                     </TextBlock>
                 </Button>
 
+                <!-- Title & Filename -->
                 <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="15,0">
                     <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding FileName}" Foreground="#6C7086" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                 </StackPanel>
 
-                <TextBlock Grid.Column="3" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="#BAC2DE" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
+                <!-- Artist -->
+                <TextBlock Grid.Column="3" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
 
-                <TextBlock Grid.Column="4" Text="{Binding Album}" VerticalAlignment="Center" Foreground="#9399B2" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
+                <!-- Album -->
+                <TextBlock Grid.Column="4" Text="{Binding Album}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0" Opacity="0.8"/>
 
+                <!-- Rating -->
                 <Button Grid.Column="5" Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                         CommandParameter="{Binding}"
-                        Background="Transparent" BorderThickness="0" Margin="8,0">
+                        Background="Transparent" BorderThickness="0" Margin="8,0" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="★" Foreground="#F9E2AF" FontSize="16" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Rating}" Foreground="#F9E2AF" FontSize="14" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{StaticResource IconStar}" Foreground="{StaticResource BrushWarning}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Rating}" Foreground="{StaticResource BrushWarning}" FontSize="14" Margin="4,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
-                <Button Grid.Column="6" 
-                        Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"
-                        Content="♾️" Width="34" Height="34" Margin="2,0,8,0"
-                        Background="#313244" Foreground="#CDD6F4" BorderThickness="0"
-                        ToolTip="寻找循环点 (PyMusicLooper)">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="17">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#45475A"/>
-                                    <Setter Property="Foreground" Value="#89B4FA"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                <!-- Action Buttons: Analyze & Edit -->
+                <StackPanel Grid.Column="6" Orientation="Horizontal" Margin="0,0,8,0">
+                    <Button Style="{StaticResource IconButton}"
+                            Content="{StaticResource IconAnalyze}"
+                            Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                            CommandParameter="{Binding}"
+                            ToolTip="寻找循环点 (PyMusicLooper)"
+                            Margin="0,0,8,0"/>
 
-                <Button Grid.Column="6" 
-                        HorizontalAlignment="Right"
-                        Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"
-                        Content="✎" Width="34" Height="34" Margin="0,0,45,0"
-                        Background="#313244" Foreground="#CDD6F4" BorderThickness="0"
-                        ToolTip="编辑属性">
-                    <Button.Style>
-                        <Style TargetType="Button">
-                            <Setter Property="Template">
-                                <Setter.Value>
-                                    <ControlTemplate TargetType="Button">
-                                        <Border Background="{TemplateBinding Background}" CornerRadius="17">
-                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </ControlTemplate>
-                                </Setter.Value>
-                            </Setter>
-                            <Style.Triggers>
-                                <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter Property="Background" Value="#45475A"/>
-                                </Trigger>
-                            </Style.Triggers>
-                        </Style>
-                    </Button.Style>
-                </Button>
+                    <Button Style="{StaticResource IconButton}"
+                            Content="{StaticResource IconEdit}"
+                            Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                            CommandParameter="{Binding}"
+                            ToolTip="编辑属性"/>
+                </StackPanel>
             </Grid>
         </DataTemplate>
     </UserControl.Resources>
@@ -152,7 +127,7 @@
         </Grid.RowDefinitions>
 
         <!-- Playlist Header & Stats -->
-        <Border Grid.Row="0" Margin="20,20,20,10" Background="#313244" CornerRadius="12" Padding="25,20">
+        <Border Grid.Row="0" Margin="20,20,20,10" Background="{StaticResource BrushSurface}" CornerRadius="12" Padding="25,20">
             <Border.Style>
                 <Style TargetType="Border">
                     <Style.Triggers>
@@ -163,15 +138,15 @@
                 </Style>
             </Border.Style>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Width="70" Height="70" CornerRadius="10" Background="#45475A" Margin="0,0,25,0">
-                    <TextBlock Text="🎵" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                <Border Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
+                    <TextBlock Text="{StaticResource IconMusic}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <TextBlock Text="{Binding SelectedCategoryItem.Name, FallbackValue='所有曲目'}" Foreground="White" FontSize="28" FontWeight="Bold"/>
                     <Grid Margin="0,8,0,0">
-                        <TextBlock Text="{Binding PlaylistStats}" Foreground="#6C7086" FontSize="15" 
+                        <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="#89B4FA" FontSize="15" FontWeight="Medium"
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource BrushAccent}" FontSize="15" FontWeight="Medium"
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityConverter}}"/>
                     </Grid>
                 </StackPanel>
@@ -179,22 +154,22 @@
         </Border>
 
         <!-- Search Bar -->
-        <Border Grid.Row="1" Margin="20,5,20,10" Background="#313244" CornerRadius="10" Height="44">
+        <Border Grid.Row="1" Margin="20,5,20,10" Background="{StaticResource BrushSurface}" CornerRadius="10" Height="44">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="🔍" VerticalAlignment="Center" Margin="15,0,8,0" Foreground="#6C7086" IsHitTestVisible="False" FontSize="14"/>
+                <TextBlock Text="{StaticResource IconSearch}" VerticalAlignment="Center" Margin="15,0,8,0" Foreground="{StaticResource BrushTextSecondary}" IsHitTestVisible="False" FontSize="14"/>
                 <TextBox Grid.Column="1" 
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          Background="Transparent" BorderThickness="0" 
                          Foreground="White" VerticalContentAlignment="Center"
-                         FontSize="15" CaretBrush="#89B4FA"
+                         FontSize="15" CaretBrush="{StaticResource BrushAccent}"
                          Margin="5,0,15,0"/>
                 
                 <TextBlock Grid.Column="1" Text="{Binding SearchPlaceholder}" 
-                           Foreground="#585B70" VerticalAlignment="Center" 
+                           Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" 
                            Margin="8,0,0,0" IsHitTestVisible="False"
                            FontSize="15">
                     <TextBlock.Style>
@@ -240,16 +215,11 @@
                 </Style>
             </controls:MultiSelectListBox.Style>
             <controls:MultiSelectListBox.ItemContainerStyle>
-                <Style TargetType="ListBoxItem">
-                    <Setter Property="Background" Value="Transparent"/>
-                    <Setter Property="BorderThickness" Value="0"/>
-                    <Setter Property="Margin" Value="0,2"/>
-                    <Setter Property="Padding" Value="0"/>
+                <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModernListBoxItem}">
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <!-- 通过 VmProxy 访问 ViewModel，PlacementTarget.DataContext 获取当前行 MusicTrack -->
-                            <ContextMenu Background="#313244" BorderThickness="0"
-                                         BorderBrush="#45475A" Padding="4" Foreground="#CDD6F4">
+                            <ContextMenu Background="{StaticResource BrushSurface}" BorderThickness="0" Padding="4" Foreground="{StaticResource BrushTextPrimary}">
                                 <MenuItem Header="▶  播放"
                                           Command="{Binding Data.PlayCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -257,14 +227,14 @@
                                           Command="{Binding Data.PlaySelectedCommand, Source={StaticResource VmProxy}}"/>
                                 <MenuItem Header="♾️  批量自动分析 (PyMusicLooper)"
                                           Command="{Binding Data.BatchAnalyzeCommand, Source={StaticResource VmProxy}}"/>
-                                <Separator Background="#45475A" Margin="4,2"/>
+                                <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Header="📁  在资源管理器中显示"
                                           Command="{Binding Data.ShowInExplorerCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <MenuItem Header="➕  添加到播放列表..."
                                           Command="{Binding Data.AddToPlaylistCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <Separator Background="#45475A" Margin="4,2"/>
+                                <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Command="{Binding Data.ToggleLoveCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                     <MenuItem.Style>
@@ -278,37 +248,22 @@
                                         </Style>
                                     </MenuItem.Style>
                                 </MenuItem>
-                                <Separator Background="#45475A" Margin="4,2"/>
+                                <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Header="➖  从当前列表移除"
                                           Command="{Binding Data.RemoveFromListCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <MenuItem Header="🗑  从磁盘删除"
-                                          Foreground="#F38BA8"
+                                          Foreground="{StaticResource BrushDanger}"
                                           Command="{Binding Data.DeleteFromDiskCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                             </ContextMenu>
                         </Setter.Value>
                     </Setter>
-                    <Setter Property="Template">
-                        <Setter.Value>
-                            <ControlTemplate TargetType="ListBoxItem">
-                                <Border Background="{TemplateBinding Background}" CornerRadius="8">
-                                    <ContentPresenter/>
-                                </Border>
-                                <ControlTemplate.Triggers>
-                                    <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                        <Setter Property="Background" Value="#2D3F5E"/>
-                                    </DataTrigger>
-                                    <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter Property="Background" Value="#313244"/>
-                                    </Trigger>
-                                    <Trigger Property="IsSelected" Value="True">
-                                        <Setter Property="Background" Value="#45475A"/>
-                                    </Trigger>
-                                </ControlTemplate.Triggers>
-                            </ControlTemplate>
-                        </Setter.Value>
-                    </Setter>
+                    <Style.Triggers>
+                        <DataTrigger Binding="{Binding IsPlaying}" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushSelection}"/>
+                        </DataTrigger>
+                    </Style.Triggers>
                 </Style>
             </controls:MultiSelectListBox.ItemContainerStyle>
         </controls:MultiSelectListBox>

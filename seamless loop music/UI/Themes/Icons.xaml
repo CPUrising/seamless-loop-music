@@ -1,0 +1,21 @@
+<ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+                    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+                    xmlns:system="clr-namespace:System;assembly=mscorlib">
+
+    <system:String x:Key="IconPlay">▶</system:String>
+    <system:String x:Key="IconLove">♡</system:String>
+    <system:String x:Key="IconLoved">❤️</system:String>
+    <system:String x:Key="IconAnalyze">♾️</system:String>
+    <system:String x:Key="IconEdit">✎</system:String>
+    <system:String x:Key="IconSearch">🔍</system:String>
+    <system:String x:Key="IconSettings">⚙️</system:String>
+    <system:String x:Key="IconRefresh">🔄</system:String>
+    <system:String x:Key="IconDelete">🗑️</system:String>
+    <system:String x:Key="IconRemove">➖</system:String>
+    <system:String x:Key="IconAdd">➕</system:String>
+    <system:String x:Key="IconStar">★</system:String>
+    <system:String x:Key="IconFolder">📁</system:String>
+    <system:String x:Key="IconDisc">💿</system:String>
+    <system:String x:Key="IconMusic">🎵</system:String>
+
+</ResourceDictionary>

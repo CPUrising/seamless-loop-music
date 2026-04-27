@@ -5,6 +5,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
+using Prism.Events;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.UI.Views
 {
@@ -15,6 +17,7 @@ namespace seamless_loop_music.UI.Views
     public partial class AddToPlaylistDialog : Window
     {
         private readonly IPlaylistManager _playlistManager;
+        private readonly IEventAggregator _eventAggregator;
         private readonly List<MusicTrack> _tracks;
         private List<Playlist> _playlists;
 
@@ -23,10 +26,11 @@ namespace seamless_loop_music.UI.Views
         /// </summary>
         public Playlist SelectedPlaylist { get; private set; }
 
-        public AddToPlaylistDialog(IPlaylistManager playlistManager, List<MusicTrack> tracks)
+        public AddToPlaylistDialog(IPlaylistManager playlistManager, IEventAggregator eventAggregator, List<MusicTrack> tracks)
         {
             InitializeComponent();
             _playlistManager = playlistManager;
+            _eventAggregator = eventAggregator;
             _tracks = tracks;
 
             int count = tracks.Count;
@@ -94,6 +98,12 @@ namespace seamless_loop_music.UI.Views
             if (SelectedPlaylist == null) return;
             foreach (var track in _tracks)
                 await _playlistManager.AddTrackToPlaylistAsync(SelectedPlaylist.Id, track);
+            
+            // 发送成功反馈
+            var message = _tracks.Count == 1 
+                ? $"已将「{_tracks[0].Title}」添加到「{SelectedPlaylist.Name}」"
+                : $"已将 {_tracks.Count} 首曲目添加到「{SelectedPlaylist.Name}」";
+            _eventAggregator.GetEvent<StatusMessageEvent>().Publish(message);
         }
     }
 }

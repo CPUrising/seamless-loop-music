@@ -10,103 +10,37 @@
         FontFamily="Segoe UI">
 
     <Window.Resources>
-        <Style TargetType="Button" x:Key="PrimaryButton">
-            <Setter Property="Background" Value="#89B4FA"/>
-            <Setter Property="Foreground" Value="#1E1E2E"/>
-            <Setter Property="FontWeight" Value="SemiBold"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="18,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#B4D0FF"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="Button" x:Key="SecondaryButton">
-            <Setter Property="Background" Value="#313244"/>
-            <Setter Property="Foreground" Value="#CDD6F4"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="Padding" Value="18,8"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#45475A"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-        <Style TargetType="ListBoxItem">
-            <Setter Property="Background" Value="Transparent"/>
-            <Setter Property="Foreground" Value="#CDD6F4"/>
-            <Setter Property="Padding" Value="12,10"/>
-            <Setter Property="FontSize" Value="13"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="ListBoxItem">
-                        <Border Background="{TemplateBinding Background}" CornerRadius="6" Margin="0,2">
-                            <ContentPresenter/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#313244"/>
-                            </Trigger>
-                            <Trigger Property="IsSelected" Value="True">
-                                <Setter Property="Background" Value="#45475A"/>
-                                <Setter Property="Foreground" Value="White"/>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
+        <!-- 使用全局样式，这里可以添加特定的覆写（如有必要） -->
     </Window.Resources>
 
     <StackPanel Margin="24">
         <!-- Header -->
         <TextBlock Text="选择播放列表" FontSize="18" FontWeight="Bold"
                    Foreground="White" Margin="0,0,0,6"/>
-        <TextBlock x:Name="TxtSubtitle" FontSize="12" Foreground="#6C7086" Margin="0,0,0,16"/>
+        <TextBlock x:Name="TxtSubtitle" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16"/>
 
         <!-- 现有歌单列表 -->
         <Border Background="#181825" CornerRadius="8" MaxHeight="260">
             <ListBox x:Name="PlaylistListBox"
                      Background="Transparent" BorderThickness="0"
-                     Padding="4" ScrollViewer.HorizontalScrollBarVisibility="Disabled"/>
+                     Padding="4" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
+                <ListBox.ItemContainerStyle>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModernListBoxItem}">
+                        <Setter Property="Padding" Value="12,10"/>
+                        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                    </Style>
+                </ListBox.ItemContainerStyle>
+            </ListBox>
         </Border>
 
         <!-- 新建歌单区 -->
-        <Expander Header="＋ 新建播放列表" Foreground="#89B4FA" Margin="0,14,0,0"
+        <Expander Header="＋ 新建播放列表" Foreground="{StaticResource BrushAccent}" Margin="0,14,0,0"
                   BorderThickness="0">
             <StackPanel Margin="0,8,0,0">
-                <Border Background="#313244" CornerRadius="8" Height="40">
-                    <TextBox x:Name="TxtNewPlaylistName"
-                             Background="Transparent" BorderThickness="0"
-                             Foreground="White" VerticalContentAlignment="Center"
-                             FontSize="13" CaretBrush="#89B4FA" Padding="12,0"
-                             KeyDown="TxtNewPlaylistName_KeyDown"/>
-                </Border>
-                <TextBlock Text="输入名称后按 Enter 创建" Foreground="#585B70" FontSize="11" Margin="4,6,0,0"/>
+                <TextBox x:Name="TxtNewPlaylistName"
+                         Style="{StaticResource ModernTextBox}"
+                         KeyDown="TxtNewPlaylistName_KeyDown"/>
+                <TextBlock Text="输入名称后按 Enter 创建" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,6,0,0"/>
             </StackPanel>
         </Expander>
 

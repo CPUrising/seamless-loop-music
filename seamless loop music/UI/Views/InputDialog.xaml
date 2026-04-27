@@ -15,30 +15,18 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="{Binding Message}" Foreground="#CDD6F4" FontSize="14" Margin="0,0,0,10"/>
+        <TextBlock Text="{Binding Message}" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" Margin="0,0,0,10"/>
         
-        <TextBox Grid.Row="1" x:Name="InputTextBox" Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" 
-                 Background="#313244" Foreground="White" BorderThickness="1" BorderBrush="#45475A"
-                 Padding="5" VerticalContentAlignment="Center" FontSize="14"
+        <TextBox Grid.Row="1" x:Name="InputTextBox" 
+                 Text="{Binding InputText, UpdateSourceTrigger=PropertyChanged}" 
+                 Style="{StaticResource ModernTextBox}"
                  KeyDown="InputTextBox_KeyDown"/>
 
         <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
-            <Button Content="确定" Width="80" Height="30" Margin="0,0,10,0" IsDefault="True"
-                    Click="OkButton_Click" Background="#89B4FA" Foreground="#11111B" BorderThickness="0">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="4"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
-            <Button Content="取消" Width="80" Height="30" IsCancel="True"
-                    Background="#45475A" Foreground="#CDD6F4" BorderThickness="0">
-                <Button.Resources>
-                    <Style TargetType="Border">
-                        <Setter Property="CornerRadius" Value="4"/>
-                    </Style>
-                </Button.Resources>
-            </Button>
+            <Button Content="确定" Width="80" Height="32" Margin="0,0,10,0" IsDefault="True"
+                    Click="OkButton_Click" Style="{StaticResource PrimaryButton}"/>
+            <Button Content="取消" Width="80" Height="32" IsCancel="True"
+                    Style="{StaticResource SecondaryButton}"/>
         </StackPanel>
     </Grid>
 </Window>

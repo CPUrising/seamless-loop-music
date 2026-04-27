@@ -11,23 +11,22 @@
              d:DesignHeight="100" d:DesignWidth="800">
     <UserControl.Resources>
         <Style x:Key="ControlToggleStyle" TargetType="ToggleButton">
-            <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="#CDD6F4"/>
+            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
             <Setter Property="Padding" Value="5"/>
             <Setter Property="Template">
                 <Setter.Value>
                     <ControlTemplate TargetType="ToggleButton">
-                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="4">
+                        <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="6">
                              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="#313244"/>
+                                <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSurface}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="#FAB387"/>
+                                <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -43,7 +42,7 @@
 
         <!-- Progress Area -->
         <StackPanel Grid.Row="0" Margin="0,15">
-            <TextBlock Text="{Binding TimeDisplay}" HorizontalAlignment="Right" FontSize="18" FontWeight="Light" Foreground="#CDD6F4"/>
+            <TextBlock Text="{Binding TimeDisplay}" HorizontalAlignment="Right" FontSize="18" FontWeight="Light" Foreground="{StaticResource BrushTextPrimary}"/>
             <Slider x:Name="ProgressBar" Value="{Binding ProgressValue}" Maximum="1000" IsMoveToPointEnabled="True" Margin="0,5,0,0"
                     Thumb.DragStarted="ProgressBar_DragStarted" Thumb.DragCompleted="ProgressBar_DragCompleted"
                     ValueChanged="ProgressBar_ValueChanged"/>
@@ -53,7 +52,7 @@
         <Grid Grid.Row="1" Margin="0,0,0,10">
             <!-- Left: Current Track Info (Clickable) -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center">
-                <Border Width="45" Height="45" CornerRadius="4" Margin="10,0,10,0" Background="#2A2A3E">
+                <Border Width="45" Height="45" CornerRadius="4" Margin="10,0,10,0" Background="{StaticResource BrushSurface}">
                     <Image Source="{Binding AlbumCoverImage}" Stretch="UniformToFill"/>
                 </Border>
                 <Button Command="{Binding OpenDetailCommand}" 
@@ -61,31 +60,33 @@
                         Cursor="Hand" Padding="5" VerticalAlignment="Center">
                     <StackPanel>
                         <TextBlock Text="{Binding CurrentTrack.DisplayName, FallbackValue='未选择曲目'}" 
-                                   FontSize="14" FontWeight="SemiBold" Foreground="#CDD6F4" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrushTextPrimary}" 
                                    MaxWidth="200" TextTrimming="CharacterEllipsis"/>
                         <TextBlock Text="{Binding CurrentTrack.Artist, FallbackValue='未知艺术家'}" 
-                                   FontSize="12" Foreground="#CDD6F4" Opacity="0.6"
+                                   FontSize="12" Foreground="{StaticResource BrushTextPrimary}" Opacity="0.6"
                                    MaxWidth="200" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                     </StackPanel>
                 </Button>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                <Button Content="&lt;&lt;" Command="{Binding PrevCommand}" Width="60" Margin="5"/>
-                <Button Content="{Binding PlayButtonContent}" Command="{Binding PlayCommand}" Width="110" Height="45" Margin="15,5" 
-                        FontWeight="Bold" Background="#A6E3A1" Foreground="#11111B"/>
-
-                <Button Content="&gt;&gt;" Command="{Binding NextCommand}" Width="60" Margin="15,5,5,5"/>
+                <Button Style="{StaticResource GhostIconButton}" Content="⏮" Command="{Binding PrevCommand}" Margin="5"/>
+                <Button Style="{StaticResource PrimaryButton}" 
+                        Content="{Binding PlayButtonContent}" 
+                        Command="{Binding PlayCommand}" 
+                        Width="100" Height="40" Margin="15,0" 
+                        FontSize="16"/>
+                <Button Style="{StaticResource GhostIconButton}" Content="⏭" Command="{Binding NextCommand}" Margin="5"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
                 <ToggleButton IsChecked="{Binding IsFeatureLoopEnabled}"
-                              Style="{StaticResource ControlToggleStyle}"
-                              Margin="0,0,10,0"
-                              ToolTip="{Binding [FeatureLoop], Source={StaticResource Loc}}">
+                               Style="{StaticResource ControlToggleStyle}"
+                               Margin="0,0,10,0"
+                               ToolTip="{Binding [FeatureLoop], Source={StaticResource Loc}}">
                     <md:PackIcon Kind="Infinity" Width="22" Height="22"/>
                 </ToggleButton>
-                <TextBlock Text="Vol:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11" Opacity="0.5" Foreground="#CDD6F4"/>
+                <TextBlock Text="Vol:" VerticalAlignment="Center" Margin="0,0,5,0" FontSize="11" Opacity="0.5" Foreground="{StaticResource BrushTextPrimary}"/>
                 <Slider Width="80" Minimum="0" Maximum="100" Value="{Binding VolumeValue}" IsMoveToPointEnabled="True"/>
             </StackPanel>
         </Grid>

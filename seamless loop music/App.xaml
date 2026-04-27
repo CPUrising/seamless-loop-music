@@ -6,23 +6,18 @@
              xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
              xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
-        <!-- 全局提示即时显示设置 -->
-        <Style TargetType="{x:Type Control}">
-            <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
-            <Setter Property="ToolTipService.BetweenShowDelay" Value="0" />
-            <Setter Property="ToolTipService.ShowDuration" Value="60000" />
-        </Style>
-        
-        <!-- 针对不继承 Control 的元素（如 FrameworkElement）也加上 -->
-        <Style TargetType="{x:Type FrameworkElement}">
-            <Setter Property="ToolTipService.InitialShowDelay" Value="0" />
-            <Setter Property="ToolTipService.BetweenShowDelay" Value="0" />
-            <Setter Property="ToolTipService.ShowDuration" Value="60000" />
-        </Style>
-        
-        <x:Static Member="services:LocalizationService.Instance" x:Key="Loc" />
-        <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
-        <converters:NullToVisibilityInverseConverter x:Key="NullToVisibilityInverseConverter"/>
-        <converters:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="UI/Themes/Colors.xaml"/>
+                <ResourceDictionary Source="UI/Themes/Icons.xaml"/>
+                <ResourceDictionary Source="UI/Themes/Styles.xaml"/>
+                <ResourceDictionary Source="UI/Themes/Controls.xaml"/>
+            </ResourceDictionary.MergedDictionaries>
+
+            <x:Static Member="services:LocalizationService.Instance" x:Key="Loc" />
+            <converters:NullToVisibilityConverter x:Key="NullToVisibilityConverter"/>
+            <converters:NullToVisibilityInverseConverter x:Key="NullToVisibilityInverseConverter"/>
+            <converters:BindingProxy x:Key="Proxy" Data="{Binding}"/>
+        </ResourceDictionary>
     </Application.Resources>
 </prism:PrismApplication>

@@ -12,7 +12,7 @@
     <UserControl.Resources>
         <converters:BindingProxy x:Key="LibraryVmProxy" Data="{Binding}"/>
     </UserControl.Resources>
-    <Grid Background="#1E1E2E">
+    <Grid Background="{StaticResource BrushBackground}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="65"/>  <!-- Column 0: Navigation -->
             <ColumnDefinition Width="280"/> <!-- Column 1: Middle Items -->
@@ -20,88 +20,46 @@
         </Grid.ColumnDefinitions>
 
         <!-- Column 0: Minimal Navigation -->
-        <Border Grid.Column="0" Background="#181825" BorderBrush="#313244" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" Background="#181825" BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,0,1,0">
             <ListBox Background="Transparent" BorderThickness="0" Margin="0,20,0,0"
                      ItemsSource="{Binding NavigationCategories}"
                      SelectedItem="{Binding SelectedCategory}"
                      HorizontalContentAlignment="Center">
                 <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="Template">
-                            <Setter.Value>
-                                <ControlTemplate TargetType="ListBoxItem">
-                                    <Grid Background="Transparent" ToolTip="{Binding Name}">
-                                        <Border x:Name="Indicator" Width="3" Height="20" Background="#89B4FA" HorizontalAlignment="Left" Visibility="Hidden" Margin="2,0,0,0"/>
-                                        <Border x:Name="ContentBorder" Background="Transparent" CornerRadius="8" Margin="8,4" Padding="10">
-                                            <TextBlock Text="{Binding Icon}" FontSize="24" HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                                        </Border>
-                                    </Grid>
-                                    <ControlTemplate.Triggers>
-                                        <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="ContentBorder" Property="Background" Value="#313244"/>
-                                            <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
-                                        </Trigger>
-                                        <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="ContentBorder" Property="Background" Value="#45475A"/>
-                                        </Trigger>
-                                    </ControlTemplate.Triggers>
-                                </ControlTemplate>
-                            </Setter.Value>
-                        </Setter>
-                    </Style>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource SidebarListBoxItem}"/>
                 </ListBox.ItemContainerStyle>
             </ListBox>
         </Border>
 
         <!-- Column 1: Category Items (Albums/Artists/etc) -->
-        <Grid Grid.Column="1" Background="#1E1E2E" Margin="0,0,0,0">
+        <Grid Grid.Column="1" Background="{StaticResource BrushBackground}" Margin="0,0,0,0">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/> <!-- Search -->
                 <RowDefinition Height="*"/>    <!-- List -->
             </Grid.RowDefinitions>
             
-            <Border Grid.Row="0" Margin="15,20,15,10" Background="#313244" CornerRadius="6" Height="36">
+            <Border Grid.Row="0" Margin="15,20,15,10" Background="{StaticResource BrushSurface}" CornerRadius="6" Height="36">
                 <Grid>
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                         <ColumnDefinition Width="Auto"/>
                     </Grid.ColumnDefinitions>
-                    <TextBlock Text="🔍" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="#6C7086" IsHitTestVisible="False" FontSize="12"/>
+                    <TextBlock Text="{StaticResource IconSearch}" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="{StaticResource BrushTextSecondary}" IsHitTestVisible="False" FontSize="12"/>
                     <TextBox Grid.Column="1" 
                              Text="{Binding MiddleFilterText, UpdateSourceTrigger=PropertyChanged}"
                              Background="Transparent" BorderThickness="0" 
                              Foreground="White" VerticalContentAlignment="Center"
-                             FontSize="13" CaretBrush="#89B4FA"
+                             FontSize="13" CaretBrush="{StaticResource BrushAccent}"
                              Margin="2,0,5,0"/>
                     
-                    <Button Grid.Column="2" Width="30" Height="30" Padding="0" Margin="0,0,3,0"
-                            Background="Transparent" BorderThickness="0"
-                            Foreground="#CDD6F4"
-                            Content="+" FontSize="20"
+                    <Button Grid.Column="2" 
+                            Style="{StaticResource GhostIconButton}"
+                            Content="{StaticResource IconAdd}" 
+                            FontSize="20"
                             ToolTip="{Binding [ToolTipAddPlaylist], Source={StaticResource Loc}}"
                             Command="{Binding CreatePlaylistCommand}"
-                            Visibility="{Binding IsPlaylistCategorySelected, Converter={StaticResource NullToVisibilityConverter}}"
-                            Cursor="Hand">
-                        <Button.Style>
-                            <Style TargetType="Button">
-                                <Setter Property="Template">
-                                    <Setter.Value>
-                                        <ControlTemplate TargetType="Button">
-                                            <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="4">
-                                                <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" Margin="0,0,0,2"/>
-                                            </Border>
-                                            <ControlTemplate.Triggers>
-                                                <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="border" Property="Background" Value="#45475A"/>
-                                                </Trigger>
-                                            </ControlTemplate.Triggers>
-                                        </ControlTemplate>
-                                    </Setter.Value>
-                                </Setter>
-                            </Style>
-                        </Button.Style>
-                    </Button>
+                            Visibility="{Binding IsPlaylistCategorySelected, Converter={StaticResource NullToVisibilityConverter}}"/>
                 </Grid>
             </Border>
 
@@ -115,20 +73,19 @@
                                   CommandParameter="{Binding SelectedCategoryItem}"/>
                 </ListBox.InputBindings>
                 <ListBox.ItemContainerStyle>
-                    <Style TargetType="ListBoxItem">
-                        <Setter Property="HorizontalContentAlignment" Value="Stretch"/>
+                    <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModernListBoxItem}">
                         <EventSetter Event="PreviewMouseRightButtonDown" Handler="ListBoxItem_PreviewMouseRightButtonDown"/>
                         <Setter Property="ContextMenu">
                             <Setter.Value>
-                                <ContextMenu Background="#313244" BorderThickness="0" Padding="4" Foreground="#CDD6F4">
+                                <ContextMenu Background="{StaticResource BrushSurface}" BorderThickness="0" Padding="4" Foreground="{StaticResource BrushTextPrimary}">
                                     <MenuItem Header="{Binding [MenuRefresh], Source={StaticResource Loc}}" 
                                               Command="{Binding Data.RefreshPlaylistCommand, Source={StaticResource LibraryVmProxy}}"/>
-                                    <Separator Background="#45475A" Margin="4,2"/>
+                                    <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                     <MenuItem Header="{Binding [MenuRename], Source={StaticResource Loc}}" 
                                               Command="{Binding Data.RenamePlaylistCommand, Source={StaticResource LibraryVmProxy}}"/>
                                     <MenuItem Header="{Binding [MenuDelete], Source={StaticResource Loc}}" 
                                               Command="{Binding Data.DeletePlaylistCommand, Source={StaticResource LibraryVmProxy}}"
-                                              Foreground="#F38BA8"/>
+                                              Foreground="{StaticResource BrushDanger}"/>
                                 </ContextMenu>
                             </Setter.Value>
                         </Setter>
@@ -142,21 +99,21 @@
                                                 <ColumnDefinition Width="*"/>
                                             </Grid.ColumnDefinitions>
                                             <!-- Thumbnail Placeholder -->
-                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="4" Background="#313244">
-                                                <TextBlock Text="{Binding Icon, TargetNullValue=💿}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
+                                            <Border Grid.Column="0" Width="36" Height="36" CornerRadius="4" Background="{StaticResource BrushSurface}">
+                                                <TextBlock Text="{Binding Icon, TargetNullValue={StaticResource IconDisc}}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
                                             </Border>
                                             <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
                                                 <TextBlock Text="{Binding Name}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                <TextBlock Text="{Binding Type}" Foreground="#6C7086" FontSize="11" Margin="0,2,0,0"/>
+                                                <TextBlock Text="{Binding Type}" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,2,0,0"/>
                                             </StackPanel>
                                         </Grid>
                                     </Border>
                                     <ControlTemplate.Triggers>
                                         <Trigger Property="IsSelected" Value="True">
-                                            <Setter TargetName="Bg" Property="Background" Value="#313244"/>
+                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurface}"/>
                                         </Trigger>
                                         <Trigger Property="IsMouseOver" Value="True">
-                                            <Setter TargetName="Bg" Property="Background" Value="#45475A"/>
+                                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
                                         </Trigger>
                                     </ControlTemplate.Triggers>
                                 </ControlTemplate>

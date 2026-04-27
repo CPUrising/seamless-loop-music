@@ -421,7 +421,7 @@ namespace seamless_loop_music.UI.ViewModels
             var tracksToAdd = SelectedTracks.Count > 1 ? SelectedTracks.ToList() : new List<MusicTrack> { track ?? SelectedTrack };
             if (!tracksToAdd.Any() || tracksToAdd.Any(t => t == null)) return;
 
-            var dialog = new Views.AddToPlaylistDialog(_playlistManager, tracksToAdd);
+            var dialog = new Views.AddToPlaylistDialog(_playlistManager, _eventAggregator, tracksToAdd);
             dialog.Owner = App.Current.MainWindow;
             dialog.ShowDialog();
         }
