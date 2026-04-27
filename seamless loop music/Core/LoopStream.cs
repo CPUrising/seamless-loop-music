@@ -15,6 +15,7 @@ namespace seamless_loop_music
         public long LoopStartPosition { get; set; } 
         public long LoopEndPosition { get; set; }  
         private int _bytesPerSample;
+        public bool EnableLooping { get; set; } = true;
 
         private readonly object _lockObject = new object(); // 线程锁
 
@@ -99,17 +100,18 @@ namespace seamless_loop_music
                 while (totalBytesRead < count)
                 {
                     long currentPos = _sourceStream.Position;
+                    long effectiveEnd = EnableLooping ? LoopEndPosition : _sourceStream.Length;
                     
-                    // 核心逻辑：如果到达或超过循环点，立刻回
-                    if (currentPos >= LoopEndPosition)
+                    // 核心逻辑：如果开启了循环且到达或超过循环点，立刻回
+                    if (EnableLooping && currentPos >= effectiveEnd)
                     {
                         SafeSetPosition(LoopStartPosition);
                         OnLoopCompleted?.Invoke();
                         currentPos = _sourceStream.Position;
                     }
 
-                    long remainingBytes = LoopEndPosition - currentPos;
-                    if (remainingBytes <= 0) break; // 防止死循环
+                    long remainingBytes = effectiveEnd - currentPos;
+                    if (remainingBytes <= 0) break; // 到达有效终点（循环点或文件末端）
 
                     int bytesToRead = (int)Math.Min(count - totalBytesRead, remainingBytes);
                     // 再次确保 bytesToRead 也是块对齐的
@@ -117,19 +119,34 @@ namespace seamless_loop_music
                     
                     if (bytesToRead <= 0)
                     {
-                        // 剩下的太小了，不够一个块，强制触发跳转
-                        SafeSetPosition(LoopStartPosition);
-                        OnLoopCompleted?.Invoke();
-                        continue;
+                        if (EnableLooping)
+                        {
+                            // 剩下的太小了，不够一个块，强制触发跳转
+                            SafeSetPosition(LoopStartPosition);
+                            OnLoopCompleted?.Invoke();
+                            continue;
+                        }
+                        else
+                        {
+                            // 到达文件末尾但不足一帧，直接结束
+                            break;
+                        }
                     }
 
                     int bytesRead = _sourceStream.Read(buffer, offset + totalBytesRead, bytesToRead);
                     if (bytesRead == 0)
                     {
-                        // 源流意外结束，尝试跳转
-                        SafeSetPosition(LoopStartPosition);
-                        OnLoopCompleted?.Invoke();
-                        if (_sourceStream.Position == currentPos) break; // 真的说不清了
+                        if (EnableLooping)
+                        {
+                            // 源流意外结束，尝试跳转
+                            SafeSetPosition(LoopStartPosition);
+                            OnLoopCompleted?.Invoke();
+                            if (_sourceStream.Position == currentPos) break; // 真的说不清了
+                        }
+                        else
+                        {
+                            break; // 真正结束
+                        }
                     }
                     else
                     {

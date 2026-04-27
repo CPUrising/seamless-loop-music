@@ -21,6 +21,7 @@ namespace seamless_loop_music
         private System.Threading.CancellationTokenSource _fillerCts;
         private volatile bool _isSeeking = false;
         public bool IsSeeking => _isSeeking;
+        private volatile bool _isEndingNaturally = false;
 
         private volatile bool _isSeamlessLoopEnabled = true;
         public bool IsSeamlessLoopEnabled
@@ -62,6 +63,7 @@ namespace seamless_loop_music
         public event Action<PlaybackState> OnPlayStateChanged; 
         public event Action<long, int> OnAudioLoaded;
         public event Action OnLoopCycleCompleted;
+        public event Action OnTrackEnded;
         public event Action<Exception> OnPlaybackError;
 
         private string _currentFilePath; 
@@ -146,6 +148,8 @@ namespace seamless_loop_music
         {
             if (_audioStream == null || _loopStream == null) return;
 
+            _loopStream.EnableLooping = _isSeamlessLoopEnabled;
+
             long startSample = _loopStartSample;
             long endSample = _loopEndSample;
 
@@ -176,7 +180,8 @@ namespace seamless_loop_music
             }
 
             // 如果已经在播放，也同步一次配置
-            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
+            // 改进：如果标记为自然结束，说明已经播完了，必须重新开始播放
+            if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing && !_isEndingNaturally)
             {
                  SyncLoopConfig();
                  return;
@@ -229,6 +234,16 @@ namespace seamless_loop_music
 
             try
             {
+                _isEndingNaturally = false;
+                
+                // 核心修复：如果已存在旧播放器，先彻底释放，防止设备占用冲突
+                if (_wavePlayer != null)
+                {
+                    _wavePlayer.PlaybackStopped -= WavePlayer_PlaybackStopped;
+                    _wavePlayer.Dispose();
+                    _wavePlayer = null;
+                }
+
                 // 全新开始：创建循环流
                 _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
                 SyncLoopConfig(); // 必须调用同步，以应用特色循环开关等动态配置
@@ -238,7 +253,8 @@ namespace seamless_loop_music
                 _bufferedProvider = new BufferedWaveProvider(_loopStream.WaveFormat)
                 {
                     BufferDuration = TimeSpan.FromSeconds(3), // 增加到3秒，防止毫秒级的溢出
-                    DiscardOnBufferOverflow = true
+                    DiscardOnBufferOverflow = true,
+                    ReadFully = false
                 };
 
                 // 创建播放器
@@ -252,6 +268,15 @@ namespace seamless_loop_music
 
                 _wavePlayer.Init(_bufferedProvider);
                 _wavePlayer.PlaybackStopped += WavePlayer_PlaybackStopped;
+
+                // 核心修复：同步预填充缓冲区，确保播放器启动时有数据可读
+                // 如果 ReadFully=false 且缓冲区为空，WaveOutEvent 会立即停止
+                var preBuffer = new byte[_loopStream.WaveFormat.AverageBytesPerSecond]; // 预填 ~1 秒
+                int preRead = _loopStream.Read(preBuffer, 0, preBuffer.Length);
+                if (preRead > 0)
+                {
+                    _bufferedProvider.AddSamples(preBuffer, 0, preRead);
+                }
 
                 // 启动后台填充任务
                 StartFillerTask();
@@ -285,6 +310,7 @@ namespace seamless_loop_music
         /// </summary>
         public void Stop()
         {
+            _isEndingNaturally = false;
             if (_wavePlayer == null || _wavePlayer.PlaybackState == PlaybackState.Stopped) return;
 
             try
@@ -302,7 +328,8 @@ namespace seamless_loop_music
 
         private void WavePlayer_PlaybackStopped(object sender, StoppedEventArgs e)
         {
-            if (_isLoading) return;
+            // 核心改进：忽略来自旧实例或正在加载时的事件
+            if (_isLoading || sender != _wavePlayer) return;
 
             // 核心健壮性改进：捕获底层异常
             if (e.Exception != null)
@@ -316,6 +343,12 @@ namespace seamless_loop_music
             {
                 OnPlayStateChanged?.Invoke(PlaybackState.Stopped);
                 OnStatusChanged?.Invoke("Playback stopped.");
+
+                if (_isEndingNaturally)
+                {
+                    _isEndingNaturally = false;
+                    OnTrackEnded?.Invoke();
+                }
             }
         }
 
@@ -355,7 +388,7 @@ namespace seamless_loop_music
                             long loopEnd = _loopStream.LoopEndPosition;
                             long loopLen = loopEnd - loopStart;
 
-                            if (loopLen > 0)
+                            if (loopLen > 0 && _isSeamlessLoopEnabled)
                             {
                                 // 如果播放位置跌出了循环起点，但填充器已经跳回循环区了
                                 if (speakerPos < loopStart && fillerPos >= loopStart)
@@ -415,6 +448,7 @@ namespace seamless_loop_music
         {
             if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
             {
+                _isEndingNaturally = false;
                 lock (_streamLock) // 占位锁，确保此时后台没有在 Read
                 {
                     _isSeeking = true;

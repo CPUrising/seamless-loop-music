@@ -91,6 +91,19 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
+        public bool IsSeamlessLoopEnabled
+        {
+            get => _playbackService.IsSeamlessLoopEnabled;
+            set
+            {
+                if (_playbackService.IsSeamlessLoopEnabled != value)
+                {
+                    _playbackService.IsSeamlessLoopEnabled = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
+
         public DelegateCommand PlayCommand { get; }
         public DelegateCommand StopCommand { get; }
         public DelegateCommand PrevCommand { get; }

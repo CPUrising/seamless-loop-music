@@ -318,7 +318,7 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (track == null) return;
             _playbackService.SetQueue(TracksView.Cast<MusicTrack>().ToList(), track);
-            _playbackService.LoadTrackAsync(track, true).ConfigureAwait(false);
+            _playbackService.LoadTrackAsync(track, true);
         }
 
         private void OnOpenDetail(MusicTrack track)
@@ -484,7 +484,7 @@ namespace seamless_loop_music.UI.ViewModels
             if (SelectedTracks.Any())
             {
                 _playbackService.SetQueue(SelectedTracks.ToList(), SelectedTracks.First());
-                _playbackService.LoadTrackAsync(SelectedTracks.First(), true).ConfigureAwait(false);
+                _playbackService.LoadTrackAsync(SelectedTracks.First(), true);
             }
         }
 

@@ -20,6 +20,7 @@ namespace seamless_loop_music.Services
         private readonly IPlaylistManager _playlistManager;
         private readonly IQueueManager _queueManager;
         private readonly TrackMetadataService _metadataService;
+        private readonly System.Threading.SemaphoreSlim _loadLock = new System.Threading.SemaphoreSlim(1, 1);
 
         public MusicTrack CurrentTrack { get; private set; }
         public PlaybackState PlaybackState => _audioLooper?.PlaybackState ?? PlaybackState.Stopped;
@@ -65,43 +66,66 @@ namespace seamless_loop_music.Services
             {
                 QueueChanged?.Invoke();
             };
+
+            _audioLooper.OnTrackEnded += OnTrackEnded;
+        }
+
+        private void OnTrackEnded()
+        {
+            if (PlayMode == PlayMode.SingleLoop)
+            {
+                SeekToSample(0);
+                Play();
+            }
+            else
+            {
+                Next();
+            }
         }
 
         public async Task LoadTrackAsync(MusicTrack track, bool autoPlay = false)
         {
             if (track == null) return;
 
-            // 如果曲目没变且已经在播放，则不需要重新加载音频流，避免打断
-            bool isAlreadyLoaded = CurrentTrack != null && CurrentTrack.Id == track.Id;
-            
-            CurrentTrack = track;
-
-            if (!isAlreadyLoaded)
+            await _loadLock.WaitAsync();
+            try
             {
-                string partB = _metadataService.FindPartB(track.FilePath);
-                await Task.Run(() => _audioLooper.LoadAudio(track.FilePath, partB));
+                // 如果曲目没变且已经在播放，则不需要重新加载音频流，避免打断
+                bool isAlreadyLoaded = CurrentTrack != null && CurrentTrack.Id == track.Id;
+                
+                CurrentTrack = track;
 
-                // 核心逻辑：如果是 A/B 融合模式，且数据库记录的长度与实际拼接后的长度差异显著
-                if (_audioLooper.IsABFusionLoaded && (track.LoopEnd <= 0 || Math.Abs(track.TotalSamples - _audioLooper.TotalSamples) > 10000))
+                if (!isAlreadyLoaded)
                 {
-                    track.LoopStart = _audioLooper.LoopStartSample;
-                    track.LoopEnd = _audioLooper.LoopEndSample;
-                    track.TotalSamples = _audioLooper.TotalSamples;
-                    _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
+                    string partB = _metadataService.FindPartB(track.FilePath);
+                    await Task.Run(() => _audioLooper.LoadAudio(track.FilePath, partB));
+
+                    // 核心逻辑：如果是 A/B 融合模式，且数据库记录的长度与实际拼接后的长度差异显著
+                    if (_audioLooper.IsABFusionLoaded && (track.LoopEnd <= 0 || Math.Abs(track.TotalSamples - _audioLooper.TotalSamples) > 10000))
+                    {
+                        track.LoopStart = _audioLooper.LoopStartSample;
+                        track.LoopEnd = _audioLooper.LoopEndSample;
+                        track.TotalSamples = _audioLooper.TotalSamples;
+                        _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
+                    }
+                    else
+                    {
+                        _audioLooper.SetLoopStartSample(track.LoopStart);
+                        _audioLooper.SetLoopEndSample(track.LoopEnd);
+                    }
                 }
-                else
+
+                TrackChanged?.Invoke(track);
+                _eventAggregator.GetEvent<TrackLoadedEvent>().Publish(track);
+
+                if (autoPlay)
                 {
-                    _audioLooper.SetLoopStartSample(track.LoopStart);
-                    _audioLooper.SetLoopEndSample(track.LoopEnd);
+                    Play();
                 }
             }
-
-            TrackChanged?.Invoke(track);
-            _eventAggregator.GetEvent<TrackLoadedEvent>().Publish(track);
-
-            if (autoPlay)
+            finally
             {
-                Play();
+                _loadLock.Release();
             }
         }
 

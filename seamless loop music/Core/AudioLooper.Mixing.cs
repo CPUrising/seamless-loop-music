@@ -84,6 +84,12 @@ namespace seamless_loop_music
                             }
                             if (read <= 0) 
                             {
+                                // 核心改动：如果不在循环模式且读取结束，标记自然结束
+                                if (!_isSeamlessLoopEnabled && !_isSeeking)
+                                {
+                                    _isEndingNaturally = true;
+                                    break; // 停止填充线程，等待播放器排空缓冲区后停止
+                                }
                                 Thread.Sleep(20);
                             }
                         }

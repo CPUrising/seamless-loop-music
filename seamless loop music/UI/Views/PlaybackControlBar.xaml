@@ -81,7 +81,7 @@
                         Foreground="{StaticResource BrushTextSecondary}"
                         Margin="0,0,8,0" Padding="4,0" Height="28" FontSize="12"
                         ToolTip="{Binding [PlayModeToolTip], Source={StaticResource Loc}}"/>
-                <ToggleButton IsChecked="{Binding IsFeatureLoopEnabled}"
+                <ToggleButton IsChecked="{Binding IsSeamlessLoopEnabled}"
                                Style="{StaticResource ControlToggleStyle}"
                                Margin="0,0,10,0"
                                ToolTip="{Binding [FeatureLoop], Source={StaticResource Loc}}">
