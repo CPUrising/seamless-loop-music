@@ -343,17 +343,41 @@ namespace seamless_loop_music
                 {
                     if (_audioStream != null && _bufferedProvider != null)
                     {
-                        // 直接根据底层流的物理位置减去尚未播放的缓冲字节数，得到最真实的扬声器位置
-                        long speakerPos = _audioStream.Position - _bufferedProvider.BufferedBytes;
+                        // 1. 获取物理位置和缓冲量
+                        long fillerPos = _audioStream.Position;
+                        long bufferedBytes = _bufferedProvider.BufferedBytes;
+                        long speakerPos = fillerPos - bufferedBytes;
                         
-                        // 处理循环回绕：如果由于缓冲导致计算出的位置为负，说明扬声器还在上一轮循环的末尾
+                        // 2. 【逻辑回绕补偿】处理循环导致的过早跳变
+                        if (_loopStream != null)
+                        {
+                            long loopStart = _loopStream.LoopStartPosition;
+                            long loopEnd = _loopStream.LoopEndPosition;
+                            long loopLen = loopEnd - loopStart;
+
+                            if (loopLen > 0)
+                            {
+                                // 如果播放位置跌出了循环起点，但填充器已经跳回循环区了
+                                if (speakerPos < loopStart && fillerPos >= loopStart)
+                                {
+                                    // 判定：加上一个循环长度后，如果它还在合理的循环区间内，说明需要补偿
+                                    if (speakerPos + loopLen < loopEnd + (long)(_audioStream.WaveFormat.AverageBytesPerSecond * 5))
+                                    {
+                                        speakerPos += loopLen;
+                                    }
+                                }
+                            }
+                        }
+
+                        // 3. 处理基础的文件末尾回绕
                         if (speakerPos < 0) 
                         {
                             speakerPos += _audioStream.Length;
                         }
 
-                        // 确保不越界
-                        if (speakerPos > _audioStream.Length) speakerPos %= _audioStream.Length;
+                        // 4. 边界约束
+                        if (speakerPos < 0) speakerPos = 0;
+                        if (speakerPos > _audioStream.Length) speakerPos = _audioStream.Length;
 
                         return TimeSpan.FromSeconds((double)speakerPos / _audioStream.WaveFormat.AverageBytesPerSecond);
                     }
