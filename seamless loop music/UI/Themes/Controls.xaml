@@ -73,17 +73,26 @@
                           HorizontalAlignment="Stretch">
                         <Border x:Name="Indicator" Width="3" Height="20" Background="{StaticResource BrushAccent}" HorizontalAlignment="Left" Visibility="Hidden" Margin="2,0,0,0"/>
                         <Border x:Name="ContentBorder" Background="Transparent" CornerRadius="8" Margin="4,4" Padding="8" HorizontalAlignment="Center" Width="48" Height="48">
-                            <TextBlock Text="{Binding Icon}" FontSize="24" Foreground="White" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="Icon" Text="{Binding Icon}" FontSize="24" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ContentBorder" Property="Background" Value="#1E1E2E"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="#11111B"/>
+                            <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource BrushAccent}"/>
                             <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="ContentBorder" Property="Background" Value="#313244"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushSurface}"/>
+                            <Setter TargetName="Icon" Property="Foreground" Value="White"/>
                         </Trigger>
+                        <MultiTrigger>
+                            <MultiTrigger.Conditions>
+                                <Condition Property="IsSelected" Value="True"/>
+                                <Condition Property="IsMouseOver" Value="True"/>
+                            </MultiTrigger.Conditions>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="#0D0D16"/>
+                        </MultiTrigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Trigger.EnterActions>
                                 <BeginStoryboard>
