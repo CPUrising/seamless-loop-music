@@ -2,8 +2,8 @@
 
 ---
 **编写者**: 莱芙・泽诺 (Lev Zenith)
-**日期**: 2026-04-26
-**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaybackService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。
+**日期**: 2026-04-28
+**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类。新增 PlayPauseIconConverter 值转换器。
 
 ---
 
@@ -23,6 +23,7 @@
 这是项目的"心脏"，负责最底层的声音处理。
 - `AudioLooper.cs`: 核心控制中心，处理播放状态（Play/Pause/Stop）以及精细的采样跳转逻辑。为了维护方便，已拆分为 `Analysis`（分析）、`Loader`（加载）和 `Mixing`（混音）等分部类。
 - `LoopStream.cs`: 自定义的音频流包装类，确保在到达循环终点时能实现毫秒级的无感跳转。
+- `ConcatenatedStream.cs`: 逻辑拼接流，按顺序连接两个 WaveStream，实现零内存损耗的无缝播放。
 
 ### 📂 Events (事件通信层) — `seamless loop music/Events/` — Prism EventAggregator
 项目的"神经网络"，负责各层之间的消息传递。
@@ -55,13 +56,13 @@
 - `PlayerService.cs`: 顶层业务管理器，协调 UI、音频引擎和数据库。
 - `IPlayerService.cs`: 播放器服务抽象接口。
 - `PlaybackService.cs`: 播放控制服务实现。
-- `IPlaybackService.cs`: 播放控制服务接口。
+- `IPlaybackService.cs`: 播放控制服务接口（注意：与 `IPlayerService.cs` 冗余）。
 - `PlaylistManagerService.cs`: 负责管理虚拟播放列表、拖拽排序以及歌曲的逻辑增删。
 - `IPlaylistManagerService.cs`: 播放列表管理服务抽象接口。
 - `PlaylistManager.cs`: 播放列表管理器实现。
 - `IPlaylistManager.cs`: 播放列表管理器接口。
-- `QueueManager.cs`: 专门处理播放队列的逻辑，如切歌顺序、循环模式等。
-- `IQueueManager.cs`: 队列管理器抽象接口。
+- `QueueManager.cs`: **保留** — 播放队列管理器（功能与 `PlaybackQueueService` 部分重叠）。
+- `IQueueManager.cs`: **保留** — 队列管理器接口。
 - `PyMusicLooperWrapper.cs`: 与 Python 库通信的桥梁，负责调用 `pymusiclooper` 进行循环点计算。
 - `LoopAnalysisService.cs`: 自动化分析逻辑，处理后台扫描和候选点获取。
 - `ILoopAnalysisService.cs`: 循环分析服务抽象接口。
@@ -70,6 +71,9 @@
 - `SearchService.cs`: 搜索服务，实现 0.4 秒防抖延迟的多关键词搜索。
 - `ISearchService.cs`: 搜索服务接口。
 - `PlaybackQueueService.cs`: 播放队列服务，负责管理播放列表、当前索引、播放模式以及切歌逻辑。
+- `AppStateService.cs` / `IAppStateService.cs`: 应用状态持久化服务，保存/恢复音量、播放模式、分类上下文和最后播放曲目。
+- `TaskbarService.cs` / `ITaskbarService.cs`: 任务栏控制服务，管理任务栏进度条和缩略图按钮。
+- `NotifyIconService.cs` / `INotifyIconService.cs`: 托盘图标管理服务，提供系统托盘图标、右键菜单和左键弹出控制面板。
 
 ### 📂 UI (展示层) - Prism MVVM + Material Design — `seamless loop music/UI/`
 项目的"门面"，负责与 **cpu 大人** 互动。
@@ -79,6 +83,7 @@
 - `LoopListWindow.xaml`: 专门用于显示和选择分析出来的多个循环点方案。
 - `FolderManagerWindow.xaml`: 管理被扫描的音乐文件夹。
 - `FolderPicker.cs`: 界面层的文件夹选择辅助工具。
+- `TrayControlsWindow.xaml[.cs]`: 托盘控制窗口，提供桌面小控制器。
 
 **视图层 (Views)**：
 - `Views/LoopWorkspace.xaml[.cs]`: 循环点编辑工作区。
@@ -98,11 +103,17 @@
 - `ViewModels/DetailViewModel.cs`: 曲目详情视图的 ViewModel。
 - `ViewModels/TrackListViewModel.cs`: 曲目列表的 ViewModel（实现 `INavigationAware`，支持分类过滤、收藏、评分、防抖搜索）。
 - `ViewModels/NowPlayingViewModel.cs`: 当前播放视图的 ViewModel。
+- `ViewModels/TrayControlsViewModel.cs`: 托盘控制窗口的 ViewModel。
 
 **控件与工具类**：
 - `Controls/MultiSelectListBox.cs`: 多选列表框控件。
+- `Controls/PlaybackControls.xaml[.cs]`: 播放控制自定义控件（播放/暂停/上一首/下一首）。
+- `Controls/VolumeControls.xaml[.cs]`: 音量控制自定义控件（音量滑块/静音按钮）。
+- `Controls/TrackInfoControl.xaml[.cs]`: 曲目信息自定义控件（封面/标题/艺术家）。
+- `Controls/ProgressControls.xaml[.cs]`: 进度条自定义控件（播放进度/循环点标记）。
 - `UI/Converters/VisibilityConverters.cs`: 值转换器（NullToVisibilityConverter、NullToVisibilityInverseConverter）。
 - `UI/Converters/BindingProxy.cs`: 绑定代理器（用于 MultiBinding）。
+- `UI/Converters/PlayPauseIconConverter.cs`: 播放/暂停图标状态转换器。
 
 ### 📂 App 入口 — `seamless loop music/`
 - `App.xaml`: 定义全局样式（Material Design 暗色皮肤）。
@@ -138,6 +149,7 @@
 - `.venv`: 独立的 Python 运行环境（用于 PyMusicLooper）。
 - `DEVELOPER_MANUAL.md`: 详细的开发者手册，记录了技术细节。
 - `progress/`: 此目录记录了我们所有的开发进度和路线图。
+- `UI/Themes/`: 主题资源目录，包含 `Icons.xaml`（图标库）、`Colors.xaml`（颜色定义）、`Styles.xaml`（全局样式）、`Controls.xaml`（控件模板）。
 
 ---
 
