@@ -39,6 +39,17 @@ namespace seamless_loop_music
         public double MatchWindowSize { get; set; } = 1.0; 
         public double MatchSearchRadius { get; set; } = 5.0; 
 
+        private bool _isFeatureLoopEnabled = true; // 默认开启：A/B 模式下只循环 Part B
+        public bool IsFeatureLoopEnabled
+        {
+            get => _isFeatureLoopEnabled;
+            set
+            {
+                _isFeatureLoopEnabled = value;
+                SyncLoopConfig();
+            }
+        }
+
 
         // 公开读写接口
         public long LoopStartSample => _loopStartSample;
@@ -70,12 +81,7 @@ namespace seamless_loop_music
                 return;
             }
             _loopStartSample = sample;
-            if (_loopStream != null)
-            {
-                _loopStream.LoopStartPosition = sample * _audioStream.WaveFormat.BlockAlign;
-                // 注意：这里不强制 ClearBuffer，因为起点变化通常不影响当前正在播放的片段
-                // 只有当起点被设为当前点之后（比如往前跳了）才需要考虑，但为了稳定最好不 Clear
-            }
+            SyncLoopConfig();
             
             OnStatusChanged?.Invoke($"Loop Start set: {sample} ({sample / (double)_audioStream.WaveFormat.SampleRate:F2}s)");
         }
@@ -139,10 +145,20 @@ namespace seamless_loop_music
         private void SyncLoopConfig()
         {
             if (_audioStream == null || _loopStream == null) return;
-            
-            _loopStream.LoopStartPosition = _loopStartSample * _audioStream.WaveFormat.BlockAlign;
-            long endPos = _loopEndSample * _audioStream.WaveFormat.BlockAlign;
-            if (_loopEndSample <= 0 || endPos > _audioStream.Length)
+
+            long startSample = _loopStartSample;
+            long endSample = _loopEndSample;
+
+            // 特色循环逻辑：关闭特色循环时，变成全曲大循环 (0 -> Total)
+            if (!_isFeatureLoopEnabled)
+            {
+                startSample = 0;
+                endSample = _totalSamples;
+            }
+
+            _loopStream.LoopStartPosition = startSample * _audioStream.WaveFormat.BlockAlign;
+            long endPos = endSample * _audioStream.WaveFormat.BlockAlign;
+            if (endSample <= 0 || endPos > _audioStream.Length)
                 _loopStream.LoopEndPosition = _audioStream.Length;
             else
                 _loopStream.LoopEndPosition = endPos;
@@ -215,6 +231,7 @@ namespace seamless_loop_music
             {
                 // 全新开始：创建循环流
                 _loopStream = new LoopStream(_audioStream, _loopStartSample, _loopEndSample);
+                SyncLoopConfig(); // 必须调用同步，以应用特色循环开关等动态配置
                 _loopStream.OnLoopCompleted += () => OnLoopCycleCompleted?.Invoke();
 
                 // --- 异步缓冲系统配置 ---
@@ -324,34 +341,21 @@ namespace seamless_loop_music
             {
                 lock (_streamLock)
                 {
-                    if (_loopStream != null && _audioStream != null && _bufferedProvider != null)
+                    if (_audioStream != null && _bufferedProvider != null)
                     {
-                        long playedBytes = _totalBytesReadSinceSeek - _bufferedProvider.BufferedBytes;
-                        if (playedBytes < 0) playedBytes = 0;
+                        // 直接根据底层流的物理位置减去尚未播放的缓冲字节数，得到最真实的扬声器位置
+                        long speakerPos = _audioStream.Position - _bufferedProvider.BufferedBytes;
                         
-                        long playedSamples = playedBytes / _audioStream.WaveFormat.BlockAlign;
-                        long currentSample = _seekTargetSample + playedSamples;
-                        
-                        if (_loopEndSample > 0 && currentSample >= _loopEndSample)
+                        // 处理循环回绕：如果由于缓冲导致计算出的位置为负，说明扬声器还在上一轮循环的末尾
+                        if (speakerPos < 0) 
                         {
-                             long loopLength = _loopEndSample - _loopStartSample;
-                             if (loopLength > 0)
-                             {
-                                 long overshoot = currentSample - _loopEndSample;
-                                 currentSample = _loopStartSample + (overshoot % loopLength);
-                             }
-                        }
-                        else if (_loopEndSample <= 0 && currentSample >= _totalSamples)
-                        {
-                             long loopLength = _totalSamples - _loopStartSample;
-                             if (loopLength > 0)
-                             {
-                                 long overshoot = currentSample - _totalSamples;
-                                 currentSample = _loopStartSample + (overshoot % loopLength);
-                             }
+                            speakerPos += _audioStream.Length;
                         }
 
-                        return TimeSpan.FromSeconds((double)currentSample / _audioStream.WaveFormat.SampleRate);
+                        // 确保不越界
+                        if (speakerPos > _audioStream.Length) speakerPos %= _audioStream.Length;
+
+                        return TimeSpan.FromSeconds((double)speakerPos / _audioStream.WaveFormat.AverageBytesPerSecond);
                     }
                 }
                 return TimeSpan.Zero;

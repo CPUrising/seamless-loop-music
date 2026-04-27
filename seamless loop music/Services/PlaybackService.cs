@@ -29,6 +29,7 @@ namespace seamless_loop_music.Services
         public bool IsABFusionLoaded => _audioLooper?.IsABFusionLoaded ?? false;
         public float Volume { get => _audioLooper.Volume; set => _audioLooper.Volume = value; }
         public bool IsSeamlessLoopEnabled { get => _audioLooper.IsSeamlessLoopEnabled; set => _audioLooper.IsSeamlessLoopEnabled = value; }
+        public bool IsFeatureLoopEnabled { get => _audioLooper.IsFeatureLoopEnabled; set => _audioLooper.IsFeatureLoopEnabled = value; }
         public double MatchWindowSize { get => _audioLooper.MatchWindowSize; set => _audioLooper.MatchWindowSize = value; }
         public double MatchSearchRadius { get => _audioLooper.MatchSearchRadius; set => _audioLooper.MatchSearchRadius = value; }
 

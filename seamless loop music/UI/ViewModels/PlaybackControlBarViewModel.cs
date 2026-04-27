@@ -65,6 +65,19 @@ namespace seamless_loop_music.UI.ViewModels
                     _playbackService.Volume = (float)(value / 100.0); 
             } 
         }
+        
+        public bool IsFeatureLoopEnabled
+        {
+            get => _playbackService.IsFeatureLoopEnabled;
+            set
+            {
+                if (_playbackService.IsFeatureLoopEnabled != value)
+                {
+                    _playbackService.IsFeatureLoopEnabled = value;
+                    RaisePropertyChanged();
+                }
+            }
+        }
 
         public DelegateCommand PlayCommand { get; }
         public DelegateCommand StopCommand { get; }

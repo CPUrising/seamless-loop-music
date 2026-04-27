@@ -29,6 +29,7 @@ namespace seamless_loop_music.Services
 
         public float Volume { get => _playbackService.Volume; set => _playbackService.Volume = value; }
         public bool IsSeamlessLoopEnabled { get => _playbackService.IsSeamlessLoopEnabled; set => _playbackService.IsSeamlessLoopEnabled = value; }
+        public bool IsFeatureLoopEnabled { get => _playbackService.IsFeatureLoopEnabled; set => _playbackService.IsFeatureLoopEnabled = value; }
         public double MatchWindowSize { get; set; } = 1.0;
         public double MatchSearchRadius { get; set; } = 5.0;
 

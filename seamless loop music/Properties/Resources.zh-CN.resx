@@ -100,4 +100,16 @@
   <data name="MenuNewPlaylist" xml:space="preserve">
     <value>新建歌单</value>
   </data>
+  <data name="FeatureLoop" xml:space="preserve">
+    <value>特色循环</value>
+  </data>
+  <data name="FeatureLoopToolTip" xml:space="preserve">
+    <value>在 A/B 融合模式下切换：开启时循环 B 段，关闭时循环全曲 A+B。</value>
+  </data>
+  <data name="ResetAB" xml:space="preserve">
+    <value>恢复 AB 衔接</value>
+  </data>
+  <data name="ResetABToolTip" xml:space="preserve">
+    <value>将循环点重置为 A/B 拼接处。</value>
+  </data>
 </root>

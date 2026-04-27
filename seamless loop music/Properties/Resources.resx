@@ -100,4 +100,16 @@
   <data name="MenuNewPlaylist" xml:space="preserve">
     <value>New Playlist</value>
   </data>
+  <data name="FeatureLoop" xml:space="preserve">
+    <value>Special Loop</value>
+  </data>
+  <data name="FeatureLoopToolTip" xml:space="preserve">
+    <value>Toggle between Partial (Loop B) or Full (A+B) loop in A/B fusion mode.</value>
+  </data>
+  <data name="ResetAB" xml:space="preserve">
+    <value>Reset AB</value>
+  </data>
+  <data name="ResetABToolTip" xml:space="preserve">
+    <value>Reset loop points to the A/B seam point.</value>
+  </data>
 </root>

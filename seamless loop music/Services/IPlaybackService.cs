@@ -16,6 +16,7 @@ namespace seamless_loop_music.Services
         bool IsABFusionLoaded { get; }
         float Volume { get; set; }
         bool IsSeamlessLoopEnabled { get; set; }
+        bool IsFeatureLoopEnabled { get; set; }
         double MatchWindowSize { get; set; }
         double MatchSearchRadius { get; set; }
 

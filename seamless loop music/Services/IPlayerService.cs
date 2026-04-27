@@ -51,6 +51,7 @@ namespace seamless_loop_music.Services
         
         float Volume { get; set; }
         bool IsSeamlessLoopEnabled { get; set; }
+        bool IsFeatureLoopEnabled { get; set; }
         double MatchWindowSize { get; set; }
         double MatchSearchRadius { get; set; }
         
