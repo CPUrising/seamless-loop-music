@@ -340,4 +340,7 @@
   <data name="BtnCancel" xml:space="preserve">
     <value>取消</value>
   </data>
+  <data name="BtnClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
 </root>

@@ -4,10 +4,14 @@
              xmlns:local="clr-namespace:seamless_loop_music"
              xmlns:services="clr-namespace:seamless_loop_music.Services"
              xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
+             xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:prism="http://prismlibrary.com/">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
+                <materialDesign:BundledTheme BaseTheme="Dark" PrimaryColor="DeepPurple" SecondaryColor="Lime" />
+                <ResourceDictionary Source="pack://application:,,,/MaterialDesignThemes.Wpf;component/Themes/MaterialDesign2.Defaults.xaml" />
+                
                 <ResourceDictionary Source="UI/Themes/Colors.xaml"/>
                 <ResourceDictionary Source="UI/Themes/Icons.xaml"/>
                 <ResourceDictionary Source="UI/Themes/Styles.xaml"/>
