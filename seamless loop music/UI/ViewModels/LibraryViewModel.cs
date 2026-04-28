@@ -178,7 +178,7 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand RenamePlaylistCommand { get; }
         public DelegateCommand DeletePlaylistCommand { get; }
         public DelegateCommand CreatePlaylistCommand { get; }
-        public DelegateCommand RefreshPlaylistCommand => new DelegateCommand(() => LoadCategoryItems());
+        public DelegateCommand RefreshPlaylistCommand => new DelegateCommand(() => { var _ = LoadCategoryItems(); });
 
         private async void OnPlayCategoryItem(CategoryItem item)
         {

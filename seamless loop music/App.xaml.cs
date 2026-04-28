@@ -1,6 +1,9 @@
 using System;
 using System.Windows;
 using System.Threading.Tasks;
+using System.Threading;
+using System.Runtime.InteropServices;
+using System.Diagnostics;
 using Prism.Unity;
 using Prism.Ioc;
 using Prism.Modularity;
@@ -16,6 +19,49 @@ namespace seamless_loop_music
 {
     public partial class App : PrismApplication
     {
+        private static Mutex _mutex = null;
+
+        [DllImport("user32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        static extern bool SetForegroundWindow(IntPtr hWnd);
+
+        [DllImport("user32.dll")]
+        static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+
+        private const int SW_RESTORE = 9;
+
+        protected override void OnStartup(StartupEventArgs e)
+        {
+            const string appName = "SeamlessLoopMusicAppMutex_SingleInstance";
+            bool createdNew;
+
+            _mutex = new Mutex(true, appName, out createdNew);
+
+            if (!createdNew)
+            {
+                // App is already running. Bring existing instance to front.
+                Process currentProcess = Process.GetCurrentProcess();
+                foreach (Process process in Process.GetProcessesByName(currentProcess.ProcessName))
+                {
+                    if (process.Id != currentProcess.Id)
+                    {
+                        IntPtr hWnd = process.MainWindowHandle;
+                        if (hWnd != IntPtr.Zero)
+                        {
+                            ShowWindow(hWnd, SW_RESTORE);
+                            SetForegroundWindow(hWnd);
+                        }
+                        break;
+                    }
+                }
+
+                Application.Current.Shutdown();
+                return;
+            }
+
+            base.OnStartup(e);
+        }
+
         public App()
         {
             try {
