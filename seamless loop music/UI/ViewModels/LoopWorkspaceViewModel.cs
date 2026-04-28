@@ -66,9 +66,29 @@ namespace seamless_loop_music.UI.ViewModels
             get => _loopStartSample;
             set
             {
-                if (SetProperty(ref _loopStartSample, value))
+                long total = _currentTrack?.TotalSamples ?? 0;
+                if (!long.TryParse(value, out long val)) val = 0;
+                val = Math.Max(0, Math.Min(total, val));
+
+                long end = long.TryParse(LoopEndSample, out long e) ? e : total;
+                bool pushedEnd = false;
+                if (val > end)
                 {
-                    UpdateSecFromSamples();
+                    _loopEndSample = val.ToString();
+                    pushedEnd = true;
+                    RaisePropertyChanged(nameof(LoopEndSample));
+                }
+
+                string validated = val.ToString();
+                if (_loopStartSample != validated)
+                {
+                    _loopStartSample = validated;
+                    RaisePropertyChanged();
+                    UpdateSecFromSamples(true, pushedEnd);
+                }
+                else if (value != validated)
+                {
+                    RaisePropertyChanged();
                 }
             }
         }
@@ -79,9 +99,23 @@ namespace seamless_loop_music.UI.ViewModels
             get => _loopEndSample;
             set
             {
-                if (SetProperty(ref _loopEndSample, value))
+                long total = _currentTrack?.TotalSamples ?? 0;
+                if (!long.TryParse(value, out long val)) val = total;
+                val = Math.Max(0, Math.Min(total, val));
+
+                long start = long.TryParse(LoopStartSample, out long s) ? s : 0;
+                if (val < start) val = start;
+
+                string validated = val.ToString();
+                if (_loopEndSample != validated)
                 {
-                    UpdateSecFromSamples();
+                    _loopEndSample = validated;
+                    RaisePropertyChanged();
+                    UpdateSecFromSamples(false, true);
+                }
+                else if (value != validated)
+                {
+                    RaisePropertyChanged();
                 }
             }
         }
@@ -92,9 +126,21 @@ namespace seamless_loop_music.UI.ViewModels
             get => _loopStartSec;
             set
             {
-                if (SetProperty(ref _loopStartSec, value))
+                int rate = GetCurrentRate();
+                double totalSec = (_currentTrack?.TotalSamples ?? 0) / (double)rate;
+                if (!double.TryParse(value, out double val)) val = 0;
+                val = Math.Max(0, Math.Min(totalSec, val));
+
+                string validated = val.ToString("F3");
+                if (_loopStartSec != validated)
                 {
-                    UpdateSamplesFromSecStart();
+                    _loopStartSec = validated;
+                    RaisePropertyChanged();
+                    UpdateSamplesFromSec(true, false);
+                }
+                else if (value != validated)
+                {
+                    RaisePropertyChanged();
                 }
             }
         }
@@ -105,9 +151,21 @@ namespace seamless_loop_music.UI.ViewModels
             get => _loopEndSec;
             set
             {
-                if (SetProperty(ref _loopEndSec, value))
+                int rate = GetCurrentRate();
+                double totalSec = (_currentTrack?.TotalSamples ?? 0) / (double)rate;
+                if (!double.TryParse(value, out double val)) val = totalSec;
+                val = Math.Max(0, Math.Min(totalSec, val));
+
+                string validated = val.ToString("F3");
+                if (_loopEndSec != validated)
                 {
-                    UpdateSamplesFromSecEnd();
+                    _loopEndSec = validated;
+                    RaisePropertyChanged();
+                    UpdateSamplesFromSec(false, true);
+                }
+                else if (value != validated)
+                {
+                    RaisePropertyChanged();
                 }
             }
         }
@@ -165,9 +223,22 @@ namespace seamless_loop_music.UI.ViewModels
         private void OnLoopPointsChanged((long start, long end) points)
         {
             _isUpdatingInternally = true;
-            LoopStartSample = points.start.ToString();
-            LoopEndSample = points.end.ToString();
-            _isUpdatingInternally = false;
+            try
+            {
+                LoopStartSample = points.start.ToString();
+                LoopEndSample = points.end.ToString();
+                
+                int rate = GetCurrentRate();
+                if (rate > 0)
+                {
+                    LoopStartSec = ((double)points.start / rate).ToString("F3");
+                    LoopEndSec = ((double)points.end / rate).ToString("F3");
+                }
+            }
+            finally
+            {
+                _isUpdatingInternally = false;
+            }
         }
 
         private void UpdateAudioInfo(MusicTrack track)
@@ -175,7 +246,6 @@ namespace seamless_loop_music.UI.ViewModels
             bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
             long total = track?.TotalSamples ?? 0;
             
-            // 如果正是正在播的歌，用播放器的采样率；否则从文件读
             int rate = (_playbackService.CurrentTrack?.Id == track?.Id)
                 ? _playbackService.SampleRate
                 : _metadataService.GetSampleRate(track?.FilePath);
@@ -277,8 +347,6 @@ namespace seamless_loop_music.UI.ViewModels
 
                 if (candidates == null || candidates.Count == 0)
                 {
-                    // 确保播放服务知道我们在分析哪首歌，但不一定要播放它
-                    // 不过 PyMusicLooper 脚本通常直接读文件，这里可能不需要 LoadTrackAsync
                     candidates = await _playerService.GetLoopCandidatesAsync();
                     
                     if (candidates != null && candidates.Count > 0)
@@ -327,8 +395,6 @@ namespace seamless_loop_music.UI.ViewModels
 
             if (long.TryParse(LoopEndSample, out long end) && long.TryParse(LoopStartSample, out long start))
             {
-                // 核心改动：只有在这里，用户明确想听编辑效果时，才去加载音频
-                // 如果当前播的不是编辑中的这首，先加载它
                 if (_playbackService.CurrentTrack?.Id != _currentTrack?.Id)
                 {
                     await _playbackService.LoadTrackAsync(_currentTrack, false);
@@ -336,7 +402,7 @@ namespace seamless_loop_music.UI.ViewModels
 
                 _playbackService.SetLoopPoints(start, end);
                 
-                int rate = _playbackService.SampleRate; // 此时已经加载了，可以用播放器的采样率
+                int rate = _playbackService.SampleRate; 
                 long previewOffset = rate * 3;
                 long target = end - previewOffset;
                 
@@ -354,54 +420,54 @@ namespace seamless_loop_music.UI.ViewModels
             _playbackService.MatchSearchRadius = SearchRadius;
         }
 
-        private void UpdateSecFromSamples()
+        private int GetCurrentRate()
         {
-            if (_isUpdatingInternally) return;
-            _isUpdatingInternally = true;
-            
             int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
                 ? _playbackService.SampleRate
                 : _metadataService.GetSampleRate(_currentTrack?.FilePath);
             
-            if (rate <= 0) rate = 44100;
-
-            if (long.TryParse(LoopStartSample, out long s)) LoopStartSec = ((double)s / rate).ToString("F3");
-            if (long.TryParse(LoopEndSample, out long e)) LoopEndSec = ((double)e / rate).ToString("F3");
-            _isUpdatingInternally = false;
+            return rate > 0 ? rate : 44100;
         }
 
-        private void UpdateSamplesFromSecStart()
+        private void UpdateSecFromSamples(bool updateStart, bool updateEnd)
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
+            try
+            {
+                int rate = GetCurrentRate();
 
-            int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
-                ? _playbackService.SampleRate
-                : _metadataService.GetSampleRate(_currentTrack?.FilePath);
-            
-            if (rate <= 0) rate = 44100;
-
-            long total = _currentTrack?.TotalSamples ?? 0;
-            if (double.TryParse(LoopStartSec, out double sec))
-                LoopStartSample = ((long)Math.Max(0, Math.Min(total, sec * rate))).ToString();
-            _isUpdatingInternally = false;
+                if (updateStart && long.TryParse(LoopStartSample, out long s)) 
+                    LoopStartSec = ((double)s / rate).ToString("F3");
+                
+                if (updateEnd && long.TryParse(LoopEndSample, out long e)) 
+                    LoopEndSec = ((double)e / rate).ToString("F3");
+            }
+            finally
+            {
+                _isUpdatingInternally = false;
+            }
         }
 
-        private void UpdateSamplesFromSecEnd()
+        private void UpdateSamplesFromSec(bool updateStart, bool updateEnd)
         {
             if (_isUpdatingInternally) return;
             _isUpdatingInternally = true;
+            try
+            {
+                int rate = GetCurrentRate();
+                long total = _currentTrack?.TotalSamples ?? 0;
 
-            int rate = (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
-                ? _playbackService.SampleRate
-                : _metadataService.GetSampleRate(_currentTrack?.FilePath);
-            
-            if (rate <= 0) rate = 44100;
+                if (updateStart && double.TryParse(LoopStartSec, out double startSec))
+                    LoopStartSample = ((long)Math.Max(0, Math.Min(total, startSec * rate))).ToString();
 
-            long total = _currentTrack?.TotalSamples ?? 0;
-            if (double.TryParse(LoopEndSec, out double sec))
-                LoopEndSample = ((long)Math.Max(0, Math.Min(total, sec * rate))).ToString();
-            _isUpdatingInternally = false;
+                if (updateEnd && double.TryParse(LoopEndSec, out double endSec))
+                    LoopEndSample = ((long)Math.Max(0, Math.Min(total, endSec * rate))).ToString();
+            }
+            finally
+            {
+                _isUpdatingInternally = false;
+            }
         }
     }
 }

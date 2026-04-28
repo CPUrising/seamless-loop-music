@@ -58,8 +58,11 @@
                                      TextAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" 
                                      BorderBrush="{StaticResource BrushAccent}" BorderThickness="0,0,0,2" Margin="0,0,0,5"
                                      Background="Transparent" CaretBrush="{StaticResource BrushAccent}"/>
-                            <TextBlock Text="{Binding LoopStartSec}" 
-                                     Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="13" Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBox Text="{Binding LoopStartSec, UpdateSourceTrigger=PropertyChanged}" 
+                                     TextAlignment="Center" FontSize="14" Foreground="{StaticResource BrushTextPrimary}"
+                                     Opacity="0.7" Background="Transparent" BorderThickness="0,0,0,1" 
+                                     BorderBrush="{StaticResource BrushAccent}" Margin="30,5,30,0"
+                                     CaretBrush="{StaticResource BrushTextPrimary}"/>
 
                             <UniformGrid Columns="2" Margin="0,20,0,0">
                                 <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Command="{Binding AdjustCommand}" CommandParameter="Start:Min" Style="{StaticResource SecondaryButton}" Margin="3"/>
@@ -90,8 +93,11 @@
                                      TextAlignment="Center" FontSize="20" FontWeight="Bold" Foreground="{StaticResource BrushDanger}" 
                                      BorderBrush="{StaticResource BrushDanger}" BorderThickness="0,0,0,2" Margin="0,0,0,5"
                                      Background="Transparent" CaretBrush="{StaticResource BrushDanger}"/>
-                            <TextBlock Text="{Binding LoopEndSec}" 
-                                     Margin="0,5,0,0" Opacity="0.5" TextAlignment="Center" FontSize="13" Foreground="{StaticResource BrushTextPrimary}"/>
+                            <TextBox Text="{Binding LoopEndSec, UpdateSourceTrigger=PropertyChanged}" 
+                                     TextAlignment="Center" FontSize="14" Foreground="{StaticResource BrushTextPrimary}"
+                                     Opacity="0.7" Background="Transparent" BorderThickness="0,0,0,1" 
+                                     BorderBrush="{StaticResource BrushDanger}" Margin="30,5,30,0"
+                                     CaretBrush="{StaticResource BrushTextPrimary}"/>
 
                             <UniformGrid Columns="2" Margin="0,20,0,0">
                                 <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Command="{Binding AdjustCommand}" CommandParameter="End:Min" Style="{StaticResource SecondaryButton}" Margin="3"/>
