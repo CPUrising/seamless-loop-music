@@ -237,6 +237,9 @@
                                           Command="{Binding Data.PlaySelectedCommand, Source={StaticResource VmProxy}}"/>
                                 <MenuItem Header="{Binding [MenuAnalyze], Source={StaticResource Loc}}"
                                           Command="{Binding Data.BatchAnalyzeCommand, Source={StaticResource VmProxy}}"/>
+                                <MenuItem Header="{Binding [MenuRenameAlias], Source={StaticResource Loc}}"
+                                          Command="{Binding Data.RenameAliasCommand, Source={StaticResource VmProxy}}"
+                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Header="{Binding [MenuShowExplorer], Source={StaticResource Loc}}"
                                           Command="{Binding Data.ShowInExplorerCommand, Source={StaticResource VmProxy}}"

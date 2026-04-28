@@ -13,6 +13,7 @@ using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Events;
 using seamless_loop_music.Data.Repositories;
+using seamless_loop_music.UI.Views;
 
 namespace seamless_loop_music.UI.ViewModels
 {
@@ -141,6 +142,7 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<MusicTrack> AddToPlaylistCommand { get; }
         public DelegateCommand<MusicTrack> RemoveFromListCommand { get; }
         public DelegateCommand<MusicTrack> DeleteFromDiskCommand { get; }
+        public DelegateCommand<MusicTrack> RenameAliasCommand { get; }
         public DelegateCommand PlaySelectedCommand { get; }
         public DelegateCommand BatchAnalyzeCommand { get; }
         public DelegateCommand SelectAllCommand { get; }
@@ -172,6 +174,7 @@ namespace seamless_loop_music.UI.ViewModels
             AddToPlaylistCommand = new DelegateCommand<MusicTrack>(OnAddToPlaylist);
             RemoveFromListCommand = new DelegateCommand<MusicTrack>(OnRemoveFromList);
             DeleteFromDiskCommand = new DelegateCommand<MusicTrack>(OnDeleteFromDisk);
+            RenameAliasCommand = new DelegateCommand<MusicTrack>(OnRenameAlias);
             PlaySelectedCommand = new DelegateCommand(OnPlaySelected);
             BatchAnalyzeCommand = new DelegateCommand(OnBatchAnalyze);
             SelectAllCommand = new DelegateCommand(OnSelectAll);
@@ -440,6 +443,31 @@ namespace seamless_loop_music.UI.ViewModels
                 System.Diagnostics.Process.Start("explorer.exe", $"/select,\"{track.FilePath}\"");
             }
             catch { }
+        }
+
+        private void OnRenameAlias(MusicTrack track)
+        {
+            if (track == null) return;
+
+            var loc = LocalizationService.Instance;
+            var dialog = new InputDialog(loc["DialogRenameAlias"], loc["PromptNewName"], track.DisplayName ?? track.Title);
+            if (dialog.ShowDialog() == true)
+            {
+                var newAlias = dialog.InputText;
+                track.DisplayName = newAlias;
+                
+                Task.Run(async () => 
+                {
+                    await _trackRepository.UpdateMetadataAsync(track);
+                    // 同步到播放引擎
+                    if (_playbackService.CurrentTrack?.Id == track.Id)
+                    {
+                        _playbackService.CurrentTrack.DisplayName = newAlias;
+                    }
+                    // 发送全局通知
+                    _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Publish(track);
+                });
+            }
         }
 
         private void OnAddToPlaylist(MusicTrack track)

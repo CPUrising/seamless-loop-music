@@ -322,6 +322,12 @@
   <data name="MsgConfirmDeletePlaylist" xml:space="preserve">
     <value>Are you sure you want to delete playlist '{0}'? (&gt;﹏&lt;)</value>
   </data>
+  <data name="MenuRenameAlias" xml:space="preserve">
+    <value>Rename Alias</value>
+  </data>
+  <data name="DialogRenameAlias" xml:space="preserve">
+    <value>Rename Alias</value>
+  </data>
   <data name="MsgNameEmpty" xml:space="preserve">
     <value>Name cannot be empty!</value>
   </data>

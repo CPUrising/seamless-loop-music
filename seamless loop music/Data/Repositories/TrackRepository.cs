@@ -261,6 +261,17 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
+        public async Task UpdateMetadataAsync(MusicTrack track)
+        {
+            using (var db = GetConnection())
+            {
+                await db.ExecuteAsync(@"UPDATE Tracks SET DisplayName = @DisplayName WHERE Id = @Id", 
+                    new { track.DisplayName, track.Id });
+                
+                await UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+            }
+        }
+
         public async Task DeleteAsync(int trackId)
         {
             using (var db = GetConnection())

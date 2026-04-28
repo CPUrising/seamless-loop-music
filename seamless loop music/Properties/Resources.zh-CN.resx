@@ -322,6 +322,12 @@
   <data name="MsgConfirmDeletePlaylist" xml:space="preserve">
     <value>确定要删除歌单「{0}」吗喵？(&gt;﹏&lt;)</value>
   </data>
+  <data name="MenuRenameAlias" xml:space="preserve">
+    <value>重命名别名</value>
+  </data>
+  <data name="DialogRenameAlias" xml:space="preserve">
+    <value>重命名别名</value>
+  </data>
   <data name="MsgNameEmpty" xml:space="preserve">
     <value>名称不能为空喵！</value>
   </data>
