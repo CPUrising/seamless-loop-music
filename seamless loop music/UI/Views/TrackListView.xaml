@@ -163,7 +163,7 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
                 <TextBlock Text="{StaticResource IconSearch}" VerticalAlignment="Center" Margin="15,0,8,0" Foreground="{StaticResource BrushTextSecondary}" IsHitTestVisible="False" FontSize="14"/>
-                <TextBox Grid.Column="1" 
+                <TextBox Grid.Column="1" x:Name="SearchTextBox"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          Background="Transparent" BorderThickness="0" 
                          Foreground="White" VerticalContentAlignment="Center"
@@ -178,12 +178,20 @@
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed"/>
                             <Style.Triggers>
-                                <DataTrigger Binding="{Binding SearchText}" Value="">
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding SearchText}" Value=""/>
+                                        <Condition Binding="{Binding ElementName=SearchTextBox, Path=IsKeyboardFocused}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
                                     <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
-                                <DataTrigger Binding="{Binding SearchText}" Value="{x:Null}">
+                                </MultiDataTrigger>
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding SearchText}" Value="{x:Null}"/>
+                                        <Condition Binding="{Binding ElementName=SearchTextBox, Path=IsKeyboardFocused}" Value="False"/>
+                                    </MultiDataTrigger.Conditions>
                                     <Setter Property="Visibility" Value="Visible"/>
-                                </DataTrigger>
+                                </MultiDataTrigger>
                             </Style.Triggers>
                         </Style>
                     </TextBlock.Style>
