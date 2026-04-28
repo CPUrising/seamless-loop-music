@@ -133,4 +133,31 @@
   <data name="MatchEnd" xml:space="preserve">
     <value>结束匹配</value>
   </data>
+  <data name="TitleLoopCandidates" xml:space="preserve">
+    <value>循环方案候选</value>
+  </data>
+  <data name="PromptSelectLoop" xml:space="preserve">
+    <value>选择一个方案进行试听或应用：</value>
+  </data>
+  <data name="HeaderScore" xml:space="preserve">
+    <value>分值</value>
+  </data>
+  <data name="HeaderStart" xml:space="preserve">
+    <value>起始点</value>
+  </data>
+  <data name="HeaderEnd" xml:space="preserve">
+    <value>结束点</value>
+  </data>
+  <data name="HeaderDuration" xml:space="preserve">
+    <value>时长</value>
+  </data>
+  <data name="HeaderNoteDistance" xml:space="preserve">
+    <value>音高偏差</value>
+  </data>
+  <data name="ButtonUpdate" xml:space="preserve">
+    <value>更新分析</value>
+  </data>
+  <data name="ButtonClose" xml:space="preserve">
+    <value>关闭</value>
+  </data>
 </root>

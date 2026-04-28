@@ -133,4 +133,31 @@
   <data name="MatchEnd" xml:space="preserve">
     <value>Match End</value>
   </data>
+  <data name="TitleLoopCandidates" xml:space="preserve">
+    <value>Loop Candidates</value>
+  </data>
+  <data name="PromptSelectLoop" xml:space="preserve">
+    <value>Select a candidate to preview or apply:</value>
+  </data>
+  <data name="HeaderScore" xml:space="preserve">
+    <value>Score</value>
+  </data>
+  <data name="HeaderStart" xml:space="preserve">
+    <value>Start</value>
+  </data>
+  <data name="HeaderEnd" xml:space="preserve">
+    <value>End</value>
+  </data>
+  <data name="HeaderDuration" xml:space="preserve">
+    <value>Duration</value>
+  </data>
+  <data name="HeaderNoteDistance" xml:space="preserve">
+    <value>Note Dist.</value>
+  </data>
+  <data name="ButtonUpdate" xml:space="preserve">
+    <value>Update List</value>
+  </data>
+  <data name="ButtonClose" xml:space="preserve">
+    <value>Close</value>
+  </data>
 </root>
