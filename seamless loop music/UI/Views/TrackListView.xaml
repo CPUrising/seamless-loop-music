@@ -106,14 +106,14 @@
                             Content="{StaticResource IconAnalyze}"
                             Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                             CommandParameter="{Binding}"
-                            ToolTip="寻找循环点 (PyMusicLooper)"
+                            ToolTip="{Binding [TipFindLoop], Source={StaticResource Loc}}"
                             Margin="0,0,8,0"/>
 
                     <Button Style="{StaticResource IconButton}"
                             Content="{StaticResource IconEdit}"
                             Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                             CommandParameter="{Binding}"
-                            ToolTip="编辑属性"/>
+                            ToolTip="{Binding [TipEditProperties], Source={StaticResource Loc}}"/>
                 </StackPanel>
             </Grid>
         </DataTemplate>
@@ -142,7 +142,9 @@
                     <TextBlock Text="{StaticResource IconMusic}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
-                    <TextBlock Text="{Binding SelectedCategoryItem.Name, FallbackValue='所有曲目'}" Foreground="White" FontSize="28" FontWeight="Bold"/>
+                    <Viewbox HorizontalAlignment="Left" MaxHeight="45" StretchDirection="DownOnly" MaxWidth="600">
+                        <TextBlock Text="{Binding CategoryName}" Foreground="White" FontSize="28" FontWeight="Bold"/>
+                    </Viewbox>
                     <Grid Margin="0,8,0,0">
                         <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
@@ -220,18 +222,18 @@
                         <Setter.Value>
                             <!-- 通过 VmProxy 访问 ViewModel，PlacementTarget.DataContext 获取当前行 MusicTrack -->
                             <ContextMenu Background="{StaticResource BrushSurface}" BorderThickness="0" Padding="4" Foreground="{StaticResource BrushTextPrimary}">
-                                <MenuItem Header="▶  播放"
+                                <MenuItem Header="{Binding [MenuPlay], Source={StaticResource Loc}}"
                                           Command="{Binding Data.PlayCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <MenuItem Header="▶  播放选中项"
+                                <MenuItem Header="{Binding [MenuPlaySelected], Source={StaticResource Loc}}"
                                           Command="{Binding Data.PlaySelectedCommand, Source={StaticResource VmProxy}}"/>
-                                <MenuItem Header="♾️  批量自动分析 (PyMusicLooper)"
+                                <MenuItem Header="{Binding [MenuAnalyze], Source={StaticResource Loc}}"
                                           Command="{Binding Data.BatchAnalyzeCommand, Source={StaticResource VmProxy}}"/>
                                 <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
-                                <MenuItem Header="📁  在资源管理器中显示"
+                                <MenuItem Header="{Binding [MenuShowExplorer], Source={StaticResource Loc}}"
                                           Command="{Binding Data.ShowInExplorerCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <MenuItem Header="➕  添加到播放列表..."
+                                <MenuItem Header="{Binding [MenuAddToPlaylist], Source={StaticResource Loc}}"
                                           Command="{Binding Data.AddToPlaylistCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
@@ -239,20 +241,20 @@
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
                                     <MenuItem.Style>
                                         <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                            <Setter Property="Header" Value="❤️  收藏"/>
+                                            <Setter Property="Header" Value="{Binding [MenuLove], Source={StaticResource Loc}}"/>
                                             <Style.Triggers>
                                                 <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsLoved, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
-                                                    <Setter Property="Header" Value="💔  取消收藏"/>
+                                                    <Setter Property="Header" Value="{Binding [MenuUnlove], Source={StaticResource Loc}}"/>
                                                 </DataTrigger>
                                             </Style.Triggers>
                                         </Style>
                                     </MenuItem.Style>
                                 </MenuItem>
                                 <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
-                                <MenuItem Header="➖  从当前列表移除"
+                                <MenuItem Header="{Binding [MenuRemove], Source={StaticResource Loc}}"
                                           Command="{Binding Data.RemoveFromListCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <MenuItem Header="🗑  从磁盘删除"
+                                <MenuItem Header="{Binding [MenuDelete], Source={StaticResource Loc}}"
                                           Foreground="{StaticResource BrushDanger}"
                                           Command="{Binding Data.DeleteFromDiskCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>

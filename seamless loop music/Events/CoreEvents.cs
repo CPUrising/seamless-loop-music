@@ -42,4 +42,9 @@ namespace seamless_loop_music.Events
     /// 请求 UI 将列表滚动到指定曲目位置时发布
     /// </summary>
     public class ScrollToTrackEvent : PubSubEvent<MusicTrack> { }
+
+    /// <summary>
+    /// 当界面语言发生切换时发布
+    /// </summary>
+    public class LanguageChangedEvent : PubSubEvent<System.Globalization.CultureInfo> { }
 }

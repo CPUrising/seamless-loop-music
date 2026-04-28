@@ -111,13 +111,7 @@ namespace seamless_loop_music.UI.ViewModels
             _searchService = searchService;
             _eventAggregator = eventAggregator;
 
-            // 初始化导航分类
-            NavigationCategories = new ObservableCollection<CategoryNavTarget>
-            {
-                new CategoryNavTarget { Name = "专辑", Icon = "💿", Type = CategoryType.Album },
-                new CategoryNavTarget { Name = "艺术家", Icon = "👤", Type = CategoryType.Artist },
-                new CategoryNavTarget { Name = "歌单", Icon = "📂", Type = CategoryType.Playlist }
-            };
+            InitializeNavigationCategories();
 
             // Initialize Category View
             CategoryItemsView = CollectionViewSource.GetDefaultView(CategoryItems);
@@ -134,6 +128,22 @@ namespace seamless_loop_music.UI.ViewModels
             DeletePlaylistCommand = new DelegateCommand(OnDeletePlaylist, () => SelectedCategoryItem != null && SelectedCategoryItem.Type == CategoryType.Playlist && SelectedCategoryItem.Id > 0);
             CreatePlaylistCommand = new DelegateCommand(OnCreatePlaylist);
             
+            // 监听语言切换事件
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(c => 
+            {
+                // 记住当前的选中状态
+                var currentNavType = SelectedCategory?.Type;
+                var currentItem = SelectedCategoryItem;
+
+                InitializeNavigationCategories();
+                
+                if (currentNavType.HasValue)
+                {
+                    SelectedCategory = NavigationCategories.FirstOrDefault(n => n.Type == currentNavType.Value);
+                    _ = LoadCategoryItems(currentItem);
+                }
+            });
+
             // 设置默认选中（这会触发初始加载）
             SelectedCategory = NavigationCategories.FirstOrDefault();
 
@@ -216,12 +226,24 @@ namespace seamless_loop_music.UI.ViewModels
         public bool IsNavigationTarget(NavigationContext navigationContext) => true;
         public void OnNavigatedFrom(NavigationContext navigationContext) { }
 
+        private void InitializeNavigationCategories()
+        {
+            var loc = LocalizationService.Instance;
+            NavigationCategories = new ObservableCollection<CategoryNavTarget>
+            {
+                new CategoryNavTarget { Name = loc["NavAlbum"], Icon = "💿", Type = CategoryType.Album },
+                new CategoryNavTarget { Name = loc["NavArtist"], Icon = "👤", Type = CategoryType.Artist },
+                new CategoryNavTarget { Name = loc["NavPlaylist"], Icon = "📂", Type = CategoryType.Playlist }
+            };
+        }
+
         private async Task LoadCategoryItems(CategoryItem targetToSelect = null)
         {
             CategoryItems.Clear();
             var allTracks = await _trackRepository.GetAllAsync();
             
             IEnumerable<CategoryItem> items = null;
+            var loc = LocalizationService.Instance;
 
             switch (SelectedCategory.Type)
             {
@@ -253,8 +275,8 @@ namespace seamless_loop_music.UI.ViewModels
                     var playlists = await _playlistManager.GetAllPlaylistsAsync();
                     var list = new List<CategoryItem>
                     {
-                        new CategoryItem { Id = -1, Name = "全部歌曲", Icon = "🎶", Type = CategoryType.Playlist },
-                        new CategoryItem { Id = -2, Name = "我的收藏", Icon = "❤️", Type = CategoryType.Playlist }
+                        new CategoryItem { Id = -1, Name = loc["PlaylistAll"], Icon = "🎶", Type = CategoryType.Playlist },
+                        new CategoryItem { Id = -2, Name = loc["PlaylistFavorites"], Icon = "❤️", Type = CategoryType.Playlist }
                     };
                     list.AddRange(playlists.Select(p => new CategoryItem 
                     { 
@@ -297,7 +319,8 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (SelectedCategoryItem == null || SelectedCategoryItem.Type != CategoryType.Playlist || SelectedCategoryItem.Id <= 0) return;
 
-            var dialog = new InputDialog("重命名歌单", "请输入新的名称：", SelectedCategoryItem.Name);
+            var loc = LocalizationService.Instance;
+            var dialog = new InputDialog(loc["DialogRenamePlaylist"], loc["PromptNewName"], SelectedCategoryItem.Name);
             if (dialog.ShowDialog() == true)
             {
                 var newName = dialog.InputText;
@@ -310,8 +333,8 @@ namespace seamless_loop_music.UI.ViewModels
                     if (allPlaylists.Any(p => p.Id != id && string.Equals(p.Name, newName, StringComparison.OrdinalIgnoreCase)))
                     {
                         App.Current.Dispatcher.Invoke(() => 
-                            System.Windows.MessageBox.Show($"已经有一个叫「{newName}」的歌单了喵！换个名字吧 (´w｀)", 
-                            "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
+                            System.Windows.MessageBox.Show(string.Format(loc["MsgPlaylistExists"], newName), 
+                            loc["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
                         return;
                     }
 
@@ -326,8 +349,9 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (SelectedCategoryItem == null || SelectedCategoryItem.Type != CategoryType.Playlist || SelectedCategoryItem.Id <= 0) return;
 
-            var result = System.Windows.MessageBox.Show($"确定要删除歌单「{SelectedCategoryItem.Name}」吗喵？(>﹏<)", 
-                "确认删除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+            var loc = LocalizationService.Instance;
+            var result = System.Windows.MessageBox.Show(string.Format(loc["MsgConfirmDeletePlaylist"], SelectedCategoryItem.Name), 
+                loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
             
             if (result == System.Windows.MessageBoxResult.Yes)
             {
@@ -342,7 +366,8 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnCreatePlaylist()
         {
-            var dialog = new InputDialog("新建歌单", "请输入歌单名称：", "新歌单");
+            var loc = LocalizationService.Instance;
+            var dialog = new InputDialog(loc["DialogNewPlaylist"], loc["PromptPlaylistName"], loc["DefaultPlaylistName"]);
             if (dialog.ShowDialog() == true)
             {
                 var name = dialog.InputText;
@@ -354,8 +379,8 @@ namespace seamless_loop_music.UI.ViewModels
                     if (allPlaylists.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
                     {
                         App.Current.Dispatcher.Invoke(() => 
-                            System.Windows.MessageBox.Show($"歌单「{name}」已经存在了喵！换个名字吧 (´w｀)", 
-                            "名称重复", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
+                            System.Windows.MessageBox.Show(string.Format(loc["MsgPlaylistExists"], name), 
+                            loc["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
                         return;
                     }
 

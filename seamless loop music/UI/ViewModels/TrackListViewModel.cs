@@ -205,6 +205,14 @@ namespace seamless_loop_music.UI.ViewModels
                 App.Current.Dispatcher.Invoke(() => StatusMessage = msg);
             });
 
+            // 监听语言切换事件
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(c => 
+            {
+                UpdateSearchPlaceholder();
+                UpdateStats();
+                RaisePropertyChanged(nameof(CategoryName));
+            });
+
             // 监听播放曲目变更
             _playbackService.TrackChanged += (track) => 
             {
@@ -227,7 +235,11 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 PlayingTrackId = _playbackService.CurrentTrack.Id;
             }
+
+            UpdateSearchPlaceholder();
         }
+
+        public string CategoryName => _selectedCategoryItem?.Name ?? LocalizationService.Instance["PlaylistAll"];
 
         private void UpdatePlayingStatus()
         {
@@ -268,20 +280,22 @@ namespace seamless_loop_music.UI.ViewModels
                 UpdateSearchPlaceholder();
                 TracksView.Refresh();
                 UpdateStats();
+                RaisePropertyChanged(nameof(CategoryName));
             });
         }
 
         private void UpdateSearchPlaceholder()
         {
+            var loc = LocalizationService.Instance;
             SearchPlaceholder = _selectedCategoryItem == null 
-                ? "在库中搜索..." 
-                : $"在 {_selectedCategoryItem.Name} 中搜索...";
+                ? loc["SearchPlaceholder"] 
+                : string.Format(loc["SearchInPlaceholder"], _selectedCategoryItem.Name);
         }
 
         private void UpdateStats()
         {
             var count = TracksView.Cast<object>().Count();
-            PlaylistStats = $"{count} 首曲目";
+            PlaylistStats = string.Format(LocalizationService.Instance["PlaylistStatsFormat"], count);
         }
 
         private bool TracksFilter(object item)
@@ -388,18 +402,19 @@ namespace seamless_loop_music.UI.ViewModels
             if (!tracksToAnalyze.Any()) return;
 
             IsAnalyzing = true;
-            StatusMessage = "准备分析...";
+            var loc = LocalizationService.Instance;
+            StatusMessage = loc["StatusPreparing"];
 
             var progress = new Progress<(int current, int total, string fileName)>(p =>
             {
-                var msg = $"正在分析 ({p.current}/{p.total}): {p.fileName}";
+                var msg = string.Format(loc["StatusAnalyzing"], p.current, p.total, p.fileName);
                 _eventAggregator.GetEvent<StatusMessageEvent>().Publish(msg);
             });
 
             try
             {
                 await _playerService.AnalyzeTracksAsync(tracksToAnalyze, progress);
-                var doneMsg = $"分析完成！共处理 {tracksToAnalyze.Count} 首曲目。";
+                var doneMsg = string.Format(loc["StatusAnalyzeDone"], tracksToAnalyze.Count);
                 _eventAggregator.GetEvent<StatusMessageEvent>().Publish(doneMsg);
                 
                 // 延迟清除状态消息
@@ -408,7 +423,7 @@ namespace seamless_loop_music.UI.ViewModels
             }
             catch (Exception ex)
             {
-                var errMsg = $"分析出错: {ex.Message}";
+                var errMsg = string.Format(loc["StatusAnalyzeError"], ex.Message);
                 _eventAggregator.GetEvent<StatusMessageEvent>().Publish(errMsg);
             }
             finally
@@ -444,7 +459,9 @@ namespace seamless_loop_music.UI.ViewModels
 
             if (_selectedCategoryItem != null && _selectedCategoryItem.Type == CategoryType.Playlist && _selectedCategoryItem.Id > 0)
             {
-                var result = System.Windows.MessageBox.Show($"确定要从播放列表「{_selectedCategoryItem.Name}」中移除选中的 {tracksToRemove.Count} 首曲目吗？", "确认移除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                var loc = LocalizationService.Instance;
+                var msg = string.Format(loc["MsgConfirmRemove"], tracksToRemove.Count, _selectedCategoryItem.Name);
+                var result = System.Windows.MessageBox.Show(msg, loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
                 if (result == System.Windows.MessageBoxResult.Yes)
                 {
                     foreach (var t in tracksToRemove)
@@ -456,7 +473,7 @@ namespace seamless_loop_music.UI.ViewModels
             }
             else
             {
-                System.Windows.MessageBox.Show("只有在自定义播放列表中才能执行移除操作。", "提示", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                System.Windows.MessageBox.Show(LocalizationService.Instance["TipCustomPlaylistOnly"], LocalizationService.Instance["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             }
         }
 
@@ -465,7 +482,9 @@ namespace seamless_loop_music.UI.ViewModels
             var tracksToDelete = SelectedTracks.Count > 1 ? SelectedTracks.ToList() : new List<MusicTrack> { track ?? SelectedTrack };
             if (!tracksToDelete.Any() || tracksToDelete.Any(t => t == null)) return;
 
-            var result = System.Windows.MessageBox.Show($"确定要从磁盘删除选中的 {tracksToDelete.Count} 首曲目吗？\n文件将被移动到回收站。", "确认删除", System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            var loc = LocalizationService.Instance;
+            var msg = string.Format(loc["MsgConfirmDelete"], tracksToDelete.Count);
+            var result = System.Windows.MessageBox.Show(msg, loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
             if (result == System.Windows.MessageBoxResult.Yes)
             {
                 foreach (var t in tracksToDelete)

@@ -75,12 +75,13 @@
 
             <!-- Right: Extras & Volume -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
-                <Button Content="{Binding PlayModeText}" 
-                        Command="{Binding ChangePlayModeCommand}"
+                <Button Command="{Binding ChangePlayModeCommand}"
                         Style="{StaticResource ControlButtonStyle}"
                         Foreground="{StaticResource BrushTextSecondary}"
-                        Margin="0,0,8,0" Padding="4,0" Height="28" FontSize="12"
-                        ToolTip="{Binding [PlayModeToolTip], Source={StaticResource Loc}}"/>
+                        Margin="0,0,8,0" Padding="5" Height="32" Width="32"
+                        ToolTip="{Binding PlayModeToolTipText}">
+                    <md:PackIcon Kind="{Binding PlayModeIcon}" Width="22" Height="22"/>
+                </Button>
                 <ToggleButton IsChecked="{Binding IsSeamlessLoopEnabled}"
                                Style="{StaticResource ControlToggleStyle}"
                                Margin="0,0,10,0"

@@ -42,11 +42,11 @@
 
         <!-- Top Bar: Navigation Buttons -->
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="30,20,0,10">
-            <Button Content="← 返回库" 
+            <Button Content="{Binding [BtnBackToLibrary], Source={StaticResource Loc}}" 
                     Command="{Binding GoBackCommand}"
                     Style="{StaticResource TopBarButtonStyle}"/>
             
-            <Button Content="🔄 编辑循环" 
+            <Button Content="{Binding [BtnEditLoop], Source={StaticResource Loc}}" 
                     Command="{Binding GoToEditCommand}"
                     Style="{StaticResource TopBarButtonStyle}"
                     Margin="15,0,0,0"/>
@@ -85,8 +85,9 @@
 
                 <!-- Track Info: Left aligned relative to artwork -->
                 <StackPanel Grid.Row="1" Margin="0,30,0,0" HorizontalAlignment="Left">
-                    <TextBlock Text="{Binding CurrentTrack.DisplayName}" FontSize="32" FontWeight="Bold" Foreground="White" 
-                               TextTrimming="CharacterEllipsis" MaxWidth="450"/>
+                    <Viewbox HorizontalAlignment="Left" MaxHeight="50" StretchDirection="DownOnly" MaxWidth="450">
+                        <TextBlock Text="{Binding CurrentTrack.DisplayName}" FontSize="32" FontWeight="Bold" Foreground="White"/>
+                    </Viewbox>
                     <TextBlock Text="{Binding CurrentTrack.Artist}" FontSize="20" Foreground="#BAC2DE" Margin="0,8,0,0" 
                                Opacity="0.8"/>
                     <TextBlock Text="{Binding CurrentTrack.Album}" FontSize="16" Foreground="#9399B2" Margin="0,5,0,0" 
@@ -102,7 +103,7 @@
                         <RowDefinition/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="待播清单" Foreground="White" FontSize="20" FontWeight="SemiBold" Margin="15,10,0,20"/>
+                    <TextBlock Grid.Row="0" Text="{Binding [HeaderQueue], Source={StaticResource Loc}}" Foreground="White" FontSize="20" FontWeight="SemiBold" Margin="15,10,0,20"/>
 
                     <ContentControl Grid.Row="1" prism:RegionManager.RegionName="NowPlayingListRegion" />
                 </Grid>

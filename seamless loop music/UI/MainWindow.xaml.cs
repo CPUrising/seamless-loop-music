@@ -27,7 +27,8 @@ namespace seamless_loop_music
             var container = ((Prism.Unity.PrismApplication)Application.Current).Container;
             var playerService = container.Resolve<IPlayerService>();
             var eventAggregator = container.Resolve<Prism.Events.IEventAggregator>();
-            var settingsWindow = new SettingsWindow(playerService, eventAggregator) { Owner = this };
+            var appState = container.Resolve<IAppStateService>();
+            var settingsWindow = new SettingsWindow(playerService, eventAggregator, appState) { Owner = this };
             settingsWindow.ShowDialog();
         }
     }

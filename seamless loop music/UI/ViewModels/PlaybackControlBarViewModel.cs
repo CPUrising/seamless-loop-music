@@ -112,9 +112,6 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand OpenDetailCommand { get; }
         public DelegateCommand ChangePlayModeCommand { get; }
 
-        private string _playModeText;
-        public string PlayModeText { get => _playModeText; set => SetProperty(ref _playModeText, value); }
-
         public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
         {
             _playbackService = playbackService;
@@ -148,6 +145,11 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 App.Current.Dispatcher.Invoke(() => UpdatePlayModeText());
             };
+
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(_ => 
+            {
+                App.Current.Dispatcher.Invoke(() => UpdatePlayModeText());
+            });
             
             _volumeValue = _playbackService.Volume * 100;
 
@@ -268,15 +270,29 @@ namespace seamless_loop_music.UI.ViewModels
             UpdatePlayModeText();
         }
 
+        private string _playModeIcon;
+        public string PlayModeIcon { get => _playModeIcon; set => SetProperty(ref _playModeIcon, value); }
+
+        private string _playModeToolTipText;
+        public string PlayModeToolTipText { get => _playModeToolTipText; set => SetProperty(ref _playModeToolTipText, value); }
+
         private void UpdatePlayModeText()
         {
-            bool isZh = LocalizationService.Instance.CurrentCulture.Name.StartsWith("zh");
-            PlayModeText = _playbackService.PlayMode switch
+            PlayModeIcon = _playbackService.PlayMode switch
             {
-                PlayMode.SingleLoop => isZh ? "单曲" : "Single",
-                PlayMode.ListLoop => isZh ? "列表" : "List",
-                PlayMode.Shuffle => isZh ? "随机" : "Shuffle",
-                _ => "Single"
+                PlayMode.SingleLoop => "RepeatOnce",
+                PlayMode.ListLoop => "Repeat",
+                PlayMode.Shuffle => "Shuffle",
+                _ => "Repeat"
+            };
+
+            var loc = LocalizationService.Instance;
+            PlayModeToolTipText = _playbackService.PlayMode switch
+            {
+                PlayMode.SingleLoop => loc["TipPlayModeSingle"],
+                PlayMode.ListLoop => loc["TipPlayModeList"],
+                PlayMode.Shuffle => loc["TipPlayModeShuffle"],
+                _ => loc["TipPlayModeList"]
             };
         }
     }

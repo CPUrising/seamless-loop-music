@@ -46,6 +46,13 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 Application.Current.Dispatcher.Invoke(() => StatusMessage = msg);
             });
+
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(c => 
+            {
+                if (_currentTrack != null) UpdateAudioInfo(_currentTrack);
+                RaisePropertyChanged(nameof(MatchWindowTitle));
+                RaisePropertyChanged(nameof(SearchRadiusTitle));
+            });
             
             if (_playbackService.CurrentTrack != null)
             {

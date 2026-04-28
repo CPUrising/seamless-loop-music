@@ -8,6 +8,7 @@ using Prism.Unity;
 using Prism.Ioc;
 using Prism.Modularity;
 using Prism.Regions;
+using Prism.Events;
 using seamless_loop_music.Services;
 using seamless_loop_music.Data;
 using seamless_loop_music.Data.Repositories;
@@ -109,6 +110,8 @@ namespace seamless_loop_music
 
         protected override void OnInitialized()
         {
+            LocalizationService.EventAggregator = Container.Resolve<IEventAggregator>();
+
             AppDomain.CurrentDomain.UnhandledException += (s, e) => {
                 System.IO.File.WriteAllText("crash_log.txt", e.ExceptionObject.ToString());
             };

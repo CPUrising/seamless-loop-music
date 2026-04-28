@@ -49,11 +49,11 @@
 
             <!-- Navigation Buttons -->
             <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="5,0,0,10">
-                <Button Content="← 返回库" 
+                <Button Content="{Binding [BtnBackToLibrary], Source={StaticResource Loc}}" 
                         Command="{Binding GoBackCommand}"
                         Style="{StaticResource DetailTopButtonStyle}"/>
                 
-                <Button Content="💿 全屏详情" 
+                <Button Content="{Binding [BtnFullScreen], Source={StaticResource Loc}}" 
                         Command="{Binding GoToDetailCommand}"
                         Style="{StaticResource DetailTopButtonStyle}"
                         Margin="10,0,0,0"/>

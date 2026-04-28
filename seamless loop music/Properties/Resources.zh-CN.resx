@@ -122,16 +122,16 @@
     <value>向前搜索匹配的循环终点。</value>
   </data>
   <data name="PyRanking" xml:space="preserve">
-    <value>方案分析</value>
+    <value>自动寻环</value>
   </data>
   <data name="PyRankingToolTip" xml:space="preserve">
     <value>使用 PyMusicLooper 自动分析最佳循环方案。</value>
   </data>
   <data name="MatchStart" xml:space="preserve">
-    <value>开始匹配</value>
+    <value>匹配起点</value>
   </data>
   <data name="MatchEnd" xml:space="preserve">
-    <value>结束匹配</value>
+    <value>匹配终点</value>
   </data>
   <data name="TitleLoopCandidates" xml:space="preserve">
     <value>循环方案候选</value>
@@ -159,5 +159,185 @@
   </data>
   <data name="ButtonClose" xml:space="preserve">
     <value>关闭</value>
+  </data>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="MusicFoldersHeader" xml:space="preserve">
+    <value>音乐文件夹</value>
+  </data>
+  <data name="MusicFoldersSub" xml:space="preserve">
+    <value>添加包含音乐文件的文件夹以进行扫描</value>
+  </data>
+  <data name="BtnAddFolder" xml:space="preserve">
+    <value>添加文件夹</value>
+  </data>
+  <data name="BtnRemove" xml:space="preserve">
+    <value>移除</value>
+  </data>
+  <data name="BtnScan" xml:space="preserve">
+    <value>立即扫描</value>
+  </data>
+  <data name="BtnScanning" xml:space="preserve">
+    <value>正在扫描...</value>
+  </data>
+  <data name="DataManagementHeader" xml:space="preserve">
+    <value>数据管理</value>
+  </data>
+  <data name="DataManagementSub" xml:space="preserve">
+    <value>从旧版 LoopData.db 文件同步循环点和歌单</value>
+  </data>
+  <data name="BtnSync" xml:space="preserve">
+    <value>从旧数据库同步</value>
+  </data>
+  <data name="BtnSyncing" xml:space="preserve">
+    <value>正在同步...</value>
+  </data>
+  <data name="LanguageHeader" xml:space="preserve">
+    <value>语言设置</value>
+  </data>
+  <data name="LanguageSub" xml:space="preserve">
+    <value>选择界面显示的语言</value>
+  </data>
+  <data name="MsgScanCompleted" xml:space="preserve">
+    <value>扫描完成！</value>
+  </data>
+  <data name="MsgSyncSuccess" xml:space="preserve">
+    <value>同步完成！</value>
+  </data>
+  <data name="NavAlbum" xml:space="preserve">
+    <value>专辑</value>
+  </data>
+  <data name="NavArtist" xml:space="preserve">
+    <value>艺术家</value>
+  </data>
+  <data name="NavPlaylist" xml:space="preserve">
+    <value>歌单</value>
+  </data>
+  <data name="PlaylistAll" xml:space="preserve">
+    <value>全部歌曲</value>
+  </data>
+  <data name="PlaylistFavorites" xml:space="preserve">
+    <value>我的收藏</value>
+  </data>
+  <data name="BtnMin" xml:space="preserve">
+    <value>最小值</value>
+  </data>
+  <data name="BtnMax" xml:space="preserve">
+    <value>最大值</value>
+  </data>
+  <data name="BtnBackToLibrary" xml:space="preserve">
+    <value>← 返回库</value>
+  </data>
+  <data name="BtnEditLoop" xml:space="preserve">
+    <value>🔄 编辑循环</value>
+  </data>
+  <data name="HeaderQueue" xml:space="preserve">
+    <value>待播清单</value>
+  </data>
+  <data name="BtnFullScreen" xml:space="preserve">
+    <value>✨ 纯享模式</value>
+  </data>
+  <data name="PlaylistStatsFormat" xml:space="preserve">
+    <value>{0} 首曲目</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>在库中搜索...</value>
+  </data>
+  <data name="SearchInPlaceholder" xml:space="preserve">
+    <value>在 {0} 中搜索...</value>
+  </data>
+  <data name="StatusAnalyzing" xml:space="preserve">
+    <value>正在分析 ({0}/{1}): {2}</value>
+  </data>
+  <data name="StatusAnalyzeDone" xml:space="preserve">
+    <value>分析完成！共处理 {0} 首曲目。</value>
+  </data>
+  <data name="StatusAnalyzeError" xml:space="preserve">
+    <value>分析出错: {0}</value>
+  </data>
+  <data name="StatusPreparing" xml:space="preserve">
+    <value>准备分析...</value>
+  </data>
+  <data name="MenuPlay" xml:space="preserve">
+    <value>▶  播放</value>
+  </data>
+  <data name="MenuPlaySelected" xml:space="preserve">
+    <value>▶  播放选中项</value>
+  </data>
+  <data name="MenuAnalyze" xml:space="preserve">
+    <value>♾️  批量自动分析 (PyMusicLooper)</value>
+  </data>
+  <data name="MenuShowExplorer" xml:space="preserve">
+    <value>📁  在资源管理器中显示</value>
+  </data>
+  <data name="MenuAddToPlaylist" xml:space="preserve">
+    <value>➕  添加到播放列表...</value>
+  </data>
+  <data name="MenuLove" xml:space="preserve">
+    <value>❤️  收藏</value>
+  </data>
+  <data name="MenuUnlove" xml:space="preserve">
+    <value>💔  取消收藏</value>
+  </data>
+  <data name="MenuRemove" xml:space="preserve">
+    <value>➖  从当前列表移除</value>
+  </data>
+  <data name="MenuDelete" xml:space="preserve">
+    <value>🗑  从磁盘删除</value>
+  </data>
+  <data name="MsgConfirmDelete" xml:space="preserve">
+    <value>确定要从磁盘删除选中的 {0} 首曲目吗？\n文件将被移动到回收站。</value>
+  </data>
+  <data name="MsgConfirmRemove" xml:space="preserve">
+    <value>确定要从播放列表「{1}」中移除选中的 {0} 首曲目吗？</value>
+  </data>
+  <data name="TipCustomPlaylistOnly" xml:space="preserve">
+    <value>只有在自定义播放列表中才能执行移除操作。</value>
+  </data>
+  <data name="TipFindLoop" xml:space="preserve">
+    <value>寻找循环点 (PyMusicLooper)</value>
+  </data>
+  <data name="TipEditProperties" xml:space="preserve">
+    <value>编辑属性</value>
+  </data>
+  <data name="DialogRenamePlaylist" xml:space="preserve">
+    <value>重命名歌单</value>
+  </data>
+  <data name="DialogNewPlaylist" xml:space="preserve">
+    <value>新建歌单</value>
+  </data>
+  <data name="PromptNewName" xml:space="preserve">
+    <value>请输入新的名称：</value>
+  </data>
+  <data name="PromptPlaylistName" xml:space="preserve">
+    <value>请输入歌单名称：</value>
+  </data>
+  <data name="DefaultPlaylistName" xml:space="preserve">
+    <value>新歌单</value>
+  </data>
+  <data name="MsgPlaylistExists" xml:space="preserve">
+    <value>歌单「{0}」已经存在了喵！换个名字吧 (´w｀)</value>
+  </data>
+  <data name="MsgConfirmDeletePlaylist" xml:space="preserve">
+    <value>确定要删除歌单「{0}」吗喵？(&gt;﹏&lt;)</value>
+  </data>
+  <data name="MsgNameEmpty" xml:space="preserve">
+    <value>名称不能为空喵！</value>
+  </data>
+  <data name="TipPlayModeSingle" xml:space="preserve">
+    <value>单曲循环</value>
+  </data>
+  <data name="TipPlayModeList" xml:space="preserve">
+    <value>列表循环</value>
+  </data>
+  <data name="TipPlayModeShuffle" xml:space="preserve">
+    <value>随机播放</value>
+  </data>
+  <data name="BtnOk" xml:space="preserve">
+    <value>确定</value>
+  </data>
+  <data name="BtnCancel" xml:space="preserve">
+    <value>取消</value>
   </data>
 </root>

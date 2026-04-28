@@ -5,6 +5,8 @@ using System.Resources;
 using System.Runtime.CompilerServices;
 using System.Windows;
 using System.Windows.Data;
+using Prism.Events;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.Services
 {
@@ -12,6 +14,8 @@ namespace seamless_loop_music.Services
     {
         private static readonly LocalizationService _instance = new LocalizationService();
         public static LocalizationService Instance => _instance;
+
+        public static IEventAggregator EventAggregator { get; set; }
 
         private readonly ResourceManager _resourceManager = Properties.Resources.ResourceManager;
         private CultureInfo _currentCulture = CultureInfo.CurrentUICulture;
@@ -36,9 +40,17 @@ namespace seamless_loop_music.Services
                     Properties.Resources.Culture = value;
                     OnPropertyChanged(null); // Notify all properties changed
                     OnPropertyChanged("Item[]"); // Specifically notify indexer for WPF bindings
+                    
+                    EventAggregator?.GetEvent<LanguageChangedEvent>().Publish(value);
                 }
             }
         }
+
+        public CultureInfo[] SupportedCultures { get; } = new[]
+        {
+            new CultureInfo("en-US"),
+            new CultureInfo("zh-CN")
+        };
 
         public event PropertyChangedEventHandler PropertyChanged;
         protected void OnPropertyChanged([CallerMemberName] string propertyName = null)

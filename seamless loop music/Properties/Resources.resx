@@ -160,4 +160,184 @@
   <data name="ButtonClose" xml:space="preserve">
     <value>Close</value>
   </data>
+  <data name="SettingsTitle" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="MusicFoldersHeader" xml:space="preserve">
+    <value>Music Folders</value>
+  </data>
+  <data name="MusicFoldersSub" xml:space="preserve">
+    <value>Add folders containing your music files</value>
+  </data>
+  <data name="BtnAddFolder" xml:space="preserve">
+    <value>Add Folder</value>
+  </data>
+  <data name="BtnRemove" xml:space="preserve">
+    <value>Remove</value>
+  </data>
+  <data name="BtnScan" xml:space="preserve">
+    <value>Scan Now</value>
+  </data>
+  <data name="BtnScanning" xml:space="preserve">
+    <value>Scanning...</value>
+  </data>
+  <data name="DataManagementHeader" xml:space="preserve">
+    <value>Data Management</value>
+  </data>
+  <data name="DataManagementSub" xml:space="preserve">
+    <value>Sync loop points and playlists from an older LoopData.db file</value>
+  </data>
+  <data name="BtnSync" xml:space="preserve">
+    <value>Sync from Old Database</value>
+  </data>
+  <data name="BtnSyncing" xml:space="preserve">
+    <value>Syncing...</value>
+  </data>
+  <data name="LanguageHeader" xml:space="preserve">
+    <value>Language</value>
+  </data>
+  <data name="LanguageSub" xml:space="preserve">
+    <value>Select the interface display language</value>
+  </data>
+  <data name="MsgScanCompleted" xml:space="preserve">
+    <value>Scan completed!</value>
+  </data>
+  <data name="MsgSyncSuccess" xml:space="preserve">
+    <value>Sync completed successfully!</value>
+  </data>
+  <data name="NavAlbum" xml:space="preserve">
+    <value>Albums</value>
+  </data>
+  <data name="NavArtist" xml:space="preserve">
+    <value>Artists</value>
+  </data>
+  <data name="NavPlaylist" xml:space="preserve">
+    <value>Playlists</value>
+  </data>
+  <data name="PlaylistAll" xml:space="preserve">
+    <value>All Tracks</value>
+  </data>
+  <data name="PlaylistFavorites" xml:space="preserve">
+    <value>My Favorites</value>
+  </data>
+  <data name="BtnMin" xml:space="preserve">
+    <value>Min</value>
+  </data>
+  <data name="BtnMax" xml:space="preserve">
+    <value>Max</value>
+  </data>
+  <data name="BtnBackToLibrary" xml:space="preserve">
+    <value>Back to Library</value>
+  </data>
+  <data name="BtnEditLoop" xml:space="preserve">
+    <value>🔄 Edit Loop</value>
+  </data>
+  <data name="HeaderQueue" xml:space="preserve">
+    <value>Playback Queue</value>
+  </data>
+  <data name="BtnFullScreen" xml:space="preserve">
+    <value>✨ Immersive</value>
+  </data>
+  <data name="PlaylistStatsFormat" xml:space="preserve">
+    <value>{0} tracks</value>
+  </data>
+  <data name="SearchPlaceholder" xml:space="preserve">
+    <value>Search in library...</value>
+  </data>
+  <data name="SearchInPlaceholder" xml:space="preserve">
+    <value>Search in {0}...</value>
+  </data>
+  <data name="StatusAnalyzing" xml:space="preserve">
+    <value>Analyzing ({0}/{1}): {2}</value>
+  </data>
+  <data name="StatusAnalyzeDone" xml:space="preserve">
+    <value>Analysis done! Processed {0} tracks.</value>
+  </data>
+  <data name="StatusAnalyzeError" xml:space="preserve">
+    <value>Analysis error: {0}</value>
+  </data>
+  <data name="StatusPreparing" xml:space="preserve">
+    <value>Preparing...</value>
+  </data>
+  <data name="MenuPlay" xml:space="preserve">
+    <value>▶ Play</value>
+  </data>
+  <data name="MenuPlaySelected" xml:space="preserve">
+    <value>▶ Play Selected</value>
+  </data>
+  <data name="MenuAnalyze" xml:space="preserve">
+    <value>♾️ Batch Analyze (PyMusicLooper)</value>
+  </data>
+  <data name="MenuShowExplorer" xml:space="preserve">
+    <value>📁 Show in Explorer</value>
+  </data>
+  <data name="MenuAddToPlaylist" xml:space="preserve">
+    <value>➕ Add to Playlist...</value>
+  </data>
+  <data name="MenuLove" xml:space="preserve">
+    <value>❤️ Favorite</value>
+  </data>
+  <data name="MenuUnlove" xml:space="preserve">
+    <value>💔 Unfavorite</value>
+  </data>
+  <data name="MenuRemove" xml:space="preserve">
+    <value>➖ Remove from List</value>
+  </data>
+  <data name="MenuDelete" xml:space="preserve">
+    <value>🗑 Delete from Disk</value>
+  </data>
+  <data name="MsgConfirmDelete" xml:space="preserve">
+    <value>Are you sure you want to delete the selected {0} tracks from disk? They will be moved to the Recycle Bin.</value>
+  </data>
+  <data name="MsgConfirmRemove" xml:space="preserve">
+    <value>Are you sure you want to remove the selected {0} tracks from playlist "{1}"?</value>
+  </data>
+  <data name="TipCustomPlaylistOnly" xml:space="preserve">
+    <value>Removal is only possible in custom playlists.</value>
+  </data>
+  <data name="TipFindLoop" xml:space="preserve">
+    <value>Find loop points (PyMusicLooper)</value>
+  </data>
+  <data name="TipEditProperties" xml:space="preserve">
+    <value>Edit properties</value>
+  </data>
+  <data name="DialogRenamePlaylist" xml:space="preserve">
+    <value>Rename Playlist</value>
+  </data>
+  <data name="DialogNewPlaylist" xml:space="preserve">
+    <value>New Playlist</value>
+  </data>
+  <data name="PromptNewName" xml:space="preserve">
+    <value>Please enter new name:</value>
+  </data>
+  <data name="PromptPlaylistName" xml:space="preserve">
+    <value>Please enter playlist name:</value>
+  </data>
+  <data name="DefaultPlaylistName" xml:space="preserve">
+    <value>New Playlist</value>
+  </data>
+  <data name="MsgPlaylistExists" xml:space="preserve">
+    <value>A playlist named '{0}' already exists! Try another name (´w｀)</value>
+  </data>
+  <data name="MsgConfirmDeletePlaylist" xml:space="preserve">
+    <value>Are you sure you want to delete playlist '{0}'? (&gt;﹏&lt;)</value>
+  </data>
+  <data name="MsgNameEmpty" xml:space="preserve">
+    <value>Name cannot be empty!</value>
+  </data>
+  <data name="TipPlayModeSingle" xml:space="preserve">
+    <value>Single Loop</value>
+  </data>
+  <data name="TipPlayModeList" xml:space="preserve">
+    <value>List Loop</value>
+  </data>
+  <data name="TipPlayModeShuffle" xml:space="preserve">
+    <value>Shuffle</value>
+  </data>
+  <data name="BtnOk" xml:space="preserve">
+    <value>OK</value>
+  </data>
+  <data name="BtnCancel" xml:space="preserve">
+    <value>Cancel</value>
+  </data>
 </root>

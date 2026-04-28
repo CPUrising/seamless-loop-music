@@ -78,6 +78,9 @@ namespace seamless_loop_music.Services
                     // 5. 保存循环开关状态
                     _db.SetSetting("Playback.IsSeamlessLoopEnabled", _playbackService.IsSeamlessLoopEnabled.ToString());
                     _db.SetSetting("Playback.IsFeatureLoopEnabled", _playbackService.IsFeatureLoopEnabled.ToString());
+
+                    // 6. 保存语言设置
+                    _db.SetSetting("App.Language", LocalizationService.Instance.CurrentCulture.Name);
                 }
                 catch (Exception ex)
                 {
@@ -107,6 +110,18 @@ namespace seamless_loop_music.Services
                 // 2.1 恢复循环开关状态
                 _playbackService.IsSeamlessLoopEnabled = _db.GetSetting("Playback.IsSeamlessLoopEnabled", "True").ToLower() == "true";
                 _playbackService.IsFeatureLoopEnabled = _db.GetSetting("Playback.IsFeatureLoopEnabled", "True").ToLower() == "true";
+
+                // 2.2 恢复语言设置
+                string langStr = _db.GetSetting("App.Language");
+                if (!string.IsNullOrEmpty(langStr))
+                {
+                    try
+                    {
+                        var culture = new System.Globalization.CultureInfo(langStr);
+                        LocalizationService.Instance.CurrentCulture = culture;
+                    }
+                    catch { }
+                }
 
                 // 3. 恢复分类上下文
                 string typeStr = _db.GetSetting("Playback.LastCategoryType");
