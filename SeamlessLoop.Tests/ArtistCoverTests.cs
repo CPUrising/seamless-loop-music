@@ -177,6 +177,64 @@ namespace SeamlessLoop.Tests
 
             Assert.That(savedTrack, Is.Not.Null);
             Assert.That(savedTrack.ArtistCoverPath, Is.EqualTo("track_cover.jpg"), "The loaded track should include the artist's cover path.");
+            Assert.That(savedTrack.AlbumCoverPath, Is.EqualTo("track_cover.jpg"), "The loaded track should include the album's cover path.");
+        }
+
+        [Test]
+        public void ArtistCover_EmptyString_ShouldBeUpdated()
+        {
+            // 模拟数据库中已存在空字符串路径的艺术家
+            using (var db = _dbHelper.GetConnection())
+            {
+                db.Execute("INSERT INTO Artists (Name, CoverPath) VALUES ('Artist Empty', '')");
+                db.Execute("INSERT INTO Albums (Name, ArtistId, CoverPath) VALUES ('Album Empty', (SELECT Id FROM Artists WHERE Name='Artist Empty'), '')");
+            }
+
+            var track = new MusicTrack 
+            { 
+                FileName = "song_new.mp3", 
+                Artist = "Artist Empty", 
+                Album = "Album Empty", 
+                CoverPath = "new_valid_cover.jpg",
+                TotalSamples = 5000
+            };
+
+            _trackRepo.Save(track);
+
+            using (var db = _dbHelper.GetConnection())
+            {
+                var artistCover = db.ExecuteScalar<string>("SELECT CoverPath FROM Artists WHERE Name = 'Artist Empty'");
+                var albumCover = db.ExecuteScalar<string>("SELECT CoverPath FROM Albums WHERE Name = 'Album Empty'");
+                
+                Assert.That(artistCover, Is.EqualTo("new_valid_cover.jpg"), "Artist cover should be updated even if it was an empty string.");
+                Assert.That(albumCover, Is.EqualTo("new_valid_cover.jpg"), "Album cover should be updated even if it was an empty string.");
+            }
+        }
+
+        [Test]
+        public void RepairMissingCategoryCovers_ShouldBackfill()
+        {
+            // 准备数据：有曲目封面，但分类表封面为空
+            using (var db = _dbHelper.GetConnection())
+            {
+                db.Execute("INSERT INTO Artists (Name, CoverPath) VALUES ('Repair Artist', '')");
+                db.Execute("INSERT INTO Albums (Name, ArtistId, CoverPath) VALUES ('Repair Album', (SELECT Id FROM Artists WHERE Name='Repair Artist'), NULL)");
+                
+                var albumId = db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name='Repair Album'");
+                db.Execute("INSERT INTO Tracks (FileName, FilePath, AlbumId, CoverPath, TotalSamples) VALUES ('s1.mp3', 'p1', @Aid, 'found_it.jpg', 100)", new { Aid = albumId });
+            }
+
+            // 执行修复
+            _dbHelper.RepairMissingCategoryCovers();
+
+            using (var db = _dbHelper.GetConnection())
+            {
+                var artistCover = db.ExecuteScalar<string>("SELECT CoverPath FROM Artists WHERE Name = 'Repair Artist'");
+                var albumCover = db.ExecuteScalar<string>("SELECT CoverPath FROM Albums WHERE Name = 'Repair Album'");
+                
+                Assert.That(artistCover, Is.EqualTo("found_it.jpg"), "Repair should backfill artist cover.");
+                Assert.That(albumCover, Is.EqualTo("found_it.jpg"), "Repair should backfill album cover.");
+            }
         }
     }
 }

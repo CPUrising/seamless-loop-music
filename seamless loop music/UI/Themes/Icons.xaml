@@ -16,6 +16,7 @@
     <system:String x:Key="IconStar">★</system:String>
     <system:String x:Key="IconFolder">📁</system:String>
     <system:String x:Key="IconDisc">💿</system:String>
+    <system:String x:Key="IconArtist">👤</system:String>
     <system:String x:Key="IconMusic">🎵</system:String>
 
     <!-- Vector Icons for Taskbar Buttons -->

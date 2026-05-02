@@ -27,6 +27,7 @@ namespace seamless_loop_music.Data.Repositories
                 al.Name   AS Album,
                 ar.Name   AS Artist,
                 ar.Name   AS AlbumArtist,
+                al.CoverPath AS AlbumCoverPath,
                 ar.CoverPath AS ArtistCoverPath,
                 COALESCE(lp.LoopStart, 0)  AS LoopStart,
                 COALESCE(lp.LoopEnd,   0)  AS LoopEnd,
@@ -248,6 +249,9 @@ namespace seamless_loop_music.Data.Repositories
                     }
                     trans.Commit();
                 }
+
+                // 扫描完成后，自动运行一次修复逻辑，确保分类封面被正确补全
+                RepairMissingCategoryCovers();
             }
         }
 
@@ -319,6 +323,24 @@ namespace seamless_loop_music.Data.Repositories
                 return result.ToList();
             }
         }
+        
+        public async Task<string> GetAlbumCoverPathAsync(string albumName)
+        {
+            using (var db = GetConnection())
+            {
+                return await db.QueryFirstOrDefaultAsync<string>(
+                    "SELECT CoverPath FROM Albums WHERE Name = @Name", new { Name = albumName });
+            }
+        }
+
+        public async Task<string> GetArtistCoverPathAsync(string artistName)
+        {
+            using (var db = GetConnection())
+            {
+                return await db.QueryFirstOrDefaultAsync<string>(
+                    "SELECT CoverPath FROM Artists WHERE Name = @Name", new { Name = artistName });
+            }
+        }
 
         // ── 辅助：Upsert 艺术家 / 专辑，返回 AlbumId ─────────────────────────
         private static int? UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist,
@@ -347,13 +369,57 @@ namespace seamless_loop_music.Data.Repositories
                 INSERT INTO Albums (Name, ArtistId, CoverPath)
                 VALUES (@Name, @ArtistId, @CoverPath)
                 ON CONFLICT(Name, ArtistId) DO UPDATE SET
-                    CoverPath = COALESCE(Albums.CoverPath, excluded.CoverPath)
+                    CoverPath = excluded.CoverPath
                 WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';",
                 new { Name = albumName, ArtistId = artistId, CoverPath = coverPath }, transaction: trans);
 
             return db.ExecuteScalar<int?>(
                 "SELECT Id FROM Albums WHERE Name = @Name AND (ArtistId = @ArtistId OR (ArtistId IS NULL AND @ArtistId IS NULL));",
                 new { Name = albumName, ArtistId = artistId }, transaction: trans);
+        }
+
+        public void RepairMissingCategoryCovers()
+        {
+            using (var db = GetConnection())
+            {
+                // 1. 修复专辑封面：找该专辑下任意一个有封面的曲目进行回填
+                db.Execute(@"
+                    UPDATE Albums 
+                    SET CoverPath = (
+                        SELECT t.CoverPath 
+                        FROM Tracks t 
+                        WHERE t.AlbumId = Albums.Id 
+                          AND t.CoverPath IS NOT NULL 
+                          AND t.CoverPath != '' 
+                        LIMIT 1
+                    )
+                    WHERE (CoverPath IS NULL OR CoverPath = '')
+                      AND EXISTS (
+                        SELECT 1 FROM Tracks t 
+                        WHERE t.AlbumId = Albums.Id 
+                          AND t.CoverPath IS NOT NULL 
+                          AND t.CoverPath != ''
+                      )");
+
+                // 2. 修复艺术家封面：找该艺术家下任意一个有封面的专辑进行回填
+                db.Execute(@"
+                    UPDATE Artists 
+                    SET CoverPath = (
+                        SELECT al.CoverPath 
+                        FROM Albums al 
+                        WHERE al.ArtistId = Artists.Id 
+                          AND al.CoverPath IS NOT NULL 
+                          AND al.CoverPath != '' 
+                        LIMIT 1
+                    )
+                    WHERE (CoverPath IS NULL OR CoverPath = '')
+                      AND EXISTS (
+                        SELECT 1 FROM Albums al 
+                        WHERE al.ArtistId = Artists.Id 
+                          AND al.CoverPath IS NOT NULL 
+                          AND al.CoverPath != ''
+                      )");
+            }
         }
     }
 }

@@ -317,24 +317,42 @@ namespace seamless_loop_music.UI.ViewModels
                     items = allTracks
                         .Where(t => !string.IsNullOrEmpty(t.Album))
                         .GroupBy(t => t.Album)
-                        .Select(g => new CategoryItem 
-                        { 
-                            Name = g.Key, 
-                            Type = CategoryType.Album,
-                            Icon = "💿",
-                            ImagePath = g.FirstOrDefault()?.CoverPath 
+                        .Select(g => 
+                        {
+                            // 优先使用 Albums 表记录的封面，若无则从该专辑下找第一个有封面的曲目作为兜底
+                            var officialCover = g.FirstOrDefault()?.AlbumCoverPath;
+                            var fallbackCover = string.IsNullOrEmpty(officialCover) 
+                                ? g.FirstOrDefault(t => !string.IsNullOrEmpty(t.CoverPath))?.CoverPath 
+                                : officialCover;
+
+                            return new CategoryItem 
+                            { 
+                                Name = g.Key, 
+                                Type = CategoryType.Album,
+                                Icon = "💿",
+                                ImagePath = fallbackCover 
+                            };
                         });
                     break;
                 case CategoryType.Artist:
                     items = allTracks
                         .Where(t => !string.IsNullOrEmpty(t.Artist))
                         .GroupBy(t => t.Artist)
-                        .Select(g => new CategoryItem 
-                        { 
-                            Name = g.Key, 
-                            Type = CategoryType.Artist,
-                            Icon = "👤",
-                            ImagePath = g.FirstOrDefault()?.ArtistCoverPath 
+                        .Select(g => 
+                        {
+                            // 优先使用 Artists 表记录的封面，若无则从该艺术家下找第一个有封面的曲目作为兜底
+                            var officialCover = g.FirstOrDefault()?.ArtistCoverPath;
+                            var fallbackCover = string.IsNullOrEmpty(officialCover) 
+                                ? g.FirstOrDefault(t => !string.IsNullOrEmpty(t.CoverPath))?.CoverPath 
+                                : officialCover;
+
+                            return new CategoryItem 
+                            { 
+                                Name = g.Key, 
+                                Type = CategoryType.Artist,
+                                Icon = "👤",
+                                ImagePath = fallbackCover 
+                            };
                         });
                     break;
                 case CategoryType.Playlist:

@@ -114,7 +114,8 @@ namespace seamless_loop_music.Data
         private const string FullTrackSelect = @"
             SELECT 
                 t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.LastModified, t.CoverPath,
-                al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist, ar.CoverPath AS ArtistCoverPath,
+                al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist, 
+                al.CoverPath AS AlbumCoverPath, ar.CoverPath AS ArtistCoverPath,
                 COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
                 lp.LoopCandidatesJson,
                 COALESCE(ur.Rating, 0) AS Rating
@@ -175,11 +176,12 @@ namespace seamless_loop_music.Data
                             new { Name = artistName, Cover = coverPath }, transaction: trans);
             }
 
+            // Album: 升级为 ON CONFLICT 模式，如果发现新封面则自动补全
             db.Execute(@"
                 INSERT INTO Albums (Name, ArtistId, CoverPath)
                 VALUES (@Name, @ArtistId, @Cover)
                 ON CONFLICT(Name, ArtistId) DO UPDATE SET
-                    CoverPath = COALESCE(Albums.CoverPath, excluded.CoverPath)
+                    CoverPath = excluded.CoverPath
                 WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';", 
                 new { Name = albumName, ArtistId = artistId, Cover = coverPath }, transaction: trans);
             return db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name = @Name AND ArtistId = @ArtistId", 
@@ -525,6 +527,49 @@ namespace seamless_loop_music.Data
                 }
             }
             return deletedCount;
+        }
+        public void RepairMissingCategoryCovers()
+        {
+            using (var db = GetConnection())
+            {
+                // 1. 修复专辑封面：找该专辑下任意一个有封面的曲目进行回填
+                db.Execute(@"
+                    UPDATE Albums 
+                    SET CoverPath = (
+                        SELECT t.CoverPath 
+                        FROM Tracks t 
+                        WHERE t.AlbumId = Albums.Id 
+                          AND t.CoverPath IS NOT NULL 
+                          AND t.CoverPath != '' 
+                        LIMIT 1
+                    )
+                    WHERE (CoverPath IS NULL OR CoverPath = '')
+                      AND EXISTS (
+                        SELECT 1 FROM Tracks t 
+                        WHERE t.AlbumId = Albums.Id 
+                          AND t.CoverPath IS NOT NULL 
+                          AND t.CoverPath != ''
+                      )");
+
+                // 2. 修复艺术家封面：找该艺术家下任意一个有封面的专辑进行回填
+                db.Execute(@"
+                    UPDATE Artists 
+                    SET CoverPath = (
+                        SELECT al.CoverPath 
+                        FROM Albums al 
+                        WHERE al.ArtistId = Artists.Id 
+                          AND al.CoverPath IS NOT NULL 
+                          AND al.CoverPath != '' 
+                        LIMIT 1
+                    )
+                    WHERE (CoverPath IS NULL OR CoverPath = '')
+                      AND EXISTS (
+                        SELECT 1 FROM Albums al 
+                        WHERE al.ArtistId = Artists.Id 
+                          AND al.CoverPath IS NOT NULL 
+                          AND al.CoverPath != ''
+                      )");
+            }
         }
     }
 }

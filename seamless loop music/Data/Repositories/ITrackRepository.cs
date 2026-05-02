@@ -18,5 +18,7 @@ namespace seamless_loop_music.Data.Repositories
         Task DeleteAsync(int trackId);
         Task<List<MusicTrack>> GetByArtistAsync(string artistName);
         Task<List<MusicTrack>> GetByAlbumAsync(string albumName);
+        Task<string> GetAlbumCoverPathAsync(string albumName);
+        Task<string> GetArtistCoverPathAsync(string artistName);
     }
 }

@@ -123,6 +123,9 @@ namespace seamless_loop_music.UI.ViewModels
                     
                     // 如果提取成功，保存曲目状态（这样下次就有了）
                     _metadataService.SaveTrack(track);
+
+                    // 关键：通知 UI 刷新库，因为艺术家/专辑的封面可能已经同步补全了
+                    _eventAggregator.GetEvent<seamless_loop_music.Events.LibraryRefreshedEvent>().Publish();
                 }
 
                 // 3. 从最终确定的路径加载
