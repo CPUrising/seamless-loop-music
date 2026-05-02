@@ -83,19 +83,41 @@ namespace seamless_loop_music.Models
         public string CoverPath
         {
             get => _coverPath;
-            set { _coverPath = value; OnPropertyChanged(); }
+            set 
+            { 
+                if (SetProperty(ref _coverPath, value)) 
+                    OnPropertyChanged(nameof(EffectiveCoverPath)); 
+            }
         }
 
         public string AlbumCoverPath
         {
             get => _albumCoverPath;
-            set { _albumCoverPath = value; OnPropertyChanged(); }
+            set 
+            { 
+                if (SetProperty(ref _albumCoverPath, value)) 
+                    OnPropertyChanged(nameof(EffectiveCoverPath)); 
+            }
         }
 
         public string ArtistCoverPath
         {
             get => _artistCoverPath;
-            set { _artistCoverPath = value; OnPropertyChanged(); }
+            set 
+            { 
+                if (SetProperty(ref _artistCoverPath, value)) 
+                    OnPropertyChanged(nameof(EffectiveCoverPath)); 
+            }
+        }
+
+        public string EffectiveCoverPath => !string.IsNullOrEmpty(CoverPath) ? CoverPath : AlbumCoverPath;
+
+        private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
+        {
+            if (Equals(storage, value)) return false;
+            storage = value;
+            OnPropertyChanged(propertyName);
+            return true;
         }
 
         public bool IsPlaying

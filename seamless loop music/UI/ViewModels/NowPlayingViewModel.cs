@@ -16,6 +16,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IRegionManager _regionManager;
         private readonly IEventAggregator _eventAggregator;
         private readonly TrackMetadataService _metadataService;
+        private readonly seamless_loop_music.Data.Repositories.ITrackRepository _trackRepository;
         private IRegionNavigationService _navigationService;
         
         private MusicTrack _currentTrack;
@@ -35,12 +36,13 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand GoBackCommand { get; }
         public DelegateCommand GoToEditCommand { get; }
 
-        public NowPlayingViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
+        public NowPlayingViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService, seamless_loop_music.Data.Repositories.ITrackRepository trackRepository)
         {
             _playbackService = playbackService;
             _regionManager = regionManager;
             _eventAggregator = eventAggregator;
             _metadataService = metadataService;
+            _trackRepository = trackRepository;
             GoBackCommand = new DelegateCommand(OnGoBack);
             GoToEditCommand = new DelegateCommand(OnGoToEdit);
             
@@ -123,6 +125,9 @@ namespace seamless_loop_music.UI.ViewModels
                     
                     // 如果提取成功，保存曲目状态（这样下次就有了）
                     _metadataService.SaveTrack(track);
+
+                    // 关键：触发全向修复，让同专辑的曲目以及艺术家表也瞬间获得封面
+                    _trackRepository.RepairMissingCategoryCovers();
 
                     // 关键：通知 UI 刷新库，因为艺术家/专辑的封面可能已经同步补全了
                     _eventAggregator.GetEvent<seamless_loop_music.Events.LibraryRefreshedEvent>().Publish();

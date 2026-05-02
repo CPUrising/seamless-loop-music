@@ -20,5 +20,6 @@ namespace seamless_loop_music.Data.Repositories
         Task<List<MusicTrack>> GetByAlbumAsync(string albumName);
         Task<string> GetAlbumCoverPathAsync(string albumName);
         Task<string> GetArtistCoverPathAsync(string artistName);
+        void RepairMissingCategoryCovers();
     }
 }

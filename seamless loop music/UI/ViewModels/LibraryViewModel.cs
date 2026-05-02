@@ -328,9 +328,8 @@ namespace seamless_loop_music.UI.ViewModels
                             return new CategoryItem 
                             { 
                                 Name = g.Key, 
-                                Type = CategoryType.Album,
-                                Icon = "💿",
-                                ImagePath = fallbackCover 
+                                ImagePath = fallbackCover,
+                                Type = CategoryType.Album
                             };
                         });
                     break;
@@ -340,7 +339,7 @@ namespace seamless_loop_music.UI.ViewModels
                         .GroupBy(t => t.Artist)
                         .Select(g => 
                         {
-                            // 优先使用 Artists 表记录的封面，若无则从该艺术家下找第一个有封面的曲目作为兜底
+                            // 艺术家封面优先级：艺术家表记录的封面 -> 该艺术家下第一个有封面的曲目
                             var officialCover = g.FirstOrDefault()?.ArtistCoverPath;
                             var fallbackCover = string.IsNullOrEmpty(officialCover) 
                                 ? g.FirstOrDefault(t => !string.IsNullOrEmpty(t.CoverPath))?.CoverPath 

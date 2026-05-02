@@ -180,15 +180,17 @@ namespace seamless_loop_music.Services
 
                 using (var db = _dbHelper.GetConnection())
                 {
-                    // 严格按照 CPU 大人要求：仅通过专辑名匹配，实现一辑一封
+                    // 严格按照 CPU 大人要求：匹配 专辑名 + 艺术家名，实现精准的一辑一封
                     string existingPath = db.QueryFirstOrDefault<string>(@"
-                        SELECT CoverPath 
-                        FROM Albums 
-                        WHERE Name = @Album 
-                          AND CoverPath IS NOT NULL 
-                          AND CoverPath != '' 
+                        SELECT al.CoverPath 
+                        FROM Albums al 
+                        JOIN Artists ar ON ar.Id = al.ArtistId
+                        WHERE al.Name = @Album 
+                          AND ar.Name = @Artist
+                          AND al.CoverPath IS NOT NULL 
+                          AND al.CoverPath != '' 
                         LIMIT 1",
-                        new { Album = track.Album });
+                        new { Album = track.Album, Artist = track.Artist });
 
                     if (IsFileValid(existingPath))
                     {

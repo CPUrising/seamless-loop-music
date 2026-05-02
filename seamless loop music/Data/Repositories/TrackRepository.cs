@@ -382,7 +382,7 @@ namespace seamless_loop_music.Data.Repositories
         {
             using (var db = GetConnection())
             {
-                // 1. 修复专辑封面：找该专辑下任意一个有封面的曲目进行回填
+                // 1. 【向上扩散】曲目封面 -> 专辑封面
                 db.Execute(@"
                     UPDATE Albums 
                     SET CoverPath = (
@@ -401,7 +401,7 @@ namespace seamless_loop_music.Data.Repositories
                           AND t.CoverPath != ''
                       )");
 
-                // 2. 修复艺术家封面：找该艺术家下任意一个有封面的专辑进行回填
+                // 2. 【向上扩散】专辑封面 -> 艺术家封面
                 db.Execute(@"
                     UPDATE Artists 
                     SET CoverPath = (
@@ -416,6 +416,22 @@ namespace seamless_loop_music.Data.Repositories
                       AND EXISTS (
                         SELECT 1 FROM Albums al 
                         WHERE al.ArtistId = Artists.Id 
+                          AND al.CoverPath IS NOT NULL 
+                          AND al.CoverPath != ''
+                      )");
+
+                // 3. 【向下补完】专辑封面 -> 曲目封面 (核心：确保同专辑曲目同步)
+                db.Execute(@"
+                    UPDATE Tracks 
+                    SET CoverPath = (
+                        SELECT al.CoverPath 
+                        FROM Albums al 
+                        WHERE al.Id = Tracks.AlbumId
+                    )
+                    WHERE (CoverPath IS NULL OR CoverPath = '')
+                      AND EXISTS (
+                        SELECT 1 FROM Albums al 
+                        WHERE al.Id = Tracks.AlbumId 
                           AND al.CoverPath IS NOT NULL 
                           AND al.CoverPath != ''
                       )");
