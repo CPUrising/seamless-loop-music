@@ -42,27 +42,25 @@ namespace seamless_loop_music.Services
                 var allTracks = _dbHelper.GetAllTracks();
                 var subfolders = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
 
-                string normalizedParent = parentPath.TrimEnd('\\', '/');
+                string normalizedParent = parentPath.Replace('/', '\\').TrimEnd('\\');
+                string searchPrefix = normalizedParent + "\\";
 
                 foreach (var track in allTracks)
                 {
                     if (string.IsNullOrEmpty(track.FilePath)) continue;
                     
-                    string trackDir = Path.GetDirectoryName(track.FilePath);
+                    string trackDir = Path.GetDirectoryName(track.FilePath)?.Replace('/', '\\');
                     if (string.IsNullOrEmpty(trackDir)) continue;
 
-                    // 检查是否在 parentPath 之下
-                    if (trackDir.StartsWith(normalizedParent, StringComparison.OrdinalIgnoreCase))
+                    // 只有当路径完全匹配或者是其子路径（且以分隔符开头）时才处理
+                    if (trackDir.StartsWith(searchPrefix, StringComparison.OrdinalIgnoreCase))
                     {
-                        if (trackDir.Length > normalizedParent.Length)
+                        // 提取 searchPrefix 之后的第一级目录名
+                        string relative = trackDir.Substring(searchPrefix.Length);
+                        if (!string.IsNullOrEmpty(relative))
                         {
-                            // 提取 parentPath 之后的第一级目录名
-                            string relative = trackDir.Substring(normalizedParent.Length).TrimStart('\\', '/');
-                            if (!string.IsNullOrEmpty(relative))
-                            {
-                                string firstLevel = relative.Split('\\', '/')[0];
-                                subfolders.Add(Path.Combine(normalizedParent, firstLevel));
-                            }
+                            string firstLevel = relative.Split('\\')[0];
+                            subfolders.Add(Path.Combine(normalizedParent, firstLevel));
                         }
                     }
                 }
@@ -83,7 +81,13 @@ namespace seamless_loop_music.Services
             if (string.IsNullOrEmpty(currentPath)) yield break;
 
             var roots = _dbHelper.GetMusicFolders();
-            string root = roots.FirstOrDefault(r => currentPath.StartsWith(r, StringComparison.OrdinalIgnoreCase));
+            string root = roots.FirstOrDefault(r => 
+            {
+                string normRoot = r.Replace('/', '\\').TrimEnd('\\');
+                string normPath = currentPath.Replace('/', '\\').TrimEnd('\\');
+                return normPath.Equals(normRoot, StringComparison.OrdinalIgnoreCase) || 
+                       normPath.StartsWith(normRoot + "\\", StringComparison.OrdinalIgnoreCase);
+            });
             
             if (string.IsNullOrEmpty(root))
             {

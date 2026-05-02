@@ -163,14 +163,14 @@
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                                <TextBlock Text=">" Margin="8,0" Foreground="{StaticResource BrushTextSecondary}" 
+                                           Visibility="{Binding IsRoot, Converter={StaticResource NullToVisibilityInverseConverter}}"
+                                           VerticalAlignment="Center" FontSize="14" Opacity="0.5"/>
                                 <Button Style="{StaticResource ModernTextButton}" 
                                         Content="{Binding Name}" 
                                         Command="{Binding Data.NavigateToPathCommand, Source={StaticResource LibraryVmProxy}}"
                                         CommandParameter="{Binding Path}"
                                         FontSize="12" Opacity="0.8"/>
-                                <TextBlock Text="›" Margin="4,0" Foreground="{StaticResource BrushTextSecondary}" 
-                                           Visibility="{Binding IsRoot, Converter={StaticResource NullToVisibilityInverseConverter}}"
-                                           VerticalAlignment="Center"/>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
