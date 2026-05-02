@@ -35,6 +35,28 @@
         <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
     </Style>
 
+    <!-- Modern Text Button (Hyperlink style) -->
+    <Style x:Key="ModernTextButton" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Padding" Value="0"/>
+        <Setter Property="Cursor" Value="Hand"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Button">
+                    <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"/>
+                    <ControlTemplate.Triggers>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter TargetName="Txt" Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            <Setter TargetName="Txt" Property="TextDecorations" Value="Underline"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Modern ListBoxItem Style -->
     <Style x:Key="ModernListBoxItem" TargetType="ListBoxItem" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="Background" Value="Transparent"/>

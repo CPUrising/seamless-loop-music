@@ -214,6 +214,9 @@
   <data name="NavPlaylist" xml:space="preserve">
     <value>Playlists</value>
   </data>
+  <data name="NavFolder" xml:space="preserve">
+    <value>Folders</value>
+  </data>
   <data name="PlaylistAll" xml:space="preserve">
     <value>All Tracks</value>
   </data>

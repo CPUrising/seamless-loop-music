@@ -25,6 +25,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IRegionManager _regionManager;
         private readonly ISearchService _searchService;
         private readonly IEventAggregator _eventAggregator;
+        private readonly IFoldersService _foldersService;
         
         private bool _isInternalSelectionChange = false;
         
@@ -100,9 +101,37 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
+        // --- 文件夹导航属性 ---
+        private ObservableCollection<SubfolderItem> _rootFolders = new ObservableCollection<SubfolderItem>();
+        public ObservableCollection<SubfolderItem> RootFolders => _rootFolders;
+
+        private SubfolderItem _selectedRoot;
+        public SubfolderItem SelectedRoot
+        {
+            get => _selectedRoot;
+            set
+            {
+                if (SetProperty(ref _selectedRoot, value) && value != null)
+                {
+                    _ = LoadSubfoldersAsync(value.Path);
+                }
+            }
+        }
+
+        private ObservableCollection<SubfolderItem> _subfolders = new ObservableCollection<SubfolderItem>();
+        public ObservableCollection<SubfolderItem> Subfolders => _subfolders;
+
+        private ObservableCollection<SubfolderItem> _breadcrumbs = new ObservableCollection<SubfolderItem>();
+        public ObservableCollection<SubfolderItem> Breadcrumbs => _breadcrumbs;
+
+        public bool IsFolderCategorySelected => SelectedCategory?.Type == CategoryType.Folder;
+
+        public DelegateCommand<string> NavigateToPathCommand { get; }
+        public DelegateCommand NavigateUpCommand { get; }
+
         
 
-        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager, ISearchService searchService, IEventAggregator eventAggregator)
+        public LibraryViewModel(ITrackRepository trackRepository, IPlaybackService playbackService, IPlaylistManager playlistManager, IRegionManager regionManager, ISearchService searchService, IEventAggregator eventAggregator, IFoldersService foldersService)
         {
             _trackRepository = trackRepository;
             _playbackService = playbackService;
@@ -110,6 +139,10 @@ namespace seamless_loop_music.UI.ViewModels
             _regionManager = regionManager;
             _searchService = searchService;
             _eventAggregator = eventAggregator;
+            _foldersService = foldersService;
+
+            NavigateToPathCommand = new DelegateCommand<string>(path => _ = LoadSubfoldersAsync(path));
+            NavigateUpCommand = new DelegateCommand(OnNavigateUp, () => Breadcrumbs.Count > 1);
 
             InitializeNavigationCategories();
 
@@ -146,6 +179,9 @@ namespace seamless_loop_music.UI.ViewModels
 
             // 设置默认选中（这会触发初始加载）
             SelectedCategory = NavigationCategories.FirstOrDefault();
+
+            // 初始导航到曲目列表
+            _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
 
             // 扫描完成后自动刷新分类列表
             _eventAggregator.GetEvent<LibraryRefreshedEvent>().Subscribe(() => { var _ = LoadCategoryItems(); });
@@ -233,7 +269,8 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 new CategoryNavTarget { Name = loc["NavAlbum"], Icon = "💿", Type = CategoryType.Album },
                 new CategoryNavTarget { Name = loc["NavArtist"], Icon = "👤", Type = CategoryType.Artist },
-                new CategoryNavTarget { Name = loc["NavPlaylist"], Icon = "📂", Type = CategoryType.Playlist }
+                new CategoryNavTarget { Name = loc["NavPlaylist"], Icon = "📂", Type = CategoryType.Playlist },
+                new CategoryNavTarget { Name = loc["NavFolder"], Icon = "📁", Type = CategoryType.Folder }
             };
         }
 
@@ -288,6 +325,9 @@ namespace seamless_loop_music.UI.ViewModels
                     }));
                     items = list;
                     break;
+                case CategoryType.Folder:
+                    await LoadRootFoldersAsync();
+                    break;
             }
 
             if (items != null)
@@ -296,6 +336,7 @@ namespace seamless_loop_music.UI.ViewModels
             }
 
             CategoryItemsView.Refresh();
+            RaisePropertyChanged(nameof(IsFolderCategorySelected));
 
             // 如果有指定要选中的项，则选中它
             if (targetToSelect != null)
@@ -313,6 +354,47 @@ namespace seamless_loop_music.UI.ViewModels
 
             // 否则默认选中第一项
             SelectedCategoryItem = CategoryItems.FirstOrDefault();
+        }
+
+        private async Task LoadRootFoldersAsync()
+        {
+            var roots = await _foldersService.GetRootFoldersAsync();
+            App.Current.Dispatcher.Invoke(() => 
+            {
+                RootFolders.Clear();
+                foreach (var r in roots) RootFolders.Add(r);
+                SelectedRoot = RootFolders.FirstOrDefault();
+            });
+        }
+
+        private async Task LoadSubfoldersAsync(string path)
+        {
+            if (string.IsNullOrEmpty(path)) return;
+
+            var sub = await _foldersService.GetSubfoldersAsync(path);
+            var crumbs = _foldersService.GetBreadcrumbs(path).ToList();
+
+            App.Current.Dispatcher.Invoke(() => 
+            {
+                Subfolders.Clear();
+                foreach (var s in sub) Subfolders.Add(s);
+
+                Breadcrumbs.Clear();
+                foreach (var c in crumbs) Breadcrumbs.Add(c);
+                NavigateUpCommand.RaiseCanExecuteChanged();
+            });
+
+            // 通知右侧列表更新路径
+            var parameters = new NavigationParameters();
+            parameters.Add("folderPath", path);
+            _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView", parameters);
+        }
+
+        private void OnNavigateUp()
+        {
+            if (Breadcrumbs.Count <= 1) return;
+            var parent = Breadcrumbs[Breadcrumbs.Count - 2];
+            _ = LoadSubfoldersAsync(parent.Path);
         }
 
         private void OnRenamePlaylist()

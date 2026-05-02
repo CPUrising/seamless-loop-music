@@ -118,12 +118,21 @@
             </Border.Style>
             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                 <Border Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
-                    <TextBlock Text="{StaticResource IconMusic}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                    <Grid>
+                        <TextBlock Text="{StaticResource IconFolder}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"/>
+                        <TextBlock Text="{StaticResource IconMusic}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"
+                                   Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
+                    </Grid>
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <Viewbox HorizontalAlignment="Left" MaxHeight="45" StretchDirection="DownOnly" MaxWidth="600">
                         <TextBlock Text="{Binding CategoryName}" Foreground="White" FontSize="28" FontWeight="Bold"/>
                     </Viewbox>
+                    <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
+                               Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="500"
+                               ToolTip="{Binding CurrentFolderPath}"/>
                     <Grid Margin="0,8,0,0">
                         <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>

@@ -6,7 +6,8 @@ namespace seamless_loop_music.Models
     {
         Album,
         Artist,
-        Playlist
+        Playlist,
+        Folder
     }
 
     public class CategoryItem

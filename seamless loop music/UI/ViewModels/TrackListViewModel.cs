@@ -34,6 +34,13 @@ namespace seamless_loop_music.UI.ViewModels
             get => _selectedCategoryItem;
             set => SetProperty(ref _selectedCategoryItem, value);
         }
+        private string _currentFolderPath;
+        public string CurrentFolderPath
+        {
+            get => _currentFolderPath;
+            set => SetProperty(ref _currentFolderPath, value);
+        }
+
         private HashSet<int> _currentPlaylistTrackIds = new HashSet<int>();
 
         private ObservableCollection<MusicTrack> _tracks = new ObservableCollection<MusicTrack>();
@@ -336,6 +343,18 @@ namespace seamless_loop_music.UI.ViewModels
                             if (!_currentPlaylistTrackIds.Contains(track.Id)) return false;
                         }
                         break;
+                    case CategoryType.Folder:
+                        if (string.IsNullOrEmpty(CurrentFolderPath)) return true;
+                        if (string.IsNullOrEmpty(track.FilePath)) return false;
+
+                        // 路径标准化对比
+                        string trackDir = System.IO.Path.GetDirectoryName(track.FilePath)?
+                            .Replace('/', '\\').TrimEnd('\\').ToLower();
+                        string filterDir = CurrentFolderPath
+                            .Replace('/', '\\').TrimEnd('\\').ToLower();
+
+                        if (trackDir != filterDir) return false;
+                        break;
                 }
             }
 
@@ -582,6 +601,21 @@ namespace seamless_loop_music.UI.ViewModels
             if (Tracks.Count == 0)
             {
                 await ReloadTracksAsync();
+            }
+
+            // 处理文件夹路径参数
+            if (navigationContext.Parameters.ContainsKey("folderPath"))
+            {
+                var path = navigationContext.Parameters["folderPath"] as string;
+                CurrentFolderPath = path;
+                _selectedCategoryItem = new CategoryItem { Type = CategoryType.Folder, Name = System.IO.Path.GetFileName(path) };
+                
+                App.Current.Dispatcher.Invoke(() => 
+                {
+                    TracksView.Refresh();
+                    UpdateStats();
+                    RaisePropertyChanged(nameof(CategoryName));
+                });
             }
 
             // 如果导航带了 track 参数，自动选中

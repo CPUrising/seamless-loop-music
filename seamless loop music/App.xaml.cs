@@ -93,6 +93,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<TrackMetadataService>();
             containerRegistry.RegisterSingleton<ITaskbarService, TaskbarService>();
             containerRegistry.RegisterSingleton<INotifyIconService, NotifyIconService>();
+            containerRegistry.RegisterSingleton<IFoldersService, FoldersService>();
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
