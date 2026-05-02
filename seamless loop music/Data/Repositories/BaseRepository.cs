@@ -108,8 +108,6 @@ namespace seamless_loop_music.Data.Repositories
                         CREATE TABLE IF NOT EXISTS Playlists (
                             Id             INTEGER PRIMARY KEY AUTOINCREMENT,
                             Name           TEXT NOT NULL,
-                            FolderPath     TEXT,
-                            IsFolderLinked INTEGER DEFAULT 0,
                             SortOrder      INTEGER DEFAULT 0,
                             CreatedAt      DATETIME DEFAULT CURRENT_TIMESTAMP
                         );");
@@ -122,16 +120,6 @@ namespace seamless_loop_music.Data.Repositories
                             PRIMARY KEY(PlaylistId, SongId),
                             FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
                             FOREIGN KEY(SongId)     REFERENCES Tracks(Id)    ON DELETE CASCADE
-                        );");
-
-                    conn.Execute(@"
-                        CREATE TABLE IF NOT EXISTS PlaylistFolders (
-                            Id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                            PlaylistId INTEGER NOT NULL,
-                            FolderPath TEXT NOT NULL,
-                            AddedAt    DATETIME DEFAULT CURRENT_TIMESTAMP,
-                            FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
-                            UNIQUE(PlaylistId, FolderPath)
                         );");
                 }
             }

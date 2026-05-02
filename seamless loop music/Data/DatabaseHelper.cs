@@ -21,7 +21,7 @@ namespace seamless_loop_music.Data
         
         // Playlist related
         List<Playlist> GetAllPlaylists();
-        int AddPlaylist(string name, string folderPath = null, bool isLinked = false);
+        int AddPlaylist(string name);
         void DeletePlaylist(int playlistId);
         void RenamePlaylist(int playlistId, string newName);
         void BulkSaveTracksAndAddToPlaylist(IEnumerable<MusicTrack> tracks, int playlistId);
@@ -33,9 +33,6 @@ namespace seamless_loop_music.Data
         void UpdateTracksSortOrder(int playlistId, List<int> songIds);
         
         // Folder related
-        List<string> GetPlaylists(int playlistId);
-        void AddFolderToPlaylist(int playlistId, string folderPath);
-        void RemovePlaylist(int playlistId, string folderPath);
         List<string> GetMusicFolders();
         void AddMusicFolder(string folderPath);
         void RemoveMusicFolder(string folderPath);
@@ -99,9 +96,8 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, IsLoved INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, FolderPath TEXT, IsFolderLinked INTEGER DEFAULT 0, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER DEFAULT 0, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, PlaylistId INTEGER NOT NULL, FolderPath TEXT NOT NULL, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, UNIQUE(PlaylistId, FolderPath));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT);");
 
@@ -164,8 +160,8 @@ namespace seamless_loop_music.Data
 
         private int? UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist, string album, string coverPath, IDbTransaction trans)
         {
-            if (string.IsNullOrEmpty(album)) return null;
             string artistName = !string.IsNullOrEmpty(artist) ? artist : (!string.IsNullOrEmpty(albumArtist) ? albumArtist : "Unknown Artist");
+            string albumName = !string.IsNullOrEmpty(album) ? album : "Unknown Album";
             
             db.Execute("INSERT OR IGNORE INTO Artists (Name) VALUES (@Name)", new { Name = artistName }, transaction: trans);
             int artistId = db.ExecuteScalar<int>("SELECT Id FROM Artists WHERE Name = @Name", new { Name = artistName }, transaction: trans);
@@ -176,9 +172,9 @@ namespace seamless_loop_music.Data
                 ON CONFLICT(Name, ArtistId) DO UPDATE SET
                     CoverPath = COALESCE(Albums.CoverPath, excluded.CoverPath)
                 WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';", 
-                new { Name = album, ArtistId = artistId, Cover = coverPath }, transaction: trans);
+                new { Name = albumName, ArtistId = artistId, Cover = coverPath }, transaction: trans);
             return db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name = @Name AND ArtistId = @ArtistId", 
-                new { Name = album, ArtistId = artistId }, transaction: trans);
+                new { Name = albumName, ArtistId = artistId }, transaction: trans);
         }
 
         public void UpdateTrackAnalysis(MusicTrack track) => SaveTrack(track);
@@ -215,9 +211,9 @@ namespace seamless_loop_music.Data
             using (var db = GetConnection()) return db.Query<Playlist>("SELECT * FROM Playlists ORDER BY SortOrder").ToList();
         }
 
-        public int AddPlaylist(string name, string folderPath = null, bool isLinked = false)
+        public int AddPlaylist(string name)
         {
-            using (var db = GetConnection()) return db.ExecuteScalar<int>(@"INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) VALUES (@Name, @Path, @Linked); SELECT last_insert_rowid();", new { Name = name, Path = folderPath, Linked = isLinked ? 1 : 0 });
+            using (var db = GetConnection()) return db.ExecuteScalar<int>(@"INSERT INTO Playlists (Name) VALUES (@Name); SELECT last_insert_rowid();", new { Name = name });
         }
 
         public void DeletePlaylist(int playlistId)
@@ -280,21 +276,6 @@ namespace seamless_loop_music.Data
             }
         }
         
-        public List<string> GetPlaylists(int playlistId)
-        {
-            using (var db = GetConnection()) return db.Query<string>("SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Id", new { Id = playlistId }).ToList();
-        }
-
-        public void AddFolderToPlaylist(int playlistId, string folderPath)
-        {
-            using (var db = GetConnection()) db.Execute("INSERT OR IGNORE INTO PlaylistFolders (PlaylistId, FolderPath) VALUES (@Pid, @Path)", new { Pid = playlistId, Path = folderPath });
-        }
-
-        public void RemovePlaylist(int playlistId, string folderPath)
-        {
-            using (var db = GetConnection()) db.Execute("DELETE FROM PlaylistFolders WHERE PlaylistId=@Pid AND FolderPath=@Path", new { Pid = playlistId, Path = folderPath });
-        }
-
         public List<string> GetMusicFolders()
         {
             using (var db = GetConnection()) return db.Query<string>("SELECT FolderPath FROM MusicFolders ORDER BY AddedAt").ToList();
@@ -340,47 +321,78 @@ namespace seamless_loop_music.Data
                 {
                     // --- 1. 架构自适应探测 ---
                     var tables = db.Query<string>("SELECT name FROM ExternalDB.sqlite_master WHERE type='table'").ToList();
-                    bool is3NF = tables.Contains("Tracks") && tables.Contains("Artists");
+                    bool is3NF = tables.Contains("Tracks", StringComparer.OrdinalIgnoreCase);
                     
                     List<MusicTrack> externalTracks;
                     if (is3NF)
                     {
-                        // 外部库是新版 3NF 架构
-                        string syncSql3NF = @"
+                        // 探测 Tracks 表字段
+                        var trackCols = db.Query("PRAGMA ExternalDB.table_info(Tracks)").Cast<IDictionary<string, object>>()
+                                          .Select(c => c["name"].ToString()).ToList();
+                        var trackColSet = new HashSet<string>(trackCols, StringComparer.OrdinalIgnoreCase);
+                        
+                        bool hasDisplayName = trackColSet.Contains("DisplayName");
+                        bool hasCover = trackColSet.Contains("CoverPath");
+
+                        bool hasArtists = tables.Contains("Artists", StringComparer.OrdinalIgnoreCase);
+                        bool hasAlbums = tables.Contains("Albums", StringComparer.OrdinalIgnoreCase);
+                        bool hasLoopPoints = tables.Contains("LoopPoints", StringComparer.OrdinalIgnoreCase);
+                        bool hasUserRatings = tables.Contains("UserRatings", StringComparer.OrdinalIgnoreCase);
+
+                        string syncSql3NF = $@"
                             SELECT 
-                                t.FileName, t.TotalSamples, t.DisplayName, 
-                                ar.Name AS Artist, al.Name AS Album, ar.Name AS AlbumArtist,
-                                lp.LoopStart, lp.LoopEnd, lp.LoopCandidatesJson,
-                                ur.Rating, ur.IsLoved, t.CoverPath
+                                t.FileName, t.TotalSamples, 
+                                {(hasDisplayName ? "t.DisplayName" : "t.FileName AS DisplayName")}, 
+                                {(hasArtists ? "ar.Name" : "NULL")} AS Artist, 
+                                {(hasAlbums ? "al.Name" : "NULL")} AS Album, 
+                                {(hasArtists ? "ar.Name" : "NULL")} AS AlbumArtist,
+                                {(hasLoopPoints ? "lp.LoopStart" : "0")} AS LoopStart, 
+                                {(hasLoopPoints ? "lp.LoopEnd" : "0")} AS LoopEnd, 
+                                {(hasLoopPoints ? "lp.LoopCandidatesJson" : "NULL")} AS LoopCandidatesJson,
+                                {(hasUserRatings ? "ur.Rating" : "0")} AS Rating, 
+                                {(hasUserRatings ? "ur.IsLoved" : "0")} AS IsLoved, 
+                                {(hasCover ? "t.CoverPath" : "NULL AS CoverPath")}
                             FROM ExternalDB.Tracks t
-                            LEFT JOIN ExternalDB.Albums al ON t.AlbumId = al.Id
-                            LEFT JOIN ExternalDB.Artists ar ON al.ArtistId = ar.Id
-                            LEFT JOIN ExternalDB.LoopPoints lp ON t.Id = lp.TrackId
-                            LEFT JOIN ExternalDB.UserRatings ur ON t.Id = ur.TrackId";
+                            {(hasAlbums ? "LEFT JOIN ExternalDB.Albums al ON t.AlbumId = al.Id" : "")}
+                            {(hasArtists ? "LEFT JOIN ExternalDB.Artists ar ON al.ArtistId = ar.Id" : "")}
+                            {(hasLoopPoints ? "LEFT JOIN ExternalDB.LoopPoints lp ON t.Id = lp.TrackId" : "")}
+                            {(hasUserRatings ? "LEFT JOIN ExternalDB.UserRatings ur ON t.Id = ur.TrackId" : "")}";
                         externalTracks = db.Query<MusicTrack>(syncSql3NF).ToList();
                     }
-                    else
+                    else if (tables.Contains("LoopPoints", StringComparer.OrdinalIgnoreCase))
                     {
                         // 外部库是旧版 Flat 架构
                         var columnsResult = db.Query("PRAGMA ExternalDB.table_info(LoopPoints)").Cast<IDictionary<string, object>>();
                         var columns = columnsResult.Select(c => c["name"].ToString()).ToList();
-                        bool hasDisplayName = columns.Contains("DisplayName");
-                        bool hasCandidates = columns.Contains("LoopCandidatesJson");
-                        bool hasRating = columns.Contains("Rating");
-                        bool hasIsLoved = columns.Contains("IsLoved");
-                        bool hasCover = columns.Contains("CoverPath");
+                        var colSet = new HashSet<string>(columns, StringComparer.OrdinalIgnoreCase);
+                        
+                        bool hasDisplayName = colSet.Contains("DisplayName");
+                        bool hasCandidates = colSet.Contains("LoopCandidatesJson");
+                        bool hasRating = colSet.Contains("Rating");
+                        bool hasIsLoved = colSet.Contains("IsLoved");
+                        bool hasCover = colSet.Contains("CoverPath");
+                        bool hasArtist = colSet.Contains("Artist");
+                        bool hasAlbum = colSet.Contains("Album");
+                        bool hasAlbumArtist = colSet.Contains("AlbumArtist");
 
                         string syncSqlFlat = $@"
                             SELECT 
                                 FileName, TotalSamples, 
                                 {(hasDisplayName ? "DisplayName" : "FileName AS DisplayName")}, 
-                                Artist, Album, AlbumArtist, LoopStart, LoopEnd, 
+                                {(hasArtist ? "Artist" : "NULL AS Artist")}, 
+                                {(hasAlbum ? "Album" : "NULL AS Album")}, 
+                                {(hasAlbumArtist ? "AlbumArtist" : (hasArtist ? "Artist AS AlbumArtist" : "NULL AS AlbumArtist"))}, 
+                                LoopStart, LoopEnd, 
                                 {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")}, 
                                 {(hasRating ? "Rating" : "0 AS Rating")}, 
                                 {(hasIsLoved ? "IsLoved" : "0 AS IsLoved")}, 
                                 {(hasCover ? "CoverPath" : "NULL AS CoverPath")} 
                             FROM ExternalDB.LoopPoints";
                         externalTracks = db.Query<MusicTrack>(syncSqlFlat).ToList();
+                    }
+                    else
+                    {
+                        externalTracks = new List<MusicTrack>();
                     }
 
                     // --- 2. 曲目同步（模糊匹配） ---
@@ -407,53 +419,62 @@ namespace seamless_loop_music.Data
                     }
                     
                     // --- 3. 歌单同步（模糊关联本地 ID） ---
-                    // 改进：使用 WHERE 子句防止插入同名歌单，因为 Playlists.Name 目前没有 UNIQUE 约束
-                    db.Execute(@"
-                        INSERT INTO Playlists (Name, FolderPath, IsFolderLinked, SortOrder) 
-                        SELECT Name, FolderPath, IsFolderLinked, SortOrder 
-                        FROM ExternalDB.Playlists 
-                        WHERE Name NOT IN (SELECT Name FROM Playlists)");
-                    
-                    // 改进：增加 GroupBy 防止数据库中已有的重名歌单导致 ToDictionary 报错
-                    var playlistMap = db.Query<PlaylistDto>("SELECT Name, Id FROM Playlists")
-                                        .GroupBy(x => x.Name)
-                                        .ToDictionary(g => g.Key, g => g.First().Id);
-                    var externalPlaylists = db.Query<PlaylistDto>("SELECT Id, Name FROM ExternalDB.Playlists");
-
-                    foreach (var extPl in externalPlaylists)
+                    if (tables.Contains("Playlists"))
                     {
-                        if (playlistMap.TryGetValue(extPl.Name, out int localPlId))
-                        {
-                            // 根据外部架构决定如何获取外部歌曲的文件名和采样数
-                            string itemSyncSql;
-                            if (is3NF)
-                            {
-                                itemSyncSql = @"
-                                    INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
-                                    SELECT @LocalPlId, t.Id, epi.SortOrder
-                                    FROM ExternalDB.PlaylistItems epi
-                                    JOIN ExternalDB.Tracks ext_t ON epi.SongId = ext_t.Id
-                                    JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(ext_t.FileName)) 
-                                                 AND ABS(t.TotalSamples - ext_t.TotalSamples) < 10000
-                                    WHERE epi.PlaylistId = @ExtPlId";
-                            }
-                            else
-                            {
-                                itemSyncSql = @"
-                                    INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
-                                    SELECT @LocalPlId, t.Id, epi.SortOrder
-                                    FROM ExternalDB.PlaylistItems epi
-                                    JOIN ExternalDB.LoopPoints elp ON epi.SongId = elp.Id
-                                    JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(elp.FileName)) 
-                                                 AND ABS(t.TotalSamples - elp.TotalSamples) < 10000
-                                    WHERE epi.PlaylistId = @ExtPlId";
-                            }
-                            
-                            db.Execute(itemSyncSql, new { LocalPlId = localPlId, ExtPlId = extPl.Id });
-                        }
-                    }
+                        var playlistCols = db.Query("PRAGMA ExternalDB.table_info(Playlists)").Cast<IDictionary<string, object>>()
+                                             .Select(c => c["name"].ToString()).ToList();
+                        bool hasSortOrder = playlistCols.Contains("SortOrder");
 
-                    playlistsSynced = externalPlaylists.Count();
+                        // 3.1 同步歌单基本信息
+                        string plSyncSql = $@"
+                            INSERT INTO Playlists (Name, SortOrder) 
+                            SELECT Name, {(hasSortOrder ? "SortOrder" : "0")} 
+                            FROM ExternalDB.Playlists 
+                            WHERE Name NOT IN (SELECT Name FROM Playlists)";
+                        db.Execute(plSyncSql);
+                        
+                        var playlistMap = db.Query<PlaylistDto>("SELECT Name, Id FROM Playlists")
+                                            .GroupBy(x => x.Name)
+                                            .ToDictionary(g => g.Key, g => g.First().Id);
+                        var externalPlaylists = db.Query<PlaylistDto>("SELECT Id, Name FROM ExternalDB.Playlists");
+
+                        foreach (var extPl in externalPlaylists)
+                        {
+                            if (playlistMap.TryGetValue(extPl.Name, out int localPlId))
+                            {
+                                // 3.2 同步歌单项 (PlaylistItems)
+                                string itemSyncSql;
+                                if (is3NF)
+                                {
+                                    itemSyncSql = @"
+                                        INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
+                                        SELECT @LocalPlId, t.Id, epi.SortOrder
+                                        FROM ExternalDB.PlaylistItems epi
+                                        JOIN ExternalDB.Tracks ext_t ON epi.SongId = ext_t.Id
+                                        JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(ext_t.FileName)) 
+                                                     AND ABS(t.TotalSamples - ext_t.TotalSamples) < 10000
+                                        WHERE epi.PlaylistId = @ExtPlId";
+                                }
+                                else
+                                {
+                                    // 检查是否有关联表，Flat 架构可能完全没有 PlaylistItems
+                                    if (!tables.Contains("PlaylistItems")) continue;
+
+                                    itemSyncSql = @"
+                                        INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder)
+                                        SELECT @LocalPlId, t.Id, epi.SortOrder
+                                        FROM ExternalDB.PlaylistItems epi
+                                        JOIN ExternalDB.LoopPoints elp ON epi.SongId = elp.Id
+                                        JOIN Tracks t ON LOWER(TRIM(t.FileName)) = LOWER(TRIM(elp.FileName)) 
+                                                     AND ABS(t.TotalSamples - elp.TotalSamples) < 10000
+                                        WHERE epi.PlaylistId = @ExtPlId";
+                                }
+                                
+                                db.Execute(itemSyncSql, new { LocalPlId = localPlId, ExtPlId = extPl.Id });
+                            }
+                        }
+                        playlistsSynced = externalPlaylists.Count();
+                    }
                 }
                 finally { db.Execute("DETACH DATABASE ExternalDB"); }
             }

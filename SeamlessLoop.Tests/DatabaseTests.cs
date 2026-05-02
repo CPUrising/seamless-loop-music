@@ -58,7 +58,6 @@ namespace SeamlessLoop.Tests
             using (var db = _dbHelper.GetConnection())
             {
                 db.Execute("DELETE FROM PlaylistItems;");
-                db.Execute("DELETE FROM PlaylistFolders;");
                 db.Execute("DELETE FROM Playlists;");
                 db.Execute("DELETE FROM UserRatings;");
                 db.Execute("DELETE FROM LoopPoints;");

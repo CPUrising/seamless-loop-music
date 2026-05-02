@@ -10,7 +10,7 @@ namespace seamless_loop_music.Services
         
 
         List<Playlist> GetAllPlaylists();
-        int CreatePlaylist(string name, string folderPath = null, bool isLinked = false);
+        int CreatePlaylist(string name);
         void RenamePlaylist(int playlistId, string newName);
         void DeletePlaylist(int playlistId);
         
@@ -19,10 +19,6 @@ namespace seamless_loop_music.Services
         void RemoveTrackFromPlaylist(int playlistId, int songId);
         
         Task AddFilesToPlaylistAsync(int playlistId, string[] filePaths);
-        Task AddFolderToPlaylistAsync(int playlistId, string folderPath);
-        Task RemoveFolderFromPlaylistAsync(int playlistId, string folderPath);
-        List<string> GetPlaylists(int playlistId);
-        Task RefreshPlaylistAsync(int playlistId);
         
         List<MusicTrack> LoadPlaylistFromDb(int playlistId);
         MusicTrack GetStoredTrackInfo(string filePath);

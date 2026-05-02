@@ -25,7 +25,7 @@ namespace seamless_loop_music.Services
         void SeekToSample(long sample);
         
         List<Playlist> GetAllPlaylists();
-        int CreatePlaylist(string name, string folderPath = null, bool isLinked = false);
+        int CreatePlaylist(string name);
         void RenamePlaylist(int playlistId, string newName);
         void DeletePlaylist(int playlistId);
         
@@ -33,12 +33,8 @@ namespace seamless_loop_music.Services
         void AddTracksToPlaylist(int playlistId, List<MusicTrack> tracks);
         void RemoveTrackFromPlaylist(int playlistId, int songId);
         
-        Task AddFilesToPlaylist(int playlistId, string[] filePaths);
-        Task AddFolderToPlaylist(int playlistId, string folderPath);
-        Task RemoveFolderFromPlaylist(int playlistId, string folderPath);
-        List<string> GetPlaylistFolders(int playlistId);
+        void AddFilesToPlaylist(int playlistId, string[] filePaths);
         
-        Task RefreshPlaylist(int playlistId);
         List<MusicTrack> LoadPlaylistFromDb(int playlistId);
         
         void UpdatePlaylistsSortOrder(List<int> playlistIds);

@@ -32,7 +32,7 @@ namespace seamless_loop_music.Data.Repositories
             {
                 string sql = @"
                     SELECT 
-                        p.Id, p.Name, p.FolderPath, p.IsFolderLinked, p.CreatedAt, p.SortOrder,
+                        p.Id, p.Name, p.CreatedAt, p.SortOrder,
                         (SELECT COUNT(1) FROM PlaylistItems pi WHERE pi.PlaylistId = p.Id) AS SongCount
                     FROM Playlists p
                     ORDER BY p.SortOrder ASC, p.CreatedAt DESC";
@@ -41,15 +41,15 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
-        public int Add(string name, string folderPath = null, bool isLinked = false)
+        public int Add(string name)
         {
             using (var db = GetConnection())
             {
                 return db.ExecuteScalar<int>(@"
-                    INSERT INTO Playlists (Name, FolderPath, IsFolderLinked) 
-                    VALUES (@Name, @Path, @Linked);
+                    INSERT INTO Playlists (Name) 
+                    VALUES (@Name);
                     SELECT last_insert_rowid();", 
-                    new { Name = name, Path = folderPath, Linked = isLinked ? 1 : 0 });
+                    new { Name = name });
             }
         }
 
@@ -149,32 +149,6 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
-        public void AddFolder(int playlistId, string folderPath)
-        {
-            using (var db = GetConnection())
-            {
-                db.Execute(@"INSERT OR IGNORE INTO PlaylistFolders (PlaylistId, FolderPath) VALUES (@Pid, @Path)", 
-                    new { Pid = playlistId, Path = folderPath });
-            }
-        }
 
-        public void RemoveFolder(int playlistId, string folderPath)
-        {
-            using (var db = GetConnection())
-            {
-                db.Execute("DELETE FROM PlaylistFolders WHERE PlaylistId = @Pid AND FolderPath = @Path", 
-                    new { Pid = playlistId, Path = folderPath });
-            }
-        }
-
-        public IEnumerable<string> GetFolders(int playlistId)
-        {
-            using (var db = GetConnection())
-            {
-                return db.Query<string>(
-                    "SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Pid ORDER BY AddedAt ASC", 
-                    new { Pid = playlistId }).ToList();
-            }
-        }
     }
 }

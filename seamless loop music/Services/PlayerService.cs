@@ -49,7 +49,7 @@ namespace seamless_loop_music.Services
         public void SeekToSample(long sample) => _playbackService.SeekToSample(sample);
 
         public List<Playlist> GetAllPlaylists() => _databaseHelper.GetAllPlaylists();
-        public int CreatePlaylist(string name, string folderPath = null, bool isLinked = false) => _databaseHelper.AddPlaylist(name, folderPath, isLinked);
+        public int CreatePlaylist(string name) => _databaseHelper.AddPlaylist(name);
         public void RenamePlaylist(int playlistId, string newName) => _databaseHelper.RenamePlaylist(playlistId, newName);
         public void DeletePlaylist(int playlistId) => _databaseHelper.DeletePlaylist(playlistId);
 
@@ -57,11 +57,7 @@ namespace seamless_loop_music.Services
         public void AddTracksToPlaylist(int playlistId, List<MusicTrack> tracks) { foreach(var t in tracks) AddTrackToPlaylist(playlistId, t); }
         public void RemoveTrackFromPlaylist(int playlistId, int songId) => _databaseHelper.RemoveSongFromPlaylist(playlistId, songId);
 
-        public Task AddFilesToPlaylist(int playlistId, string[] filePaths) => Task.CompletedTask;
-        public Task AddFolderToPlaylist(int playlistId, string folderPath) { _databaseHelper.AddFolderToPlaylist(playlistId, folderPath); return Task.CompletedTask; }
-        public Task RemoveFolderFromPlaylist(int playlistId, string folderPath) => Task.CompletedTask;
-        public List<string> GetPlaylistFolders(int playlistId) => _databaseHelper.GetPlaylists(playlistId);
-        public Task RefreshPlaylist(int playlistId) => _playlistManager.RefreshPlaylistAsync(playlistId);
+        public void AddFilesToPlaylist(int playlistId, string[] filePaths) { }
         public List<MusicTrack> LoadPlaylistFromDb(int playlistId) => _databaseHelper.GetPlaylistTracks(playlistId).ToList();
 
         public void UpdatePlaylistsSortOrder(List<int> playlistIds) => _databaseHelper.UpdatePlaylistsSortOrder(playlistIds);

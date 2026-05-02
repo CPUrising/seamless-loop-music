@@ -338,19 +338,14 @@ namespace seamless_loop_music.Data.Repositories
         private static int? UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist,
                                                string album, string coverPath, IDbTransaction trans)
         {
-            if (string.IsNullOrWhiteSpace(album)) return null;
+            string artistName = !string.IsNullOrWhiteSpace(artist) ? artist : (!string.IsNullOrWhiteSpace(albumArtist) ? albumArtist : "Unknown Artist");
+            string albumName = !string.IsNullOrWhiteSpace(album) ? album : "Unknown Album";
 
-            // Artist（优先使用 AlbumArtist，其次 Artist）
-            string artistName = !string.IsNullOrWhiteSpace(albumArtist) ? albumArtist : artist;
-            int? artistId = null;
-            if (!string.IsNullOrWhiteSpace(artistName))
-            {
-                db.Execute("INSERT OR IGNORE INTO Artists (Name) VALUES (@Name);",
-                    new { Name = artistName }, transaction: trans);
-                artistId = db.ExecuteScalar<int>(
-                    "SELECT Id FROM Artists WHERE Name = @Name;",
-                    new { Name = artistName }, transaction: trans);
-            }
+            db.Execute("INSERT OR IGNORE INTO Artists (Name) VALUES (@Name);",
+                new { Name = artistName }, transaction: trans);
+            int artistId = db.ExecuteScalar<int>(
+                "SELECT Id FROM Artists WHERE Name = @Name;",
+                new { Name = artistName }, transaction: trans);
 
             // Album: 升级为 ON CONFLICT 模式，如果发现新封面则自动补全
             db.Execute(@"
@@ -359,11 +354,11 @@ namespace seamless_loop_music.Data.Repositories
                 ON CONFLICT(Name, ArtistId) DO UPDATE SET
                     CoverPath = COALESCE(Albums.CoverPath, excluded.CoverPath)
                 WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';",
-                new { Name = album, ArtistId = artistId, CoverPath = coverPath }, transaction: trans);
+                new { Name = albumName, ArtistId = artistId, CoverPath = coverPath }, transaction: trans);
 
             return db.ExecuteScalar<int?>(
                 "SELECT Id FROM Albums WHERE Name = @Name AND (ArtistId = @ArtistId OR (ArtistId IS NULL AND @ArtistId IS NULL));",
-                new { Name = album, ArtistId = artistId }, transaction: trans);
+                new { Name = albumName, ArtistId = artistId }, transaction: trans);
         }
     }
 }

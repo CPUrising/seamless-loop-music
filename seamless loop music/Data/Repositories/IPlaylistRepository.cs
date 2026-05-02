@@ -7,7 +7,7 @@ namespace seamless_loop_music.Data.Repositories
     public interface IPlaylistRepository
     {
         // Removed: IEnumerable<Playlist> GetAll();
-        int Add(string name, string folderPath = null, bool isLinked = false);
+        int Add(string name);
         void Delete(int id);
         void Rename(int id, string newName);
         void UpdateSortOrder(IEnumerable<int> ids);
@@ -18,11 +18,5 @@ namespace seamless_loop_music.Data.Repositories
         void RemoveTrack(int playlistId, int trackId);
         void UpdateTracksSortOrder(int playlistId, IEnumerable<int> trackIds);
         bool IsTrackInPlaylist(int playlistId, int trackId);
-
-        // Folder management
-        void AddFolder(int playlistId, string folderPath);
-        void RemoveFolder(int playlistId, string folderPath);
-        IEnumerable<string> GetFolders(int playlistId);
     }
 }
-
