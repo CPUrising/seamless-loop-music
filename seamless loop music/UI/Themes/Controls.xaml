@@ -61,6 +61,119 @@
         </Setter>
     </Style>
 
+    <!-- Custom Slider Style with Hover-Reveal Thumb -->
+    <Style x:Key="ModernSlider" TargetType="Slider">
+        <Setter Property="Height" Value="20"/>
+        <Setter Property="Margin" Value="0"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="Slider">
+                    <Grid>
+                        <Border x:Name="TrackBackground"
+                                Height="3"
+                                Background="{StaticResource BrushSurfaceHighlight}"
+                                CornerRadius="1.5"
+                                VerticalAlignment="Center"/>
+                        <Track x:Name="PART_Track">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="Slider.DecreaseLarge">
+                                    <RepeatButton.Style>
+                                        <Style TargetType="RepeatButton">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate>
+                                                        <Border Height="3"
+                                                                Background="{StaticResource BrushAccent}"
+                                                                CornerRadius="1.5"/>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </RepeatButton.Style>
+                                </RepeatButton>
+                            </Track.DecreaseRepeatButton>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="Slider.IncreaseLarge">
+                                    <RepeatButton.Style>
+                                        <Style TargetType="RepeatButton">
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate>
+                                                        <Border Height="3"
+                                                                Background="{StaticResource BrushSurfaceHighlight}"
+                                                                CornerRadius="1.5"/>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                        </Style>
+                                    </RepeatButton.Style>
+                                </RepeatButton>
+                            </Track.IncreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb x:Name="Thumb">
+                                    <Thumb.Style>
+                                        <Style TargetType="Thumb">
+                                            <Setter Property="Width" Value="14"/>
+                                            <Setter Property="Height" Value="14"/>
+                                            <Setter Property="Opacity" Value="0"/>
+                                            <Setter Property="Cursor" Value="Hand"/>
+                                            <Setter Property="Margin" Value="-7,0,0,0"/>
+                                            <Setter Property="Template">
+                                                <Setter.Value>
+                                                    <ControlTemplate TargetType="Thumb">
+                                                        <Ellipse x:Name="ThumbEllipse"
+                                                                 Fill="{StaticResource BrushAccent}"
+                                                                 Stroke="{StaticResource BrushBackground}"
+                                                                 StrokeThickness="1"
+                                                                 Width="14"
+                                                                 Height="14">
+                                                            <Ellipse.Effect>
+                                                                <DropShadowEffect BlurRadius="3"
+                                                                                  ShadowDepth="0"
+                                                                                  Color="#40000000"/>
+                                                            </Ellipse.Effect>
+                                                        </Ellipse>
+                                                        <ControlTemplate.Triggers>
+                                                            <Trigger Property="IsMouseOver" Value="True">
+                                                                <Setter TargetName="ThumbEllipse" Property="Fill" Value="{StaticResource BrushAccentHover}"/>
+                                                            </Trigger>
+                                                        </ControlTemplate.Triggers>
+                                                    </ControlTemplate>
+                                                </Setter.Value>
+                                            </Setter>
+                                            <Style.Triggers>
+                                                <DataTrigger Binding="{Binding IsMouseOver, RelativeSource={RelativeSource AncestorType=Slider}}" Value="True">
+                                                    <DataTrigger.EnterActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                 To="1"
+                                                                                 Duration="0:0:0.15"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.EnterActions>
+                                                    <DataTrigger.ExitActions>
+                                                        <BeginStoryboard>
+                                                            <Storyboard>
+                                                                <DoubleAnimation Storyboard.TargetProperty="Opacity"
+                                                                                 To="0"
+                                                                                 Duration="0:0:0.2"/>
+                                                            </Storyboard>
+                                                        </BeginStoryboard>
+                                                    </DataTrigger.ExitActions>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </Thumb.Style>
+                                </Thumb>
+                            </Track.Thumb>
+                        </Track>
+                    </Grid>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
     <!-- Sidebar ListBoxItem Style -->
     <Style x:Key="SidebarListBoxItem" TargetType="ListBoxItem" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="HorizontalContentAlignment" Value="Center"/>

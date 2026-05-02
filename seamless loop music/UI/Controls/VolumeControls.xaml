@@ -10,7 +10,8 @@
         <md:PackIcon Kind="VolumeHigh" Width="18" Height="18" 
                      Foreground="{StaticResource BrushTextPrimary}" Opacity="0.5"
                      VerticalAlignment="Center" Margin="0,0,8,0"/>
-        <Slider Width="{Binding SliderWidth, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=100}" 
+        <Slider Style="{StaticResource ModernSlider}"
+                Width="{Binding SliderWidth, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=100}" 
                 Minimum="0" Maximum="100" 
                 Value="{Binding VolumeValue}" 
                 IsMoveToPointEnabled="True"

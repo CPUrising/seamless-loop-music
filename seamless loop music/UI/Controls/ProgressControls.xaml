@@ -12,7 +12,8 @@
                        HorizontalAlignment="Right" FontSize="12" Opacity="0.6"
                        Foreground="{StaticResource BrushTextPrimary}"/>
         </Grid>
-        <Slider x:Name="ProgressBar" Value="{Binding ProgressValue}" Maximum="1000" 
+        <Slider x:Name="ProgressBar" Style="{StaticResource ModernSlider}"
+                Value="{Binding ProgressValue}" Maximum="1000" 
                 IsMoveToPointEnabled="True" Margin="0,2,0,0"
                 ValueChanged="ProgressBar_ValueChanged"/>
     </StackPanel>

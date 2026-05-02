@@ -156,14 +156,14 @@
                             <TextBlock Text="{Binding MatchWindowTitle}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding MatchWindowSize, StringFormat={}{0:F1}}" FontSize="15" Foreground="{StaticResource BrushAccent}" FontWeight="Bold" Margin="8,0,0,0"/>
                         </StackPanel>
-                        <Slider Minimum="0.1" Maximum="10" Value="{Binding MatchWindowSize}" TickFrequency="0.1" IsSnapToTickEnabled="True" Height="30"/>
+                        <Slider Style="{StaticResource ModernSlider}" Minimum="0.1" Maximum="10" Value="{Binding MatchWindowSize}" TickFrequency="0.1" IsSnapToTickEnabled="True" Height="30"/>
                     </StackPanel>
                     <StackPanel Grid.Column="1" Margin="8">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding SearchRadiusTitle}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"/>
                             <TextBlock Text="{Binding SearchRadius, StringFormat={}{0:F0}}" FontSize="15" Foreground="#94E2D5" FontWeight="Bold" Margin="8,0,0,0"/>
                         </StackPanel>
-                        <Slider Minimum="1" Maximum="20" Value="{Binding SearchRadius}" TickFrequency="1" IsSnapToTickEnabled="True" Height="30"/>
+                        <Slider Style="{StaticResource ModernSlider}" Minimum="1" Maximum="20" Value="{Binding SearchRadius}" TickFrequency="1" IsSnapToTickEnabled="True" Height="30"/>
                     </StackPanel>
                 </Grid>
             </StackPanel>
