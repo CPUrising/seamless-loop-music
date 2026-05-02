@@ -121,6 +121,26 @@ namespace seamless_loop_music.UI.ViewModels
         private ObservableCollection<SubfolderItem> _subfolders = new ObservableCollection<SubfolderItem>();
         public ObservableCollection<SubfolderItem> Subfolders => _subfolders;
 
+        private ICollectionView _subfoldersView;
+        public ICollectionView SubfoldersView
+        {
+            get => _subfoldersView;
+            set => SetProperty(ref _subfoldersView, value);
+        }
+
+        private string _folderFilterText;
+        public string FolderFilterText
+        {
+            get => _folderFilterText;
+            set
+            {
+                if (SetProperty(ref _folderFilterText, value))
+                {
+                    SubfoldersView?.Refresh();
+                }
+            }
+        }
+
         private ObservableCollection<SubfolderItem> _breadcrumbs = new ObservableCollection<SubfolderItem>();
         public ObservableCollection<SubfolderItem> Breadcrumbs => _breadcrumbs;
 
@@ -152,6 +172,15 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (string.IsNullOrWhiteSpace(MiddleFilterText)) return true;
                 if (obj is CategoryItem item) return item.Name?.IndexOf(MiddleFilterText, StringComparison.OrdinalIgnoreCase) >= 0;
+                return false;
+            };
+
+            // Initialize Subfolders View
+            SubfoldersView = CollectionViewSource.GetDefaultView(Subfolders);
+            SubfoldersView.Filter = (obj) => 
+            {
+                if (string.IsNullOrWhiteSpace(FolderFilterText)) return true;
+                if (obj is SubfolderItem item) return item.Name?.IndexOf(FolderFilterText, StringComparison.OrdinalIgnoreCase) >= 0;
                 return false;
             };
 

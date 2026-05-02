@@ -6,6 +6,7 @@
              xmlns:local="clr-namespace:seamless_loop_music.UI.Views"
              xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
              xmlns:prism="http://prismlibrary.com/"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
@@ -135,23 +136,35 @@
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/> <!-- Root Selector -->
                     <RowDefinition Height="Auto"/> <!-- Breadcrumbs -->
+                    <RowDefinition Height="Auto"/> <!-- Search Box -->
                     <RowDefinition Height="*"/>    <!-- Subfolders -->
                 </Grid.RowDefinitions>
 
-                <ComboBox Grid.Row="0" Margin="15,20,15,5" 
-                          ItemsSource="{Binding RootFolders}"
-                          SelectedItem="{Binding SelectedRoot}"
-                          Style="{StaticResource FlatComboBoxStyle}"
-                          Height="36">
-                    <ComboBox.ItemTemplate>
-                        <DataTemplate>
-                            <StackPanel Orientation="Horizontal">
-                                <TextBlock Text="📂" Margin="0,0,8,0" Opacity="0.7"/>
-                                <TextBlock Text="{Binding Name}" ToolTip="{Binding Path}"/>
-                            </StackPanel>
-                        </DataTemplate>
-                    </ComboBox.ItemTemplate>
-                </ComboBox>
+                <Border Grid.Row="0" Margin="15,20,15,5" Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="12">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [NavFolder], Source={StaticResource Loc}}" 
+                                   FontSize="14" FontWeight="SemiBold" Foreground="{StaticResource BrushAccent}" 
+                                   Margin="0,0,0,10"/>
+                        
+                        <ComboBox ItemsSource="{Binding RootFolders}"
+                                  SelectedItem="{Binding SelectedRoot}"
+                                  Style="{StaticResource MaterialDesignOutlinedComboBox}"
+                                  md:TextFieldAssist.HasClearButton="False"
+                                  md:HintAssist.Hint="{Binding [NavFolder], Source={StaticResource Loc}}"
+                                  Foreground="White"
+                                  Padding="8,4"
+                                  VerticalContentAlignment="Center">
+                            <ComboBox.ItemTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal">
+                                        <TextBlock Text="📂" Margin="0,0,8,0" Opacity="0.7"/>
+                                        <TextBlock Text="{Binding Name}" ToolTip="{Binding Path}"/>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </ComboBox.ItemTemplate>
+                        </ComboBox>
+                    </StackPanel>
+                </Border>
 
                 <!-- Breadcrumbs -->
                 <ItemsControl Grid.Row="1" Margin="15,5,15,10" ItemsSource="{Binding Breadcrumbs}">
@@ -176,8 +189,25 @@
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
 
-                <ListBox Grid.Row="2" Background="Transparent" BorderThickness="0" Margin="5,0,5,10"
-                         ItemsSource="{Binding Subfolders}">
+                <!-- Search Box -->
+                <Border Grid.Row="2" Margin="15,0,15,10" Background="{StaticResource BrushSurface}" CornerRadius="6" Height="36">
+                    <Grid>
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="Auto"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <TextBlock Text="{StaticResource IconSearch}" VerticalAlignment="Center" Margin="10,0,5,0" Foreground="{StaticResource BrushTextSecondary}" IsHitTestVisible="False" FontSize="12"/>
+                        <TextBox Grid.Column="1" 
+                                 Text="{Binding FolderFilterText, UpdateSourceTrigger=PropertyChanged}"
+                                 Background="Transparent" BorderThickness="0" 
+                                 Foreground="White" VerticalContentAlignment="Center"
+                                 FontSize="13" CaretBrush="{StaticResource BrushAccent}"
+                                 Margin="2,0,5,0"/>
+                    </Grid>
+                </Border>
+
+                <ListBox Grid.Row="3" Background="Transparent" BorderThickness="0" Margin="5,0,5,10"
+                         ItemsSource="{Binding SubfoldersView}">
                     <ListBox.ItemContainerStyle>
                         <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModernListBoxItem}">
                             <Setter Property="Template">
