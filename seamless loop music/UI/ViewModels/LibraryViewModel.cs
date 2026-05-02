@@ -322,7 +322,7 @@ namespace seamless_loop_music.UI.ViewModels
                             Name = g.Key, 
                             Type = CategoryType.Album,
                             Icon = "💿",
-                            ImagePath = g.FirstOrDefault()?.FilePath 
+                            ImagePath = g.FirstOrDefault()?.CoverPath 
                         });
                     break;
                 case CategoryType.Artist:
@@ -334,7 +334,7 @@ namespace seamless_loop_music.UI.ViewModels
                             Name = g.Key, 
                             Type = CategoryType.Artist,
                             Icon = "👤",
-                            ImagePath = g.FirstOrDefault()?.FilePath 
+                            ImagePath = g.FirstOrDefault()?.ArtistCoverPath 
                         });
                     break;
                 case CategoryType.Playlist:

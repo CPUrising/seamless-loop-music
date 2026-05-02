@@ -27,6 +27,7 @@ namespace seamless_loop_music.Data.Repositories
                 al.Name   AS Album,
                 ar.Name   AS Artist,
                 ar.Name   AS AlbumArtist,
+                ar.CoverPath AS ArtistCoverPath,
                 COALESCE(lp.LoopStart, 0)  AS LoopStart,
                 COALESCE(lp.LoopEnd,   0)  AS LoopEnd,
                 lp.LoopCandidatesJson,
@@ -326,11 +327,20 @@ namespace seamless_loop_music.Data.Repositories
             string artistName = !string.IsNullOrWhiteSpace(artist) ? artist : (!string.IsNullOrWhiteSpace(albumArtist) ? albumArtist : "Unknown Artist");
             string albumName = !string.IsNullOrWhiteSpace(album) ? album : "Unknown Album";
 
-            db.Execute("INSERT OR IGNORE INTO Artists (Name) VALUES (@Name);",
+            db.Execute("INSERT OR IGNORE INTO Artists (Name, CoverPath) VALUES (@Name, NULL);",
                 new { Name = artistName }, transaction: trans);
             int artistId = db.ExecuteScalar<int>(
                 "SELECT Id FROM Artists WHERE Name = @Name;",
                 new { Name = artistName }, transaction: trans);
+
+            // 若传入的 coverPath 有效，且 Artist 当前无封面，则更新
+            if (!string.IsNullOrEmpty(coverPath))
+            {
+                db.Execute(@"UPDATE Artists 
+                            SET CoverPath = @Cover 
+                            WHERE Name = @Name AND (CoverPath IS NULL OR CoverPath = '')", 
+                            new { Name = artistName, Cover = coverPath }, transaction: trans);
+            }
 
             // Album: 升级为 ON CONFLICT 模式，如果发现新封面则自动补全
             db.Execute(@"

@@ -105,9 +105,12 @@
                                                     <ColumnDefinition Width="40"/>
                                                     <ColumnDefinition Width="*"/>
                                                 </Grid.ColumnDefinitions>
-                                                <!-- Thumbnail Placeholder -->
-                                                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="4" Background="{StaticResource BrushSurface}">
-                                                    <TextBlock Text="{Binding Icon, TargetNullValue={StaticResource IconDisc}}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.5"/>
+                                                <!-- Thumbnail -->
+                                                <Border Grid.Column="0" Width="36" Height="36" CornerRadius="4" Background="{StaticResource BrushSurface}" ClipToBounds="True">
+                                                    <Grid>
+                                                        <TextBlock Text="{Binding Icon, TargetNullValue={StaticResource IconDisc}}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.3"/>
+                                                        <Image Source="{Binding ImagePath}" Stretch="UniformToFill" RenderOptions.BitmapScalingMode="HighQuality"/>
+                                                    </Grid>
                                                 </Border>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
