@@ -616,7 +616,7 @@ namespace seamless_loop_music.UI.ViewModels
                 _selectedCategoryItem = new CategoryItem 
                 { 
                     Type = CategoryType.Folder, 
-                    Name = System.IO.Path.GetFileName(path),
+                    Name = new System.IO.DirectoryInfo(path).Name,
                     FolderPath = path
                 };
                 

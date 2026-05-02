@@ -45,7 +45,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}"/>
+                    <TextBlock x:Name="Txt" Text="{TemplateBinding Content}" Foreground="{TemplateBinding Foreground}" TextTrimming="CharacterEllipsis"/>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="Txt" Property="Foreground" Value="{StaticResource BrushAccent}"/>

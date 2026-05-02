@@ -24,7 +24,7 @@ namespace seamless_loop_music.Services
                 var folders = _dbHelper.GetMusicFolders();
                 return folders.Select(f => new SubfolderItem 
                 { 
-                    Name = Path.GetFileName(f) ?? f, 
+                    Name = new DirectoryInfo(f).Name, 
                     Path = f,
                     IsRoot = true 
                 }).ToList();
@@ -67,7 +67,7 @@ namespace seamless_loop_music.Services
 
                 return subfolders.Select(f => new SubfolderItem 
                 { 
-                    Name = Path.GetFileName(f), 
+                    Name = new DirectoryInfo(f).Name, 
                     Path = f,
                     IsRoot = false 
                 })
@@ -91,12 +91,12 @@ namespace seamless_loop_music.Services
             
             if (string.IsNullOrEmpty(root))
             {
-                yield return new SubfolderItem { Name = Path.GetFileName(currentPath) ?? currentPath, Path = currentPath, IsRoot = true };
+                yield return new SubfolderItem { Name = new DirectoryInfo(currentPath).Name, Path = currentPath, IsRoot = true };
                 yield break;
             }
 
             // 从 root 开始构建
-            yield return new SubfolderItem { Name = Path.GetFileName(root) ?? root, Path = root, IsRoot = true };
+            yield return new SubfolderItem { Name = new DirectoryInfo(root).Name, Path = root, IsRoot = true };
 
             if (currentPath.Length > root.Length)
             {

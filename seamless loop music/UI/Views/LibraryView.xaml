@@ -170,7 +170,7 @@
                 <ItemsControl Grid.Row="1" Margin="15,5,15,10" ItemsSource="{Binding Breadcrumbs}">
                     <ItemsControl.ItemsPanel>
                         <ItemsPanelTemplate>
-                            <StackPanel Orientation="Horizontal" />
+                            <WrapPanel Orientation="Horizontal" />
                         </ItemsPanelTemplate>
                     </ItemsControl.ItemsPanel>
                     <ItemsControl.ItemTemplate>
@@ -183,7 +183,9 @@
                                         Content="{Binding Name}" 
                                         Command="{Binding Data.NavigateToPathCommand, Source={StaticResource LibraryVmProxy}}"
                                         CommandParameter="{Binding Path}"
-                                        FontSize="12" Opacity="0.8"/>
+                                        ToolTip="{Binding Path}"
+                                        FontSize="12" Opacity="0.8"
+                                        MaxWidth="180"/>
                             </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
