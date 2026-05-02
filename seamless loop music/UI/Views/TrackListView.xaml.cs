@@ -1,5 +1,7 @@
 using System.Linq;
+using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Media;
 using Prism.Events;
 using Prism.Ioc;
 using seamless_loop_music.Events;
@@ -58,6 +60,37 @@ namespace seamless_loop_music.UI.Views
                 var vm = DataContext as TrackListViewModel;
                 vm?.PlayCommand.Execute(track);
             }
+        }
+
+        private void TrackList_PreviewMouseWheel(object sender, System.Windows.Input.MouseWheelEventArgs e)
+        {
+            if (sender is ListBox listBox)
+            {
+                // 查找内部的 ScrollViewer
+                var scrollViewer = GetScrollViewer(listBox);
+                if (scrollViewer != null)
+                {
+                    // 拦截默认滚动，手动控制
+                    if (e.Delta > 0)
+                        scrollViewer.LineUp();
+                    else
+                        scrollViewer.LineDown();
+
+                    e.Handled = true;
+                }
+            }
+        }
+
+        private static ScrollViewer GetScrollViewer(DependencyObject depObj)
+        {
+            if (depObj is ScrollViewer viewer) return viewer;
+            for (int i = 0; i < VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = VisualTreeHelper.GetChild(depObj, i);
+                var result = GetScrollViewer(child);
+                if (result != null) return result;
+            }
+            return null;
         }
     }
 }

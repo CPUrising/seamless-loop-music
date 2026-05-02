@@ -192,7 +192,8 @@
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling"
                  SelectionChanged="TrackList_SelectionChanged"
-                 MouseDoubleClick="TrackList_MouseDoubleClick">
+                 MouseDoubleClick="TrackList_MouseDoubleClick"
+                 PreviewMouseWheel="TrackList_PreviewMouseWheel">
             <controls:MultiSelectListBox.InputBindings>
                 <KeyBinding Key="A" Modifiers="Ctrl" Command="{Binding SelectAllCommand}"/>
                 <KeyBinding Key="Delete" Command="{Binding RemoveFromListCommand}"/>
