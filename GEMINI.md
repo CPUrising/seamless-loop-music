@@ -2,8 +2,8 @@
 
 ---
 **编写者**: 莱芙・泽诺 (Lev Zenith)
-**日期**: 2026-04-29
-**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理（注：IAppStateService.cs 接口未找到）。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类（已补充对应文件记录）。新增 PlayPauseIconConverter 值转换器。
+**日期**: 2026-05-02
+**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理（注：IAppStateService.cs 接口未找到）。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类（已补充对应文件记录）。新增 PlayPauseIconConverter 值转换器。新增 FoldersService 文件夹浏览服务与 SubfolderItem 模型。新增 TestDatabaseSeed、SyncTests、DatabaseTests 测试模块。FolderManagerWindow 已移除。PlaylistFolder.cs 已重命名为 Playlist.cs。
 
 ---
 
@@ -33,10 +33,10 @@
 - `CoreEvents.cs`: 定义全局事件（TrackLoadedEvent、PlaybackStateChangedEvent、LoopPointsChangedEvent、PlaylistChangedEvent、TrackMetadataChangedEvent、LibraryRefreshedEvent），用于 UI、Services、Core 之间的解耦通信。
 - `CategoryItemSelectedEvent.cs`: 分类项选中事件，用于触发曲目列表按 Album / Artist / Playlist 过滤。
 
-### 📂 Models (数据模型层) — `seamless loop music/Models/`
+### 📂 Models (数据模型层) — seamless loop music/Models/`
 项目的"零件包"，定义了程序中流转的数据结构。
 - `MusicTrack.cs`: 代表一首歌曲，包含采样率、开始/结束循环点、收藏状态、评分等核心数据信息。
-- `PlaylistFolder.cs`: 代表一个播放列表。
+- `Playlist.cs`: 代表一个播放列表（由 `PlaylistFolder.cs` 重命名而来）。
 - `LoopCandidate.cs`: 存储分析出来的潜在循环点数据。
 - `PlayMode.cs`: 播放模式枚举（单曲循环、列表循环、随机播放等）。
 - `CategoryItem.cs`: 分类项模型，支持 Album / Artist / Playlist 三种分类类型，包含封面图片路径（ImagePath）等扩展属性。
@@ -44,8 +44,9 @@
 - `Album.cs`: 专辑数据模型，包含专辑名称、封面路径等信息。
 - `Artist.cs`: 艺术家数据模型，包含艺术家名称、封面路径等信息。
 - `UserRating.cs`: 用户评分模型，用于存储曲目评分（Rating）和收藏（IsLoved）状态。
+- `SubfolderItem.cs`: 子文件夹项模型，用于文件夹浏览功能，包含名称、路径和是否为根目录标识。
 
-### 📂 Data (持久化层) - Repository 仓储模式 — `seamless loop music/Data/`
+### 📂 Data (持久化层) - Repository 仓储模式 — `seamless loop music/seamless loop music/Data/`
 项目的"档案室"，确保存档数据不丢失。
 - `DatabaseHelper.cs`: 封装了 SQLite 的所有操作。包括 `MusicTracks` 表（存储循环参数）和 `Playlists` 表（存储播放列表结构）。
 - `Repositories/BaseRepository.cs`: 仓储基类，提供通用 CRUD 操作。
@@ -54,7 +55,7 @@
 - `Repositories/IPlaylistRepository.cs`: 播放列表仓储接口。
 - `Repositories/PlaylistRepository.cs`: 播放列表仓储实现。
 
-### 📂 Services (业务逻辑层) — `seamless loop music/Services/`
+### 📂 Services (业务逻辑层) — `seamless loop music/seamless loop music/Services/`
 项目的"参谋部"，处理各种复杂的逻辑运算。
 - `PlayerService.cs`: 顶层业务管理器，协调 UI、音频引擎和数据库。
 - `IPlayerService.cs`: 播放器服务抽象接口。
@@ -77,8 +78,9 @@
 - `AppStateService.cs`: 应用状态持久化服务，保存/恢复音量、播放模式、分类上下文和最后播放曲目。（注：配套接口 `IAppStateService.cs` 未在实际项目中找到）
 - `TaskbarService.cs` / `ITaskbarService.cs`: 任务栏控制服务，管理任务栏进度条和缩略图按钮。
 - `NotifyIconService.cs` / `INotifyIconService.cs`: 托盘图标管理服务，提供系统托盘图标、右键菜单和左键弹出控制面板。
+- `FoldersService.cs` / `IFoldersService.cs`: 文件夹浏览服务，提供根文件夹、子文件夹列表和面包屑导航功能。
 
-### 📂 UI (展示层) - Prism MVVM + Material Design — `seamless loop music/UI/`
+### 📂 UI (展示层) - Prism MVVM + Material Design — `seamless loop music/seamless loop music/UI/`
 项目的"门面"，负责与 **cpu 大人** 互动。
 
 **窗口层**：
@@ -86,7 +88,10 @@
 - `LoopListWindow.xaml`: 专门用于显示和选择分析出来的多个循环点方案。
 - `FolderManagerWindow.xaml`: 管理被扫描的音乐文件夹。
 - `FolderPicker.cs`: 界面层的文件夹选择辅助工具。
-- `TrayControlsWindow.xaml[.cs]`: 托盘控制窗口，提供桌面小控制器。
+- `Views/TrayControlsWindow.xaml[.cs]`: 托盘控制窗口，提供桌面小控制器。
+
+**已移除**：
+- `Views/FolderManagerWindow.xaml[.cs]`: 管理被扫描的音乐文件夹（已移除，功能由 FoldersService 替代）。
 
 **视图层 (Views)**：
 - `Views/LoopWorkspace.xaml[.cs]`: 循环点编辑工作区。
@@ -114,17 +119,20 @@
 - `Controls/VolumeControls.xaml[.cs]`: 音量控制自定义控件（音量滑块/静音按钮）。
 - `Controls/TrackInfoControl.xaml[.cs]`: 曲目信息自定义控件（封面/标题/艺术家）。
 - `Controls/ProgressControls.xaml[.cs]`: 进度条自定义控件（播放进度/循环点标记）。
-- `UI/Converters/VisibilityConverters.cs`: 值转换器（NullToVisibilityConverter、NullToVisibilityInverseConverter）。
-- `UI/Converters/BindingProxy.cs`: 绑定代理器（用于 MultiBinding）。
-- `UI/Converters/PlayPauseIconConverter.cs`: 播放/暂停图标状态转换器。
+- `Converters/VisibilityConverters.cs`: 值转换器（NullToVisibilityConverter、NullToVisibilityInverseConverter）。
+- `Converters/BindingProxy.cs`: 绑定代理器（用于 MultiBinding）。
+- `Converters/PlayPauseIconConverter.cs`: 播放/暂停图标状态转换器。
 
-### 📂 App 入口 — `seamless loop music/`
+### 📂 App 入口 — `seamless loop music/seamless loop music/`
 - `App.xaml`: 定义全局样式（Material Design 暗色皮肤）。
 - `App.xaml.cs`: 应用入口，实现**单实例互斥锁**（防止多开），全局异常捕获，已实例存在时自动唤醒置顶，**Prism UnityContainer 依赖注入配置**。
 
 ### 📂 测试项目 (SeamlessLoop.Tests) — `SeamlessLoop.Tests/`
 - `SeamlessLoop.Tests.csproj`: 单元测试项目文件。
-- `UnitTest1.cs`: 测试用例。
+- `TestDatabaseSeed.cs`: 测试数据库种子数据生成器，提供黄金数据集和大规模测试数据生成。
+- `SyncTests.cs`: 数据库同步测试，验证从外部数据库同步数据的各种场景。
+- `DatabaseTests.cs`: 数据库完整性测试，包含 3NF 架构验证、循环参数边界测试、事务并发测试和性能测试。
+- `UnitTest1.cs`: 基础测试用例。
 
 ## 3. Prism 框架集成
 
