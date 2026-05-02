@@ -24,6 +24,7 @@ namespace seamless_loop_music.Services
         IReadOnlyList<MusicTrack> Queue { get; }
         int CurrentIndex { get; }
         PlayMode PlayMode { get; set; }
+        CategoryItem CurrentCategory { get; }
 
         event Action<MusicTrack> TrackChanged;
         event Action<PlaybackState> StateChanged;
@@ -50,7 +51,7 @@ namespace seamless_loop_music.Services
         Task EnqueueAlbumAsync(string albumName);
         Task EnqueuePlaylistAsync(CategoryItem playlistItem);
 
-        void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null);
+        void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null, CategoryItem category = null);
         void AddToQueue(MusicTrack track);
         void RemoveFromQueue(int index);
         void ClearQueue();

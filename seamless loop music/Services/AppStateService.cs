@@ -172,7 +172,7 @@ namespace seamless_loop_music.Services
 
                             if (contextTracks != null && contextTracks.Any())
                             {
-                                _playbackService.SetQueue(contextTracks, track);
+                                _playbackService.SetQueue(contextTracks, track, CurrentCategory);
                             }
                         }
                     }

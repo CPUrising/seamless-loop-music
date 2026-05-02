@@ -85,6 +85,10 @@ namespace seamless_loop_music.UI.ViewModels
                 var listParams = new NavigationParameters();
                 listParams.Add("compact", true);
                 listParams.Add("track", track);
+                if (_playbackService.CurrentCategory != null)
+                {
+                    listParams.Add("category", _playbackService.CurrentCategory);
+                }
                 _regionManager.RequestNavigate("NowPlayingListRegion", "TrackListView", listParams);
             }
         }
@@ -151,6 +155,12 @@ namespace seamless_loop_music.UI.ViewModels
                 parameters.Add("track", CurrentTrack);
                 parameters.Add("target", "DetailView");
                 parameters.Add("autoPlay", false); // 关键：不要重新加载和播放
+                
+                if (_playbackService.CurrentCategory != null)
+                {
+                    parameters.Add("category", _playbackService.CurrentCategory);
+                }
+                
                 _regionManager.RequestNavigate("MainContentRegion", "LibraryView", parameters);
             }
         }

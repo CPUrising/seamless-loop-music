@@ -16,6 +16,7 @@ namespace seamless_loop_music.Models
         public string Name { get; set; }
         public string Icon { get; set; } // 图标字符串 (如 🎶, ❤️)
         public string ImagePath { get; set; } // 专辑封面或艺术家头像
+        public string FolderPath { get; set; } // 文件夹路径 (仅在 Type 为 Folder 时使用)
         public CategoryType Type { get; set; }
     }
 }

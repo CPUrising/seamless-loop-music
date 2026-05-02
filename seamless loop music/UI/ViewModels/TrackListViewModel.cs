@@ -278,6 +278,10 @@ namespace seamless_loop_music.UI.ViewModels
                 // “我的收藏”特殊处理已经在 TracksFilter 里了，这里只需要确保集合不干扰
                 newPlaylistIds.Clear();
             }
+            else if (item != null && item.Type == CategoryType.Folder)
+            {
+                CurrentFolderPath = item.FolderPath;
+            }
 
             // 更新状态
             _currentPlaylistTrackIds = newPlaylistIds;
@@ -371,7 +375,7 @@ namespace seamless_loop_music.UI.ViewModels
         private void OnPlayTrack(MusicTrack track)
         {
             if (track == null) return;
-            _playbackService.SetQueue(TracksView.Cast<MusicTrack>().ToList(), track);
+            _playbackService.SetQueue(TracksView.Cast<MusicTrack>().ToList(), track, _selectedCategoryItem);
             _playbackService.LoadTrackAsync(track, true);
         }
 
@@ -408,6 +412,7 @@ namespace seamless_loop_music.UI.ViewModels
             // 1. 导航到详情页
             var parameters = new NavigationParameters();
             parameters.Add("track", track);
+            parameters.Add("category", _selectedCategoryItem); // 携带当前分类上下文
             parameters.Add("autoPlay", false);
             _regionManager.RequestNavigate("LibraryContentRegion", "DetailView", parameters);
 
@@ -559,7 +564,7 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (SelectedTracks.Any())
             {
-                _playbackService.SetQueue(SelectedTracks.ToList(), SelectedTracks.First());
+                _playbackService.SetQueue(SelectedTracks.ToList(), SelectedTracks.First(), _selectedCategoryItem);
                 _playbackService.LoadTrackAsync(SelectedTracks.First(), true);
             }
         }
@@ -608,7 +613,12 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 var path = navigationContext.Parameters["folderPath"] as string;
                 CurrentFolderPath = path;
-                _selectedCategoryItem = new CategoryItem { Type = CategoryType.Folder, Name = System.IO.Path.GetFileName(path) };
+                _selectedCategoryItem = new CategoryItem 
+                { 
+                    Type = CategoryType.Folder, 
+                    Name = System.IO.Path.GetFileName(path),
+                    FolderPath = path
+                };
                 
                 App.Current.Dispatcher.Invoke(() => 
                 {
@@ -626,15 +636,24 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     SelectedTrack = Tracks.FirstOrDefault(t => t.Id == targetTrack.Id);
                     
-                    // 如果是在侧边栏精简模式，且没有分类参数，尝试自动关联专辑
+                    // 如果是在侧边栏精简模式，且没有分类参数
                     if (IsCompact && navigationContext.Parameters.ContainsKey("category") == false)
                     {
-                        var category = new CategoryItem 
-                        { 
-                            Name = targetTrack.Album, 
-                            Type = CategoryType.Album 
-                        };
-                        await ApplyCategoryFilterAsync(category);
+                        // 优先尝试从播放服务获取当前的分类上下文
+                        if (_selectedCategoryItem == null && _playbackService.CurrentCategory != null)
+                        {
+                            await ApplyCategoryFilterAsync(_playbackService.CurrentCategory);
+                        }
+                        // 最后的兜底：如果真的没有任何上下文，才考虑按专辑过滤
+                        else if (_selectedCategoryItem == null && !string.IsNullOrEmpty(targetTrack?.Album))
+                        {
+                            var fallbackCategory = new CategoryItem 
+                            { 
+                                Name = targetTrack.Album, 
+                                Type = CategoryType.Album 
+                            };
+                            await ApplyCategoryFilterAsync(fallbackCategory);
+                        }
                     }
                 }
             }

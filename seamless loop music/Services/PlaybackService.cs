@@ -23,6 +23,7 @@ namespace seamless_loop_music.Services
         private readonly System.Threading.SemaphoreSlim _loadLock = new System.Threading.SemaphoreSlim(1, 1);
 
         public MusicTrack CurrentTrack { get; private set; }
+        public CategoryItem CurrentCategory { get; private set; }
         public PlaybackState PlaybackState => _audioLooper?.PlaybackState ?? PlaybackState.Stopped;
         public TimeSpan CurrentTime => _audioLooper?.CurrentTime ?? TimeSpan.Zero;
         public long CurrentSample => _audioLooper != null ? (long)(_audioLooper.CurrentTime.TotalSeconds * _audioLooper.SampleRate) : 0;
@@ -258,6 +259,7 @@ namespace seamless_loop_music.Services
             var tracks = await _trackRepository.GetByArtistAsync(artistName);
             if (tracks != null && tracks.Any())
             {
+                CurrentCategory = new CategoryItem { Name = artistName, Type = CategoryType.Artist };
                 _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }
@@ -268,6 +270,7 @@ namespace seamless_loop_music.Services
             var tracks = await _trackRepository.GetByAlbumAsync(albumName);
             if (tracks != null && tracks.Any())
             {
+                CurrentCategory = new CategoryItem { Name = albumName, Type = CategoryType.Album };
                 _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }
@@ -292,13 +295,15 @@ namespace seamless_loop_music.Services
 
             if (tracks != null && tracks.Any())
             {
+                CurrentCategory = playlistItem;
                 _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }
         }
 
-        public void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null)
+        public void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null, CategoryItem category = null)
         {
+            CurrentCategory = category;
             _queueManager.SetQueue(tracks, currentTrack);
         }
 
