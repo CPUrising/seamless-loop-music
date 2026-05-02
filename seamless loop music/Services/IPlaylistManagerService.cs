@@ -31,6 +31,7 @@ namespace seamless_loop_music.Services
         long GetTotalSamples(string filePath);
         void UpdatePlaylistsSortOrder(List<int> playlistIds);
         void UpdateTracksSortOrder(int playlistId, List<int> songIds);
+        Task<int> CleanupMissingTracksAsync();
     }
 }
 

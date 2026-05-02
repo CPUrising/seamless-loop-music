@@ -18,7 +18,6 @@ namespace seamless_loop_music.Data.Repositories
         void RemoveTrack(int playlistId, int trackId);
         void UpdateTracksSortOrder(int playlistId, IEnumerable<int> trackIds);
         bool IsTrackInPlaylist(int playlistId, int trackId);
-        void BulkSaveTracksToPlaylist(IEnumerable<MusicTrack> tracks, int playlistId);
 
         // Folder management
         void AddFolder(int playlistId, string folderPath);

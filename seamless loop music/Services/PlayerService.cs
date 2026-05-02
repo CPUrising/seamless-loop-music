@@ -58,7 +58,7 @@ namespace seamless_loop_music.Services
         public void RemoveTrackFromPlaylist(int playlistId, int songId) => _databaseHelper.RemoveSongFromPlaylist(playlistId, songId);
 
         public Task AddFilesToPlaylist(int playlistId, string[] filePaths) => Task.CompletedTask;
-        public Task AddFolderToPlaylist(int playlistId, string folderPath) { _databaseHelper.AddPlaylist(playlistId, folderPath); return Task.CompletedTask; }
+        public Task AddFolderToPlaylist(int playlistId, string folderPath) { _databaseHelper.AddFolderToPlaylist(playlistId, folderPath); return Task.CompletedTask; }
         public Task RemoveFolderFromPlaylist(int playlistId, string folderPath) => Task.CompletedTask;
         public List<string> GetPlaylistFolders(int playlistId) => _databaseHelper.GetPlaylists(playlistId);
         public Task RefreshPlaylist(int playlistId) => _playlistManager.RefreshPlaylistAsync(playlistId);

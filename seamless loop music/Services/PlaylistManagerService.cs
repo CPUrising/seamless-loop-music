@@ -128,7 +128,7 @@ namespace seamless_loop_music.Services
             if (!Directory.Exists(folderPath)) return;
 
             // 1. 记录文件夹
-            _dbHelper.AddPlaylist(playlistId, folderPath);
+            _dbHelper.AddFolderToPlaylist(playlistId, folderPath);
             
             // 2. 刷新歌单内容
             await RefreshPlaylistAsync(playlistId);
@@ -388,6 +388,22 @@ namespace seamless_loop_music.Services
 
         public void UpdateTracksSortOrder(int playlistId, List<int> songIds) => _dbHelper.UpdateTracksSortOrder(playlistId, songIds);
 
-
+        public async Task<int> CleanupMissingTracksAsync()
+        {
+            return await Task.Run(() =>
+            {
+                OnStatusMessage?.Invoke("Scanning for missing files in library...");
+                int deleted = _dbHelper.CleanupMissingFiles();
+                if (deleted > 0)
+                {
+                    OnStatusMessage?.Invoke($"Cleanup complete. Removed {deleted} missing tracks from database.");
+                }
+                else
+                {
+                    OnStatusMessage?.Invoke("Cleanup complete. No missing files found.");
+                }
+                return deleted;
+            });
+        }
     }
 }

@@ -130,11 +130,21 @@ namespace seamless_loop_music
                 var notifyIconService = Container.Resolve<INotifyIconService>();
                 notifyIconService.Initialize();
 
-                // Restore last app state
+                // Perform startup cleanup and restore last app state
                 Task.Run(async () => 
                 {
                     // Delay slightly to ensure UI regions are ready
                     await Task.Delay(200);
+                    
+                    try 
+                    {
+                        // 1. Cleanup missing files (optional but good for health)
+                        var playlistManager = Container.Resolve<IPlaylistManagerService>();
+                        await playlistManager.CleanupMissingTracksAsync();
+                    }
+                    catch (Exception ex) { Debug.WriteLine($"Cleanup error: {ex.Message}"); }
+
+                    // 2. Restore state
                     var appState = Container.Resolve<IAppStateService>();
                     await appState.RestoreStateAsync();
                 });

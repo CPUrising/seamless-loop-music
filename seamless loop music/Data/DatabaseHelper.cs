@@ -34,7 +34,7 @@ namespace seamless_loop_music.Data
         
         // Folder related
         List<string> GetPlaylists(int playlistId);
-        void AddPlaylist(int playlistId, string folderPath);
+        void AddFolderToPlaylist(int playlistId, string folderPath);
         void RemovePlaylist(int playlistId, string folderPath);
         List<string> GetMusicFolders();
         void AddMusicFolder(string folderPath);
@@ -46,6 +46,7 @@ namespace seamless_loop_music.Data
         void SetSetting(string key, string value);
         
         (int tracksSynced, int playlistsSynced) SyncWithExternalDatabase(string externalDbPath);
+        int CleanupMissingFiles();
     }
 
     public class DatabaseHelper : IDatabaseHelper
@@ -53,13 +54,27 @@ namespace seamless_loop_music.Data
         private readonly string _dbPath;
         private readonly string _connectionString;
 
-        public DatabaseHelper()
-        {
-            string exeDir = AppDomain.CurrentDomain.BaseDirectory;
-            string folder = Path.Combine(exeDir, "Data");
-            if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+        public DatabaseHelper() : this(null) { }
 
-            _dbPath = Path.Combine(folder, "LoopData.db");
+        public DatabaseHelper(string customDbPath = null)
+        {
+            if (string.IsNullOrEmpty(customDbPath))
+            {
+                string exeDir = AppDomain.CurrentDomain.BaseDirectory;
+                string folder = Path.Combine(exeDir, "Data");
+                if (!Directory.Exists(folder)) Directory.CreateDirectory(folder);
+                _dbPath = Path.Combine(folder, "LoopData.db");
+            }
+            else
+            {
+                if (customDbPath.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+                {
+                    _connectionString = customDbPath;
+                    _dbPath = customDbPath; // 内存模式下路径意义不大
+                    return;
+                }
+                _dbPath = customDbPath;
+            }
             _connectionString = $"Data Source={_dbPath};Version=3;Busy Timeout=5000;";
         }
 
@@ -85,7 +100,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, IsLoved INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, FolderPath TEXT, IsFolderLinked INTEGER DEFAULT 0, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER DEFAULT 0, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, PlaylistId INTEGER NOT NULL, FolderPath TEXT NOT NULL, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, UNIQUE(PlaylistId, FolderPath));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT);");
@@ -237,15 +252,40 @@ namespace seamless_loop_music.Data
             using (var db = GetConnection()) return db.ExecuteScalar<bool>("SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId=@Pid AND SongId=@Sid", new { Pid = playlistId, Sid = songId });
         }
 
-        public void UpdatePlaylistsSortOrder(List<int> playlistIds) { }
-        public void UpdateTracksSortOrder(int playlistId, List<int> songIds) { }
+        public void UpdatePlaylistsSortOrder(List<int> playlistIds)
+        {
+            using (var db = GetConnection())
+            using (var trans = db.BeginTransaction())
+            {
+                for (int i = 0; i < playlistIds.Count; i++)
+                {
+                    db.Execute("UPDATE Playlists SET SortOrder = @Order WHERE Id = @Id", 
+                        new { Order = i, Id = playlistIds[i] }, transaction: trans);
+                }
+                trans.Commit();
+            }
+        }
+
+        public void UpdateTracksSortOrder(int playlistId, List<int> songIds)
+        {
+            using (var db = GetConnection())
+            using (var trans = db.BeginTransaction())
+            {
+                for (int i = 0; i < songIds.Count; i++)
+                {
+                    db.Execute("UPDATE PlaylistItems SET SortOrder = @Order WHERE PlaylistId = @Pid AND SongId = @Sid", 
+                        new { Order = i, Pid = playlistId, Sid = songIds[i] }, transaction: trans);
+                }
+                trans.Commit();
+            }
+        }
         
         public List<string> GetPlaylists(int playlistId)
         {
             using (var db = GetConnection()) return db.Query<string>("SELECT FolderPath FROM PlaylistFolders WHERE PlaylistId = @Id", new { Id = playlistId }).ToList();
         }
 
-        public void AddPlaylist(int playlistId, string folderPath)
+        public void AddFolderToPlaylist(int playlistId, string folderPath)
         {
             using (var db = GetConnection()) db.Execute("INSERT OR IGNORE INTO PlaylistFolders (PlaylistId, FolderPath) VALUES (@Pid, @Path)", new { Pid = playlistId, Path = folderPath });
         }
@@ -436,6 +476,27 @@ namespace seamless_loop_music.Data
 
             // 2. 强制创建唯一索引（如果不存在），确保未来不会再出现重名
             db.Execute("CREATE UNIQUE INDEX IF NOT EXISTS idx_playlists_name ON Playlists(Name)");
+        }
+        public int CleanupMissingFiles()
+        {
+            int deletedCount = 0;
+            using (var db = GetConnection())
+            {
+                var tracks = db.Query<(int Id, string FilePath)>("SELECT Id, FilePath FROM Tracks").ToList();
+                using (var trans = db.BeginTransaction())
+                {
+                    foreach (var track in tracks)
+                    {
+                        if (!string.IsNullOrEmpty(track.FilePath) && !File.Exists(track.FilePath))
+                        {
+                            db.Execute("DELETE FROM Tracks WHERE Id = @Id", new { Id = track.Id }, transaction: trans);
+                            deletedCount++;
+                        }
+                    }
+                    trans.Commit();
+                }
+            }
+            return deletedCount;
         }
     }
 }

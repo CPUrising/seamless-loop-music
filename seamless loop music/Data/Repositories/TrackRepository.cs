@@ -11,6 +11,9 @@ namespace seamless_loop_music.Data.Repositories
 {
     public class TrackRepository : BaseRepository, ITrackRepository
     {
+        public TrackRepository() : base(null) { }
+        public TrackRepository(string customDbPath) : base(customDbPath) { }
+
         // ── 完整 JOIN 查询语句（供所有 SELECT 复用）────────────────────────────
         private const string FullTrackSelect = @"
             SELECT
@@ -113,6 +116,17 @@ namespace seamless_loop_music.Data.Repositories
                                 AnalysisLastModified = excluded.AnalysisLastModified;",
                             new { TrackId = track.Id, track.LoopStart, track.LoopEnd, Json = track.LoopCandidatesJson, Now = DateTime.Now },
                             transaction: trans);
+
+                        // 更新 UserRatings (补全)
+                        db.Execute(@"
+                            INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
+                            VALUES (@TrackId, @Rating, @IsLoved, @Now)
+                            ON CONFLICT(TrackId) DO UPDATE SET
+                                Rating       = excluded.Rating,
+                                IsLoved      = excluded.IsLoved,
+                                LastModified = excluded.LastModified;",
+                            new { TrackId = track.Id, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = DateTime.Now },
+                            transaction: trans);
                     }
                     else
                     {
@@ -138,17 +152,26 @@ namespace seamless_loop_music.Data.Repositories
 
                         if (track.Id > 0)
                         {
-                            // 插入 LoopPoints
+                            // 插入/更新 LoopPoints
                             db.Execute(@"
-                                INSERT OR IGNORE INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
-                                VALUES (@TrackId, @LoopStart, @LoopEnd, @Json, @Now);",
+                                INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson, AnalysisLastModified)
+                                VALUES (@TrackId, @LoopStart, @LoopEnd, @Json, @Now)
+                                ON CONFLICT(TrackId) DO UPDATE SET
+                                    LoopStart            = excluded.LoopStart,
+                                    LoopEnd              = excluded.LoopEnd,
+                                    LoopCandidatesJson   = excluded.LoopCandidatesJson,
+                                    AnalysisLastModified = excluded.AnalysisLastModified;",
                                 new { TrackId = track.Id, track.LoopStart, track.LoopEnd, Json = track.LoopCandidatesJson, Now = DateTime.Now },
                                 transaction: trans);
 
-                            // 插入 UserRatings
+                            // 插入/更新 UserRatings
                             db.Execute(@"
-                                INSERT OR IGNORE INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
-                                VALUES (@TrackId, @Rating, @IsLoved, @Now);",
+                                INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
+                                VALUES (@TrackId, @Rating, @IsLoved, @Now)
+                                ON CONFLICT(TrackId) DO UPDATE SET
+                                    Rating       = excluded.Rating,
+                                    IsLoved      = excluded.IsLoved,
+                                    LastModified = excluded.LastModified;",
                                 new { TrackId = track.Id, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = DateTime.Now },
                                 transaction: trans);
                         }

@@ -9,6 +9,9 @@ namespace seamless_loop_music.Data.Repositories
 {
     public class PlaylistRepository : BaseRepository, IPlaylistRepository
     {
+        public PlaylistRepository() : base(null) { }
+        public PlaylistRepository(string customDbPath) : base(customDbPath) { }
+
         // ── 复用统一的 3NF 查询逻辑 ──────────────────────────────────────────
         private const string FullTrackSelect = @"
             SELECT 
@@ -143,23 +146,6 @@ namespace seamless_loop_music.Data.Repositories
                 return db.ExecuteScalar<int>(
                     "SELECT COUNT(1) FROM PlaylistItems WHERE PlaylistId = @Pid AND SongId = @Sid", 
                     new { Pid = playlistId, Sid = trackId }) > 0;
-            }
-        }
-
-        public void BulkSaveTracksToPlaylist(IEnumerable<MusicTrack> tracks, int playlistId)
-        {
-            // 注意：此方法逻辑较为复杂，建议通过 DatabaseHelper 或调用更通用的 BulkInsert 逻辑
-            // 为了维持 3NF 一致性，这里应调用统一的保存逻辑
-            using (var db = GetConnection())
-            using (var trans = db.BeginTransaction())
-            {
-                foreach (var track in tracks)
-                {
-                    // 1. 查找或插入 Artist/Album (这里逻辑应与 DatabaseHelper 一致)
-                    // ... 简略起见，这里复用逻辑的核心是先保证 Track 存在 ...
-                    // 鉴于目前架构，建议直接在 UI 层调用 TrackRepository 进行保存后再加入歌单
-                }
-                trans.Commit();
             }
         }
 

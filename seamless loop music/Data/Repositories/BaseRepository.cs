@@ -12,20 +12,31 @@ namespace seamless_loop_music.Data.Repositories
         protected readonly string _connectionString;
         protected readonly string _dbPath;
 
-        protected BaseRepository()
-        {
-            string baseDir = AppDomain.CurrentDomain.BaseDirectory;
-            string dataDir = Path.Combine(baseDir, "Data");
-            
-            if (!Directory.Exists(dataDir))
-            {
-                Directory.CreateDirectory(dataDir);
-            }
+        protected BaseRepository() : this(null) { }
 
-            _dbPath = Path.Combine(dataDir, "LoopData.db");
+        protected BaseRepository(string customDbPath = null)
+        {
+            if (string.IsNullOrEmpty(customDbPath))
+            {
+                string baseDir = AppDomain.CurrentDomain.BaseDirectory;
+                string dataDir = Path.Combine(baseDir, "Data");
+                if (!Directory.Exists(dataDir)) Directory.CreateDirectory(dataDir);
+                _dbPath = Path.Combine(dataDir, "LoopData.db");
+            }
+            else
+            {
+                if (customDbPath.StartsWith("Data Source=", StringComparison.OrdinalIgnoreCase))
+                {
+                    _connectionString = customDbPath;
+                    _dbPath = customDbPath;
+                    try { InitializeDatabase(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[BaseRepository] Init Error: {ex.Message}"); }
+                    return;
+                }
+                _dbPath = customDbPath;
+            }
             _connectionString = $"Data Source={_dbPath};Version=3;Foreign Keys=True;Default Timeout=5;";
 
-            try { InitializeDatabase(); } catch { }
+            try { InitializeDatabase(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[BaseRepository] Init Error: {ex.Message}"); }
         }
 
         private void InitializeDatabase()
@@ -74,8 +85,7 @@ namespace seamless_loop_music.Data.Repositories
                     // ── LoopPoints 表（循环点，与 Tracks 1:1）────────────────
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS LoopPoints (
-                            Id                    INTEGER PRIMARY KEY AUTOINCREMENT,
-                            TrackId               INTEGER NOT NULL UNIQUE,
+                            TrackId               INTEGER PRIMARY KEY,
                             LoopStart             INTEGER DEFAULT 0,
                             LoopEnd               INTEGER DEFAULT 0,
                             LoopCandidatesJson    TEXT,
@@ -86,8 +96,7 @@ namespace seamless_loop_music.Data.Repositories
                     // ── UserRatings 表（用户评分，与 Tracks 1:1）─────────────
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS UserRatings (
-                            Id           INTEGER PRIMARY KEY AUTOINCREMENT,
-                            TrackId      INTEGER NOT NULL UNIQUE,
+                            TrackId      INTEGER PRIMARY KEY,
                             Rating       INTEGER DEFAULT 0,
                             IsLoved      INTEGER DEFAULT 0,
                             LastModified DATETIME,
@@ -107,10 +116,10 @@ namespace seamless_loop_music.Data.Repositories
 
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS PlaylistItems (
-                            Id         INTEGER PRIMARY KEY AUTOINCREMENT,
-                            PlaylistId INTEGER NOT NULL,
-                            SongId     INTEGER NOT NULL,
+                            PlaylistId INTEGER,
+                            SongId     INTEGER,
                             SortOrder  INTEGER DEFAULT 0,
+                            PRIMARY KEY(PlaylistId, SongId),
                             FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE,
                             FOREIGN KEY(SongId)     REFERENCES Tracks(Id)    ON DELETE CASCADE
                         );");
@@ -129,6 +138,7 @@ namespace seamless_loop_music.Data.Repositories
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[数据库初始化失败] {ex.Message}");
+                throw; // 抛出异常以便上层知道初始化失败
             }
         }
 
