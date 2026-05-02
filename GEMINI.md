@@ -2,8 +2,8 @@
 
 ---
 **编写者**: 莱芙・泽诺 (Lev Zenith)
-**日期**: 2026-04-28
-**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类。新增 PlayPauseIconConverter 值转换器。
+**日期**: 2026-04-29
+**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理（注：IAppStateService.cs 接口未找到）。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类（已补充对应文件记录）。新增 PlayPauseIconConverter 值转换器。
 
 ---
 
@@ -22,6 +22,9 @@
 ### 📂 Core (核心引擎层) — `seamless loop music/Core/`
 这是项目的"心脏"，负责最底层的声音处理。
 - `AudioLooper.cs`: 核心控制中心，处理播放状态（Play/Pause/Stop）以及精细的采样跳转逻辑。为了维护方便，已拆分为 `Analysis`（分析）、`Loader`（加载）和 `Mixing`（混音）等分部类。
+- `AudioLooper.Analysis.cs`: AudioLooper 分析分部类，封装循环点分析相关逻辑。
+- `AudioLooper.Loader.cs`: AudioLooper 加载分部类，封装音频文件加载相关逻辑。
+- `AudioLooper.Mixing.cs`: AudioLooper 混音分部类，封装音频混音与播放相关逻辑。
 - `LoopStream.cs`: 自定义的音频流包装类，确保在到达循环终点时能实现毫秒级的无感跳转。
 - `ConcatenatedStream.cs`: 逻辑拼接流，按顺序连接两个 WaveStream，实现零内存损耗的无缝播放。
 
@@ -71,7 +74,7 @@
 - `SearchService.cs`: 搜索服务，实现 0.4 秒防抖延迟的多关键词搜索。
 - `ISearchService.cs`: 搜索服务接口。
 - `PlaybackQueueService.cs`: 播放队列服务，负责管理播放列表、当前索引、播放模式以及切歌逻辑。
-- `AppStateService.cs` / `IAppStateService.cs`: 应用状态持久化服务，保存/恢复音量、播放模式、分类上下文和最后播放曲目。
+- `AppStateService.cs`: 应用状态持久化服务，保存/恢复音量、播放模式、分类上下文和最后播放曲目。（注：配套接口 `IAppStateService.cs` 未在实际项目中找到）
 - `TaskbarService.cs` / `ITaskbarService.cs`: 任务栏控制服务，管理任务栏进度条和缩略图按钮。
 - `NotifyIconService.cs` / `INotifyIconService.cs`: 托盘图标管理服务，提供系统托盘图标、右键菜单和左键弹出控制面板。
 
