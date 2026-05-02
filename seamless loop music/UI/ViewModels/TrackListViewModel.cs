@@ -624,6 +624,7 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     TracksView.Refresh();
                     UpdateStats();
+                    UpdateSearchPlaceholder();
                     RaisePropertyChanged(nameof(CategoryName));
                 });
             }
