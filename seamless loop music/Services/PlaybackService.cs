@@ -282,7 +282,8 @@ namespace seamless_loop_music.Services
             }
             else if (playlistItem.Id == -2)
             {
-                tracks = await _trackRepository.GetLovedTracksAsync();
+                var all = await _trackRepository.GetAllAsync();
+                tracks = all.Where(t => t.Rating > 0).OrderByDescending(t => t.Rating).ToList();
             }
             else if (playlistItem.Id > 0)
             {

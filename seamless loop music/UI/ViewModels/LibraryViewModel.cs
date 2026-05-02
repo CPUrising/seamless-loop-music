@@ -276,7 +276,7 @@ namespace seamless_loop_music.UI.ViewModels
                     var list = new List<CategoryItem>
                     {
                         new CategoryItem { Id = -1, Name = loc["PlaylistAll"], Icon = "🎶", Type = CategoryType.Playlist },
-                        new CategoryItem { Id = -2, Name = loc["PlaylistFavorites"], Icon = "❤️", Type = CategoryType.Playlist }
+                        new CategoryItem { Id = -2, Name = loc["PlaylistFavorites"], Icon = "⭐", Type = CategoryType.Playlist }
                     };
                     list.AddRange(playlists.Select(p => new CategoryItem 
                     { 

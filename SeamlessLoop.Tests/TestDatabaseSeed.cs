@@ -23,8 +23,7 @@ namespace SeamlessLoop.Tests
                     TotalSamples = 1000000,
                     LoopStart = 1000,
                     LoopEnd = 900000,
-                    Rating = 4,
-                    IsLoved = true
+                    Rating = 4
                 },
 
                 // 2. 重名专辑场景 (不同艺术家)

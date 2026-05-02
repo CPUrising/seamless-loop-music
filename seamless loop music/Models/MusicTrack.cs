@@ -17,7 +17,6 @@ namespace seamless_loop_music.Models
         private string _artist;
         private string _album;
         private string _albumArtist;
-        private bool _isLoved;
         private int _rating;
         private string _coverPath;
         private bool _isPlaying;
@@ -71,12 +70,6 @@ namespace seamless_loop_music.Models
         { 
             get => _albumArtist; 
             set { _albumArtist = value; OnPropertyChanged(); } 
-        }
-
-        public bool IsLoved
-        {
-            get => _isLoved;
-            set { _isLoved = value; OnPropertyChanged(); }
         }
 
         public int Rating

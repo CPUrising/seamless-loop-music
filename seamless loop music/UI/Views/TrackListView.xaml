@@ -42,7 +42,6 @@
             <Grid Height="55" Margin="12,0">
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="40"/> <!-- Play -->
-                    <ColumnDefinition Width="35"/> <!-- Love -->
                     <ColumnDefinition Width="2*"/> <!-- Title -->
                     <ColumnDefinition Width="1*"/> <!-- Artist -->
                     <ColumnDefinition Width="1*"/> <!-- Album -->
@@ -57,41 +56,21 @@
                         Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                         CommandParameter="{Binding}"/>
 
-                <!-- Love Button -->
-                <Button Grid.Column="1" 
-                        Command="{Binding DataContext.ToggleLoveCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"
-                        Background="Transparent" BorderThickness="0" Cursor="Hand">
-                    <TextBlock FontSize="20" VerticalAlignment="Center" HorizontalAlignment="Center">
-                        <TextBlock.Style>
-                            <Style TargetType="TextBlock">
-                                <Setter Property="Text" Value="{StaticResource IconLove}"/>
-                                <Setter Property="Foreground" Value="{StaticResource BrushTextMuted}"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding IsLoved}" Value="True">
-                                        <Setter Property="Text" Value="{StaticResource IconLoved}"/>
-                                        <Setter Property="Foreground" Value="{StaticResource BrushDanger}"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </TextBlock.Style>
-                    </TextBlock>
-                </Button>
 
                 <!-- Title & Filename -->
-                <StackPanel Grid.Column="2" VerticalAlignment="Center" Margin="15,0">
+                <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0">
                     <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                 </StackPanel>
 
                 <!-- Artist -->
-                <TextBlock Grid.Column="3" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
 
                 <!-- Album -->
-                <TextBlock Grid.Column="4" Text="{Binding Album}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0" Opacity="0.8"/>
+                <TextBlock Grid.Column="3" Text="{Binding Album}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0" Opacity="0.8"/>
 
                 <!-- Rating -->
-                <Button Grid.Column="5" Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
+                <Button Grid.Column="4" Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                         CommandParameter="{Binding}"
                         Background="Transparent" BorderThickness="0" Margin="8,0" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
@@ -101,7 +80,7 @@
                 </Button>
 
                 <!-- Action Buttons: Analyze & Edit -->
-                <StackPanel Grid.Column="6" Orientation="Horizontal" Margin="0,0,8,0">
+                <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="0,0,8,0">
                     <Button Style="{StaticResource IconButton}"
                             Content="{StaticResource IconAnalyze}"
                             Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
@@ -247,20 +226,6 @@
                                 <MenuItem Header="{Binding [MenuAddToPlaylist], Source={StaticResource Loc}}"
                                           Command="{Binding Data.AddToPlaylistCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
-                                <MenuItem Command="{Binding Data.ToggleLoveCommand, Source={StaticResource VmProxy}}"
-                                          CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}">
-                                    <MenuItem.Style>
-                                        <Style TargetType="MenuItem" BasedOn="{StaticResource {x:Type MenuItem}}">
-                                            <Setter Property="Header" Value="{Binding [MenuLove], Source={StaticResource Loc}}"/>
-                                            <Style.Triggers>
-                                                <DataTrigger Binding="{Binding PlacementTarget.DataContext.IsLoved, RelativeSource={RelativeSource AncestorType=ContextMenu}}" Value="True">
-                                                    <Setter Property="Header" Value="{Binding [MenuUnlove], Source={StaticResource Loc}}"/>
-                                                </DataTrigger>
-                                            </Style.Triggers>
-                                        </Style>
-                                    </MenuItem.Style>
-                                </MenuItem>
                                 <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Header="{Binding [MenuRemove], Source={StaticResource Loc}}"
                                           Command="{Binding Data.RemoveFromListCommand, Source={StaticResource VmProxy}}"

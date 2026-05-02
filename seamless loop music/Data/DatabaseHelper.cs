@@ -95,7 +95,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Albums (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, ArtistId INTEGER, CoverPath TEXT, FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL, UNIQUE(Name, ArtistId));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, IsLoved INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER DEFAULT 0, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
@@ -117,7 +117,7 @@ namespace seamless_loop_music.Data
                 al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist,
                 COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
                 lp.LoopCandidatesJson,
-                COALESCE(ur.IsLoved, 0) AS IsLoved, COALESCE(ur.Rating, 0) AS Rating
+                COALESCE(ur.Rating, 0) AS Rating
             FROM Tracks t
             LEFT JOIN Albums al ON t.AlbumId = al.Id
             LEFT JOIN Artists ar ON al.ArtistId = ar.Id
@@ -151,7 +151,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@Id, @LoopStart, @LoopEnd, @LoopCandidatesJson) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", 
                     track, transaction: trans);
 
-                db.Execute(@"INSERT INTO UserRatings (TrackId, IsLoved, Rating, LastModified) VALUES (@Id, @IsLoved, @Rating, @LastModified) ON CONFLICT(TrackId) DO UPDATE SET IsLoved=excluded.IsLoved, Rating=excluded.Rating, LastModified=excluded.LastModified", 
+                db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, LastModified) VALUES (@Id, @Rating, @LastModified) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating, LastModified=excluded.LastModified", 
                     track, transaction: trans);
                 
                 trans.Commit();
@@ -198,8 +198,8 @@ namespace seamless_loop_music.Data
                     track.Id = (int)trackId;
                     db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@TrackId, @LoopStart, @LoopEnd, @LoopCandidatesJson) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", 
                         new { TrackId = trackId, track.LoopStart, track.LoopEnd, track.LoopCandidatesJson }, transaction: trans);
-                    db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified) VALUES (@TrackId, @Rating, @IsLoved, @Now) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating, IsLoved=excluded.IsLoved, LastModified = excluded.LastModified;",
-                        new { TrackId = trackId, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = track.LastModified },
+                    db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, LastModified) VALUES (@TrackId, @Rating, @Now) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating, LastModified = excluded.LastModified;",
+                        new { TrackId = trackId, track.Rating, Now = track.LastModified },
                         transaction: trans);
                 }
                 trans.Commit();
@@ -350,7 +350,6 @@ namespace seamless_loop_music.Data
                                 {(hasLoopPoints ? "lp.LoopEnd" : "0")} AS LoopEnd, 
                                 {(hasLoopPoints ? "lp.LoopCandidatesJson" : "NULL")} AS LoopCandidatesJson,
                                 {(hasUserRatings ? "ur.Rating" : "0")} AS Rating, 
-                                {(hasUserRatings ? "ur.IsLoved" : "0")} AS IsLoved, 
                                 {(hasCover ? "t.CoverPath" : "NULL AS CoverPath")}
                             FROM ExternalDB.Tracks t
                             {(hasAlbums ? "LEFT JOIN ExternalDB.Albums al ON t.AlbumId = al.Id" : "")}
@@ -385,7 +384,6 @@ namespace seamless_loop_music.Data
                                 LoopStart, LoopEnd, 
                                 {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")}, 
                                 {(hasRating ? "Rating" : "0 AS Rating")}, 
-                                {(hasIsLoved ? "IsLoved" : "0 AS IsLoved")}, 
                                 {(hasCover ? "CoverPath" : "NULL AS CoverPath")} 
                             FROM ExternalDB.LoopPoints";
                         externalTracks = db.Query<MusicTrack>(syncSqlFlat).ToList();
@@ -411,7 +409,7 @@ namespace seamless_loop_music.Data
                                 int? albumId = UpsertArtistAlbum(db, ext.Artist, ext.AlbumArtist, ext.Album, ext.CoverPath, trans);
                                 db.Execute(@"UPDATE Tracks SET DisplayName=@DisplayName, AlbumId=@AlbumId, CoverPath=COALESCE(@CoverPath, CoverPath) WHERE Id=@Id", new { ext.DisplayName, AlbumId = albumId, ext.CoverPath, Id = localTrack.Id }, transaction: trans);
                                 db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@Id, @LoopStart, @LoopEnd, @Json) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", new { Id = localTrack.Id, ext.LoopStart, ext.LoopEnd, Json = ext.LoopCandidatesJson }, transaction: trans);
-                                db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified) VALUES (@Id, @Rating, @IsLoved, @Now) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating, IsLoved=excluded.IsLoved", new { Id = localTrack.Id, ext.Rating, ext.IsLoved, Now = DateTime.Now }, transaction: trans);
+                                db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, LastModified) VALUES (@Id, @Rating, @Now) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating", new { Id = localTrack.Id, ext.Rating, Now = DateTime.Now }, transaction: trans);
                                 trans.Commit();
                                 tracksSynced++;
                             }

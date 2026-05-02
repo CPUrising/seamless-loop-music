@@ -94,7 +94,7 @@
   <data name="MenuRename" xml:space="preserve">
     <value>重命名</value>
   </data>
-  <data name="MenuDelete" xml:space="preserve">
+  <data name="MenuDeletePlaylist" xml:space="preserve">
     <value>删除</value>
   </data>
   <data name="MenuNewPlaylist" xml:space="preserve">
@@ -218,7 +218,7 @@
     <value>全部歌曲</value>
   </data>
   <data name="PlaylistFavorites" xml:space="preserve">
-    <value>我的收藏</value>
+    <value>Rating 歌单</value>
   </data>
   <data name="BtnMin" xml:space="preserve">
     <value>最小值</value>
@@ -273,12 +273,6 @@
   </data>
   <data name="MenuAddToPlaylist" xml:space="preserve">
     <value>➕  添加到播放列表...</value>
-  </data>
-  <data name="MenuLove" xml:space="preserve">
-    <value>❤️  收藏</value>
-  </data>
-  <data name="MenuUnlove" xml:space="preserve">
-    <value>💔  取消收藏</value>
   </data>
   <data name="MenuRemove" xml:space="preserve">
     <value>➖  从当前列表移除</value>
@@ -348,5 +342,8 @@
   </data>
   <data name="BtnClose" xml:space="preserve">
     <value>关闭</value>
+  </data>
+  <data name="TipRateCurrent" xml:space="preserve">
+    <value>为当前歌曲打分 (0-5)</value>
   </data>
 </root>

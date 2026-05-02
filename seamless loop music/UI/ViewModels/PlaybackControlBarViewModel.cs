@@ -9,6 +9,7 @@ using Prism.Regions;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
 using seamless_loop_music.Events;
+using seamless_loop_music.Data.Repositories;
 using TagLib;
 
 namespace seamless_loop_music.UI.ViewModels
@@ -19,6 +20,7 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly IRegionManager _regionManager;
         private readonly IEventAggregator _eventAggregator;
         private readonly TrackMetadataService _metadataService;
+        private readonly ITrackRepository _trackRepository;
         private readonly DispatcherTimer _statusTimer;
 
         private MusicTrack _currentTrack;
@@ -111,13 +113,16 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand<double?> SeekCommand { get; }
         public DelegateCommand OpenDetailCommand { get; }
         public DelegateCommand ChangePlayModeCommand { get; }
+        public DelegateCommand ShowRatingPlaylistCommand { get; }
+        public DelegateCommand<MusicTrack> RateCommand { get; }
 
-        public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService)
+        public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService, ITrackRepository trackRepository)
         {
             _playbackService = playbackService;
             _regionManager = regionManager;
             _eventAggregator = eventAggregator;
             _metadataService = metadataService;
+            _trackRepository = trackRepository;
 
             PlayCommand = new DelegateCommand(OnPlayPause);
             StopCommand = new DelegateCommand(() => _playbackService.Stop());
@@ -126,6 +131,8 @@ namespace seamless_loop_music.UI.ViewModels
             SeekCommand = new DelegateCommand<double?>(OnSeek);
             OpenDetailCommand = new DelegateCommand(OnOpenDetail);
             ChangePlayModeCommand = new DelegateCommand(OnExecuteChangePlayMode);
+            ShowRatingPlaylistCommand = new DelegateCommand(OnShowRatingPlaylist);
+            RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
 
             UpdatePlayModeText();
 
@@ -213,6 +220,27 @@ namespace seamless_loop_music.UI.ViewModels
             parameters.Add("track", CurrentTrack);
             parameters.Add("autoPlay", false);
             _regionManager.RequestNavigate("MainContentRegion", "NowPlayingView", parameters);
+        }
+
+        private void OnShowRatingPlaylist()
+        {
+            // 1. 确保导航回 LibraryView
+            _regionManager.RequestNavigate("MainContentRegion", "LibraryView");
+
+            // 2. 发送事件选中 Rating 歌单 (Id = -2)
+            _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(new CategoryItem
+            {
+                Id = -2,
+                Type = CategoryType.Playlist,
+                Name = LocalizationService.Instance["PlaylistFavorites"]
+            });
+        }
+
+        private async void OnRateTrack(MusicTrack track)
+        {
+            if (track == null) return;
+            track.Rating = (track.Rating + 1) % 6;
+            await _trackRepository.UpdateMetadataAsync(track.Id, track.Rating);
         }
 
         private void LoadAlbumCover(MusicTrack track)

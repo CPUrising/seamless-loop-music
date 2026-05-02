@@ -85,7 +85,7 @@
                                     <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
                                     <MenuItem Header="{Binding [MenuRename], Source={StaticResource Loc}}" 
                                               Command="{Binding Data.RenamePlaylistCommand, Source={StaticResource LibraryVmProxy}}"/>
-                                    <MenuItem Header="{Binding [MenuDelete], Source={StaticResource Loc}}" 
+                                    <MenuItem Header="{Binding [MenuDeletePlaylist], Source={StaticResource Loc}}" 
                                               Command="{Binding Data.DeletePlaylistCommand, Source={StaticResource LibraryVmProxy}}"
                                               Foreground="{StaticResource BrushDanger}"/>
                                 </ContextMenu>

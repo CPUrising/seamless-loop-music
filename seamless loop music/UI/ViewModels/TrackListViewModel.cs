@@ -134,7 +134,6 @@ namespace seamless_loop_music.UI.ViewModels
 
         public DelegateCommand<MusicTrack> PlayCommand { get; }
         public DelegateCommand<MusicTrack> OpenDetailCommand { get; }
-        public DelegateCommand<MusicTrack> ToggleLoveCommand { get; }
         public DelegateCommand<MusicTrack> RateCommand { get; }
         public DelegateCommand<MusicTrack> AnalyzeTrackCommand { get; }
 
@@ -166,7 +165,6 @@ namespace seamless_loop_music.UI.ViewModels
 
             PlayCommand = new DelegateCommand<MusicTrack>(OnPlayTrack);
             OpenDetailCommand = new DelegateCommand<MusicTrack>(OnOpenDetail);
-            ToggleLoveCommand = new DelegateCommand<MusicTrack>(OnToggleLove);
             RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
             AnalyzeTrackCommand = new DelegateCommand<MusicTrack>(OnAnalyzeTrack);
 
@@ -281,6 +279,15 @@ namespace seamless_loop_music.UI.ViewModels
             App.Current.Dispatcher.Invoke(() => 
             {
                 UpdateSearchPlaceholder();
+
+                // 只有在切换到“Rating歌单”时才应用星级排序
+                TracksView.SortDescriptions.Clear();
+                if (_selectedCategoryItem?.Id == -2)
+                {
+                    TracksView.SortDescriptions.Add(new SortDescription("Rating", ListSortDirection.Descending));
+                    TracksView.SortDescriptions.Add(new SortDescription("Title", ListSortDirection.Ascending));
+                }
+
                 TracksView.Refresh();
                 UpdateStats();
                 RaisePropertyChanged(nameof(CategoryName));
@@ -320,9 +327,9 @@ namespace seamless_loop_music.UI.ViewModels
                         {
                             // 不进行任何分类过滤
                         }
-                        else if (_selectedCategoryItem.Id == -2) // 我的收藏
+                        else if (_selectedCategoryItem.Id == -2) // Rating歌单
                         {
-                            if (!track.IsLoved) return false;
+                            if (track.Rating <= 0) return false;
                         }
                         else if (_selectedCategoryItem.Id > 0) // 普通歌单
                         {
@@ -368,19 +375,11 @@ namespace seamless_loop_music.UI.ViewModels
             _regionManager.RequestNavigate("LibraryContentRegion", "DetailView", parameters);
         }
 
-        private async void OnToggleLove(MusicTrack track)
-        {
-            if (track == null) return;
-            track.IsLoved = !track.IsLoved;
-            await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
-            _eventAggregator.GetEvent<TrackMetadataChangedEvent>().Publish(track);
-        }
-
         private async void OnRateTrack(MusicTrack track)
         {
             if (track == null) return;
             track.Rating = (track.Rating + 1) % 6;
-            await _trackRepository.UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+            await _trackRepository.UpdateMetadataAsync(track.Id, track.Rating);
         }
 
         private void OnAnalyzeTrack(MusicTrack track)
@@ -560,7 +559,6 @@ namespace seamless_loop_music.UI.ViewModels
             var local = Tracks.FirstOrDefault(t => t.Id == track.Id);
             if (local != null && local != track)
             {
-                local.IsLoved = track.IsLoved;
                 local.Rating = track.Rating;
             }
         }

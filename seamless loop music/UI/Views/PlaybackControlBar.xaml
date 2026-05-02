@@ -68,7 +68,31 @@
         <!-- Bottom Bar: Playback Controls -->
         <Grid Grid.Row="1" Margin="0,0,0,10">
             <!-- Left: Current Track Info -->
-            <controls:TrackInfoControl HorizontalAlignment="Left" ArtSize="45" IsClickable="True" ShowAlbum="False" CoverImage="{Binding AlbumCoverImage}"/>
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                <controls:TrackInfoControl ArtSize="45" IsClickable="True" ShowAlbum="False" CoverImage="{Binding AlbumCoverImage}"/>
+                <Button Command="{Binding RateCommand}"
+                        CommandParameter="{Binding CurrentTrack}"
+                        Style="{StaticResource ControlButtonStyle}"
+                        Margin="10,0,0,0"
+                        ToolTip="{Binding [TipRateCurrent], Source={StaticResource Loc}}">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{StaticResource BrushWarning}"/>
+                        <TextBlock Text="{Binding CurrentTrack.Rating}" 
+                                   Foreground="{StaticResource BrushWarning}" 
+                                   VerticalAlignment="Center" FontWeight="Bold" Margin="4,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding CurrentTrack.Rating}" Value="0">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Button>
+            </StackPanel>
 
             <!-- Center: Controls -->
             <controls:PlaybackControls HorizontalAlignment="Center"/>

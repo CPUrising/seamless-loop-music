@@ -30,7 +30,6 @@ namespace seamless_loop_music.Data.Repositories
                 COALESCE(lp.LoopStart, 0)  AS LoopStart,
                 COALESCE(lp.LoopEnd,   0)  AS LoopEnd,
                 lp.LoopCandidatesJson,
-                COALESCE(ur.IsLoved,   0)  AS IsLoved,
                 COALESCE(ur.Rating,    0)  AS Rating
             FROM Tracks t
             LEFT JOIN Albums    al ON al.Id = t.AlbumId
@@ -119,13 +118,12 @@ namespace seamless_loop_music.Data.Repositories
 
                         // 更新 UserRatings (补全)
                         db.Execute(@"
-                            INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
-                            VALUES (@TrackId, @Rating, @IsLoved, @Now)
+                            INSERT INTO UserRatings (TrackId, Rating, LastModified)
+                            VALUES (@TrackId, @Rating, @Now)
                             ON CONFLICT(TrackId) DO UPDATE SET
                                 Rating       = excluded.Rating,
-                                IsLoved      = excluded.IsLoved,
                                 LastModified = excluded.LastModified;",
-                            new { TrackId = track.Id, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = DateTime.Now },
+                            new { TrackId = track.Id, track.Rating, Now = DateTime.Now },
                             transaction: trans);
                     }
                     else
@@ -166,13 +164,12 @@ namespace seamless_loop_music.Data.Repositories
 
                             // 插入/更新 UserRatings
                             db.Execute(@"
-                                INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
-                                VALUES (@TrackId, @Rating, @IsLoved, @Now)
+                                INSERT INTO UserRatings (TrackId, Rating, LastModified)
+                                VALUES (@TrackId, @Rating, @Now)
                                 ON CONFLICT(TrackId) DO UPDATE SET
                                     Rating       = excluded.Rating,
-                                    IsLoved      = excluded.IsLoved,
                                     LastModified = excluded.LastModified;",
-                                new { TrackId = track.Id, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = DateTime.Now },
+                                new { TrackId = track.Id, track.Rating, Now = DateTime.Now },
                                 transaction: trans);
                         }
                     }
@@ -238,13 +235,12 @@ namespace seamless_loop_music.Data.Repositories
                             transaction: trans);
 
                         db.Execute(@"
-                            INSERT INTO UserRatings (TrackId, Rating, IsLoved, LastModified)
-                            VALUES (@TrackId, @Rating, @IsLoved, @Now)
+                            INSERT INTO UserRatings (TrackId, Rating, LastModified)
+                            VALUES (@TrackId, @Rating, @Now)
                             ON CONFLICT(TrackId) DO UPDATE SET
                                 Rating       = excluded.Rating,
-                                IsLoved      = excluded.IsLoved,
                                 LastModified = excluded.LastModified;",
-                            new { TrackId = trackId, track.Rating, IsLoved = track.IsLoved ? 1 : 0, Now = track.LastModified },
+                            new { TrackId = trackId, track.Rating, Now = track.LastModified },
                             transaction: trans);
 
                         track.Id = (int)trackId;
@@ -269,18 +265,17 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
-        public async Task UpdateMetadataAsync(int id, bool isLoved, int rating)
+        public async Task UpdateMetadataAsync(int id, int rating)
         {
             using (var db = GetConnection())
             {
                 await db.ExecuteAsync(@"
-                    INSERT INTO UserRatings (TrackId, IsLoved, Rating, LastModified)
-                    VALUES (@TrackId, @L, @R, @Now)
+                    INSERT INTO UserRatings (TrackId, Rating, LastModified)
+                    VALUES (@TrackId, @R, @Now)
                     ON CONFLICT(TrackId) DO UPDATE SET
-                        IsLoved      = excluded.IsLoved,
                         Rating       = excluded.Rating,
                         LastModified = excluded.LastModified;",
-                    new { TrackId = id, L = isLoved ? 1 : 0, R = rating, Now = DateTime.Now });
+                    new { TrackId = id, R = rating, Now = DateTime.Now });
             }
         }
 
@@ -291,7 +286,7 @@ namespace seamless_loop_music.Data.Repositories
                 await db.ExecuteAsync(@"UPDATE Tracks SET DisplayName = @DisplayName WHERE Id = @Id", 
                     new { track.DisplayName, track.Id });
                 
-                await UpdateMetadataAsync(track.Id, track.IsLoved, track.Rating);
+                await UpdateMetadataAsync(track.Id, track.Rating);
             }
         }
 
@@ -301,16 +296,6 @@ namespace seamless_loop_music.Data.Repositories
             {
                 // LoopPoints 和 UserRatings 因为有 ON DELETE CASCADE 会自动删除
                 await db.ExecuteAsync("DELETE FROM Tracks WHERE Id=@Id", new { Id = trackId });
-            }
-        }
-
-        public async Task<List<MusicTrack>> GetLovedTracksAsync()
-        {
-            using (var db = GetConnection())
-            {
-                var result = await db.QueryAsync<MusicTrack>(
-                    FullTrackSelect + " WHERE ur.IsLoved = 1");
-                return result.ToList();
             }
         }
 
