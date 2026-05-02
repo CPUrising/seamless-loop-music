@@ -4,6 +4,7 @@ using Prism.Events;
 using Prism.Ioc;
 using seamless_loop_music.Events;
 using seamless_loop_music.Models;
+using seamless_loop_music.UI.ViewModels;
 
 namespace seamless_loop_music.UI.Views
 {
@@ -47,6 +48,15 @@ namespace seamless_loop_music.UI.Views
                 {
                     TrackList.ScrollIntoView(TrackList.SelectedItem);
                 }), System.Windows.Threading.DispatcherPriority.Background);
+            }
+        }
+
+        private void TrackList_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (TrackList.SelectedItem is MusicTrack track)
+            {
+                var vm = DataContext as TrackListViewModel;
+                vm?.PlayCommand.Execute(track);
             }
         }
     }

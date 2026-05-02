@@ -24,11 +24,12 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Button Grid.Column="0" 
-                        Style="{StaticResource TrackPlayButton}"
-                        Content="{StaticResource IconPlay}"
-                        Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"/>
+                <Border Grid.Column="0" Width="35" Height="35" CornerRadius="4" Background="{StaticResource BrushSurfaceHighlight}" ClipToBounds="True" VerticalAlignment="Center">
+                    <Grid>
+                        <TextBlock Text="{StaticResource IconMusic}" Foreground="{StaticResource BrushTextMuted}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding CoverPath}" Stretch="UniformToFill"/>
+                    </Grid>
+                </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
                     <TextBlock Text="{Binding Title}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
@@ -49,12 +50,13 @@
                     <ColumnDefinition Width="Auto"/> <!-- Action -->
                 </Grid.ColumnDefinitions>
 
-                <!-- Play Button -->
-                <Button Grid.Column="0" 
-                        Style="{StaticResource TrackPlayButton}"
-                        Content="{StaticResource IconPlay}"
-                        Command="{Binding DataContext.PlayCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                        CommandParameter="{Binding}"/>
+                <!-- Cover Image -->
+                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="4" Background="{StaticResource BrushSurfaceHighlight}" ClipToBounds="True" VerticalAlignment="Center">
+                    <Grid>
+                        <TextBlock Text="{StaticResource IconMusic}" Foreground="{StaticResource BrushTextMuted}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <Image Source="{Binding CoverPath}" Stretch="UniformToFill"/>
+                    </Grid>
+                </Border>
 
 
                 <!-- Title & Filename -->
@@ -79,20 +81,13 @@
                     </StackPanel>
                 </Button>
 
-                <!-- Action Buttons: Analyze & Edit -->
+                <!-- Action Buttons: Analyze -->
                 <StackPanel Grid.Column="5" Orientation="Horizontal" Margin="0,0,8,0">
                     <Button Style="{StaticResource IconButton}"
                             Content="{StaticResource IconAnalyze}"
                             Command="{Binding DataContext.AnalyzeTrackCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                             CommandParameter="{Binding}"
-                            ToolTip="{Binding [TipFindLoop], Source={StaticResource Loc}}"
-                            Margin="0,0,8,0"/>
-
-                    <Button Style="{StaticResource IconButton}"
-                            Content="{StaticResource IconEdit}"
-                            Command="{Binding DataContext.OpenDetailCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
-                            CommandParameter="{Binding}"
-                            ToolTip="{Binding [TipEditProperties], Source={StaticResource Loc}}"/>
+                            ToolTip="{Binding [TipFindLoop], Source={StaticResource Loc}}"/>
                 </StackPanel>
             </Grid>
         </DataTemplate>
@@ -196,7 +191,8 @@
                  SelectionMode="Extended"
                  VirtualizingStackPanel.IsVirtualizing="True"
                  VirtualizingStackPanel.VirtualizationMode="Recycling"
-                 SelectionChanged="TrackList_SelectionChanged">
+                 SelectionChanged="TrackList_SelectionChanged"
+                 MouseDoubleClick="TrackList_MouseDoubleClick">
             <controls:MultiSelectListBox.InputBindings>
                 <KeyBinding Key="A" Modifiers="Ctrl" Command="{Binding SelectAllCommand}"/>
                 <KeyBinding Key="Delete" Command="{Binding RemoveFromListCommand}"/>
