@@ -206,8 +206,8 @@ namespace seamless_loop_music.UI.ViewModels
                 }
             });
 
-            // 设置默认选中（这会触发初始加载）
-            SelectedCategory = NavigationCategories.FirstOrDefault();
+            // 设置默认选中（默认打开显示播放列表大类）
+            SelectedCategory = NavigationCategories.FirstOrDefault(n => n.Type == CategoryType.Playlist) ?? NavigationCategories.FirstOrDefault();
 
             // 初始导航到曲目列表
             _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
@@ -398,8 +398,8 @@ namespace seamless_loop_music.UI.ViewModels
                 }
             }
 
-            // 否则默认选中第一项
-            SelectedCategoryItem = CategoryItems.FirstOrDefault();
+            // 否则默认选中 Rating 歌单（如果有的话），或者选第一项
+            SelectedCategoryItem = CategoryItems.FirstOrDefault(i => i.Id == -2) ?? CategoryItems.FirstOrDefault();
         }
 
         private async Task LoadRootFoldersAsync()

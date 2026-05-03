@@ -45,6 +45,11 @@ namespace seamless_loop_music.Data
         (int tracksSynced, int playlistsSynced) SyncWithExternalDatabase(string externalDbPath);
         int CleanupMissingFiles();
         void RepairMissingCategoryCovers();
+
+        // Queue related
+        void ClearQueuedTracks();
+        void SaveQueuedTracks(IEnumerable<int> trackIds);
+        List<int> GetQueuedTrackIds();
     }
 
     public class DatabaseHelper : IDatabaseHelper
@@ -101,6 +106,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER DEFAULT 0, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS QueuedTracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, TrackId INTEGER, SortOrder INTEGER);");
 
                 // 执行迁移（加约束、查重等）
                 ApplyMigrations(db);
@@ -635,6 +641,38 @@ namespace seamless_loop_music.Data
                         db.Execute("UPDATE Tracks SET CoverPath = @Path WHERE Id = @Id", new { Path = (string)t.AlbumPath, Id = (long)t.Id });
                     }
                 }
+            }
+        }
+
+        public void ClearQueuedTracks()
+        {
+            using (var db = GetConnection()) db.Execute("DELETE FROM QueuedTracks");
+        }
+
+        public void SaveQueuedTracks(IEnumerable<int> trackIds)
+        {
+            using (var db = GetConnection())
+            using (var trans = db.BeginTransaction())
+            {
+                db.Execute("DELETE FROM QueuedTracks", transaction: trans);
+                if (trackIds != null)
+                {
+                    int order = 0;
+                    foreach (var trackId in trackIds)
+                    {
+                        db.Execute("INSERT INTO QueuedTracks (TrackId, SortOrder) VALUES (@TrackId, @Order)", 
+                            new { TrackId = trackId, Order = order++ }, transaction: trans);
+                    }
+                }
+                trans.Commit();
+            }
+        }
+
+        public List<int> GetQueuedTrackIds()
+        {
+            using (var db = GetConnection())
+            {
+                return db.Query<int>("SELECT TrackId FROM QueuedTracks ORDER BY SortOrder").ToList();
             }
         }
     }

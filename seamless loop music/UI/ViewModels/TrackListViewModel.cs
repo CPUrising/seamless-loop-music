@@ -244,7 +244,18 @@ namespace seamless_loop_music.UI.ViewModels
                 PlayingTrackId = _playbackService.CurrentTrack.Id;
             }
 
+            // 监听队列变更
+            _playbackService.QueueChanged += OnQueueChanged;
+
             UpdateSearchPlaceholder();
+        }
+
+        private void OnQueueChanged()
+        {
+            if (IsCompact)
+            {
+                App.Current.Dispatcher.Invoke(async () => await ReloadTracksAsync());
+            }
         }
 
         public string CategoryName => _selectedCategoryItem?.Name ?? LocalizationService.Instance["PlaylistAll"];
@@ -264,6 +275,21 @@ namespace seamless_loop_music.UI.ViewModels
 
         private async Task ApplyCategoryFilterAsync(CategoryItem item)
         {
+            _selectedCategoryItem = item;
+
+            if (IsCompact)
+            {
+                // 在精简模式（正在播放列表）下，我们不根据分类重新加载库，只更新上下文显示
+                App.Current.Dispatcher.Invoke(() => 
+                {
+                    UpdateSearchPlaceholder();
+                    UpdateStats();
+                    RaisePropertyChanged(nameof(CategoryName));
+                    TracksView.Refresh();
+                });
+                return;
+            }
+
             // 深度修复：先准备好过滤数据，再切换分类状态，防止竞态条件下过滤器看到空的 ID 集合
             HashSet<int> newPlaylistIds = new HashSet<int>();
 
@@ -285,7 +311,6 @@ namespace seamless_loop_music.UI.ViewModels
 
             // 更新状态
             _currentPlaylistTrackIds = newPlaylistIds;
-            _selectedCategoryItem = item;
             
             App.Current.Dispatcher.Invoke(() => 
             {
@@ -323,7 +348,8 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (!(item is MusicTrack track)) return false;
 
-            if (_selectedCategoryItem != null)
+            // 在精简模式（正在播放）下，我们不进行分类过滤，只进行搜索过滤
+            if (_selectedCategoryItem != null && !IsCompact)
             {
                 switch (_selectedCategoryItem.Type)
                 {
@@ -603,7 +629,7 @@ namespace seamless_loop_music.UI.ViewModels
             }
 
             // 只有在列表为空时才重新加载，防止返回时丢失位置
-            if (Tracks.Count == 0)
+            if (Tracks.Count == 0 || IsCompact)
             {
                 await ReloadTracksAsync();
             }
@@ -684,7 +710,17 @@ namespace seamless_loop_music.UI.ViewModels
         private async Task ReloadTracksAsync()
         {
             var oldSelectedId = SelectedTrack?.Id;
-            var results = await _trackRepository.GetAllAsync();
+            
+            IEnumerable<MusicTrack> results;
+            if (IsCompact)
+            {
+                // 正在播放列表直接从播放服务获取当前队列
+                results = _playbackService.Queue ?? new List<MusicTrack>();
+            }
+            else
+            {
+                results = await _trackRepository.GetAllAsync();
+            }
             
             App.Current.Dispatcher.Invoke(() =>
             {

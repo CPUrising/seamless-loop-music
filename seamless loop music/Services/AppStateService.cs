@@ -67,12 +67,13 @@ namespace seamless_loop_music.Services
                     // 1. 保存音量
                     _db.SetSetting("Playback.Volume", _playbackService.Volume.ToString());
 
-                    // 2. 保存分类上下文
-                    if (CurrentCategory != null)
+                    // 2. 保存分类上下文 (从播放服务获取实际播放的上下文，确保队列还原准确)
+                    var contextCategory = _playbackService.CurrentCategory;
+                    if (contextCategory != null)
                     {
-                        _db.SetSetting("Playback.LastCategoryType", ((int)CurrentCategory.Type).ToString());
-                        _db.SetSetting("Playback.LastCategoryId", CurrentCategory.Id.ToString());
-                        _db.SetSetting("Playback.LastCategoryName", CurrentCategory.Name ?? "");
+                        _db.SetSetting("Playback.LastCategoryType", ((int)contextCategory.Type).ToString());
+                        _db.SetSetting("Playback.LastCategoryId", contextCategory.Id.ToString());
+                        _db.SetSetting("Playback.LastCategoryName", contextCategory.Name ?? "");
                     }
 
                     // 3. 保存当前播放曲目
@@ -94,6 +95,10 @@ namespace seamless_loop_music.Services
                     // 7. 保存托盘行为设置
                     _db.SetSetting("App.MinimizeToTray", MinimizeToTray.ToString());
                     _db.SetSetting("App.CloseToTray", CloseToTray.ToString());
+
+                    // 8. 保存精确播放队列 (参考 Dopamine 方案)
+                    var queueTrackIds = _playbackService.Queue?.Select(t => t.Id).ToList();
+                    _db.SaveQueuedTracks(queueTrackIds);
                 }
                 catch (Exception ex)
                 {
@@ -140,60 +145,60 @@ namespace seamless_loop_music.Services
                 MinimizeToTray = _db.GetSetting("App.MinimizeToTray", "False").ToLower() == "true";
                 CloseToTray = _db.GetSetting("App.CloseToTray", "False").ToLower() == "true";
 
-                // 3. 恢复分类上下文
+                // 3. 恢复分类上下文 (仅作为上下文记录，主要用于确定恢复后的 UI 逻辑)
+                CategoryItem savedCategory = null;
                 string typeStr = _db.GetSetting("Playback.LastCategoryType");
                 if (!string.IsNullOrEmpty(typeStr) && int.TryParse(typeStr, out int typeInt))
                 {
                     int.TryParse(_db.GetSetting("Playback.LastCategoryId", "0"), out int categoryId);
-                    var category = new CategoryItem
+                    savedCategory = new CategoryItem
                     {
                         Type = (CategoryType)typeInt,
                         Id = categoryId,
                         Name = _db.GetSetting("Playback.LastCategoryName", "")
                     };
-
-                    CurrentCategory = category;
-                    // 发布事件通知 UI 跳转并刷新曲目列表
-                    _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(category);
-                    
-                    // 等待 UI 响应并刷新列表
-                    await Task.Delay(100);
                 }
 
-                // 4. 恢复最后播放的曲目并重建队列
+                // 4. 重建播放队列 (精确还原，不再依赖分类过滤逻辑)
+                var savedTrackIds = await Task.Run(() => _db.GetQueuedTrackIds());
+                List<MusicTrack> restoredQueue = new List<MusicTrack>();
+                if (savedTrackIds.Any())
+                {
+                    var allTracks = await _trackRepository.GetAllAsync();
+                    var trackMap = allTracks.ToDictionary(t => t.Id);
+                    foreach (var id in savedTrackIds)
+                    {
+                        if (trackMap.TryGetValue(id, out var t)) restoredQueue.Add(t);
+                    }
+                }
+
+                // 5. 恢复最后播放的曲目并挂载队列
                 string trackIdStr = _db.GetSetting("Playback.LastTrackId");
                 if (int.TryParse(trackIdStr, out int trackId))
                 {
                     var track = await _trackRepository.GetByIdAsync(trackId);
                     if (track != null)
                     {
-                        // 4.1 加载曲目
+                        // 5.1 加载曲目
                         await _playbackService.LoadTrackAsync(track, false);
 
-                        // 4.2 尝试根据分类上下文还原队列，以便支持切歌
-                        if (CurrentCategory != null)
+                        // 5.2 挂载队列
+                        if (restoredQueue.Any())
                         {
-                            List<MusicTrack> contextTracks = null;
-                            switch (CurrentCategory.Type)
-                            {
-                                case CategoryType.Album:
-                                    contextTracks = await _trackRepository.GetByAlbumAsync(CurrentCategory.Name);
-                                    break;
-                                case CategoryType.Artist:
-                                    contextTracks = await _trackRepository.GetByArtistAsync(CurrentCategory.Name);
-                                    break;
-                                case CategoryType.Playlist:
-                                    contextTracks = await _playlistManager.GetTracksInPlaylistAsync(CurrentCategory.Id);
-                                    break;
-                            }
-
-                            if (contextTracks != null && contextTracks.Any())
-                            {
-                                _playbackService.SetQueue(contextTracks, track, CurrentCategory);
-                            }
+                            _playbackService.SetQueue(restoredQueue, track, savedCategory);
                         }
                     }
                 }
+
+                // 6. 界面强制返回 Rating 歌单 (我的收藏)，且不影响后台播放队列
+                var ratingCategory = new CategoryItem 
+                { 
+                    Id = -2, 
+                    Type = CategoryType.Playlist, 
+                    Name = LocalizationService.Instance["PlaylistFavorites"] 
+                };
+                CurrentCategory = ratingCategory;
+                _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(ratingCategory);
             }
             catch (Exception ex)
             {
