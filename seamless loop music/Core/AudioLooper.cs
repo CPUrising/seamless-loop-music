@@ -500,12 +500,6 @@ namespace seamless_loop_music
         }
         private void LogDebug(string message)
         {
-            try
-            {
-                string logPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "audio_debug.txt");
-                File.AppendAllText(logPath, $"[{DateTime.Now:HH:mm:ss.fff}] {message}{Environment.NewLine}");
-            }
-            catch { }
             OnStatusChanged?.Invoke(message);
         }
     }
