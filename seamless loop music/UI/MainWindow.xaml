@@ -6,7 +6,25 @@
         Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="800" Width="1200"
         Icon="/Resources/app_icon.png"
         Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei"
-        WindowStartupLocation="CenterScreen">
+        WindowStartupLocation="CenterScreen"
+        WindowStyle="None">
+    
+    <WindowChrome.WindowChrome>
+        <WindowChrome CaptionHeight="40" GlassFrameThickness="0" CornerRadius="0" />
+    </WindowChrome.WindowChrome>
+
+    <Window.Resources>
+        <!-- Style for Maximize/Restore button to switch icons based on WindowState -->
+        <Style x:Key="MaximizeButtonStyle" TargetType="Button" BasedOn="{StaticResource TitleBarButtonStyle}">
+            <Setter Property="Content" Value="{StaticResource PathMaximize}"/>
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding WindowState, RelativeSource={RelativeSource AncestorType=Window}}" Value="Maximized">
+                    <Setter Property="Content" Value="{StaticResource PathRestore}"/>
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+    </Window.Resources>
+
     <Window.TaskbarItemInfo>
         <TaskbarItemInfo x:Name="MainTaskbarItemInfo">
             <TaskbarItemInfo.ThumbButtonInfos>
@@ -22,21 +40,46 @@
             </TaskbarItemInfo.ThumbButtonInfos>
         </TaskbarItemInfo>
     </Window.TaskbarItemInfo>
-    <Window.Resources>
-        <!-- Keep existing styles for now, but consolidate later -->
-    </Window.Resources>
 
     <Grid>
         <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/>
-            <RowDefinition Height="*"/>
-            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="Auto"/> <!-- Title Bar -->
+            <RowDefinition Height="*"/>    <!-- Main Content -->
+            <RowDefinition Height="Auto"/> <!-- Bottom Bar -->
         </Grid.RowDefinitions>
 
-        <!-- Top Bar: Settings -->
-        <Border Grid.Row="0" Background="#181825" Padding="10,5" BorderThickness="0,0,0,1" BorderBrush="#313244">
-            <Button Content="⚙ Settings" HorizontalAlignment="Right" Click="BtnSettings_Click"/>
-        </Border>
+        <!-- Custom Title Bar -->
+        <Grid Grid.Row="0" Height="40" Background="#181825">
+            <!-- Left Side: Icon and Title -->
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0">
+                <Image Source="/Resources/app_icon.png" Width="18" Height="18" Margin="0,0,10,0"/>
+                <TextBlock Text="{Binding [AppTitle], Source={StaticResource Loc}}" 
+                           Foreground="{StaticResource BrushTextSecondary}" 
+                           FontSize="13" 
+                           VerticalAlignment="Center"
+                           FontWeight="Medium"/>
+            </StackPanel>
+
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+                <!-- Settings Button (Now in Title Bar) -->
+                <Button Click="BtnSettings_Click" 
+                        Style="{StaticResource TitleBarButtonStyle}" 
+                        Content="{StaticResource PathSettings}"
+                        ToolTip="{Binding [Settings], Source={StaticResource Loc}}"/>
+                
+                <!-- System Controls -->
+                <Button Click="BtnMinimize_Click" 
+                        Style="{StaticResource TitleBarButtonStyle}" 
+                        Content="{StaticResource PathMinimize}"/>
+                
+                <Button Click="BtnMaximize_Click" 
+                        Style="{StaticResource MaximizeButtonStyle}"/>
+                
+                <Button Click="BtnClose_Click" 
+                        Style="{StaticResource TitleBarCloseButtonStyle}" 
+                        Content="{StaticResource PathClose}"/>
+            </StackPanel>
+        </Grid>
         
         <Grid Grid.Row="1">
             <!-- Main Content Region -->
