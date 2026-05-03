@@ -394,7 +394,16 @@
   <data name="BtnAdd" xml:space="preserve">
     <value>Add</value>
   </data>
-  <data name="HeaderPlaylist" xml:space="preserve">
-    <value>Playlist</value>
+  <data name="MsgAddSingleTrackTo" xml:space="preserve">
+    <value>Add 「{0}」 to:</value>
+  </data>
+  <data name="MsgAddMultipleTracksTo" xml:space="preserve">
+    <value>Add {0} tracks to:</value>
+  </data>
+  <data name="StatusAddedSingleTo" xml:space="preserve">
+    <value>Added 「{0}」 to 「{1}」</value>
+  </data>
+  <data name="StatusAddedMultipleTo" xml:space="preserve">
+    <value>Added {0} tracks to 「{1}」</value>
   </data>
 </root>

@@ -8,6 +8,8 @@ using seamless_loop_music.Services;
 using Prism.Events;
 using seamless_loop_music.Events;
 
+using System.Threading.Tasks;
+
 namespace seamless_loop_music.UI.Views
 {
     /// <summary>
@@ -35,8 +37,8 @@ namespace seamless_loop_music.UI.Views
 
             int count = tracks.Count;
             TxtSubtitle.Text = count == 1
-                ? $"将「{tracks[0].Title}」添加到："
-                : $"将 {count} 首曲目添加到：";
+                ? string.Format(seamless_loop_music.Properties.Resources.MsgAddSingleTrackTo, tracks[0].Title)
+                : string.Format(seamless_loop_music.Properties.Resources.MsgAddMultipleTracksTo, count);
 
             Loaded += async (_, __) =>
             {
@@ -55,32 +57,44 @@ namespace seamless_loop_music.UI.Views
 
         private async void TxtNewPlaylistName_KeyDown(object sender, KeyEventArgs e)
         {
-            if (e.Key != Key.Enter) return;
-
-            var name = TxtNewPlaylistName.Text?.Trim();
-            if (string.IsNullOrEmpty(name)) return;
-
-            // 查重逻辑
-            var allPlaylists = await _playlistManager.GetAllPlaylistsAsync();
-            if (allPlaylists.Any(p => string.Equals(p.Name, name, System.StringComparison.OrdinalIgnoreCase)))
+            if (e.Key == Key.Enter)
             {
-                MessageBox.Show($"已经有一个叫「{name}」的歌单了喵！换个名字吧", 
-                    "名称重复", MessageBoxButton.OK, MessageBoxImage.Warning);
-                return;
+                await HandleConfirmAction();
             }
-
-            var newPlaylist = await _playlistManager.CreatePlaylistAsync(name);
-            SelectedPlaylist = newPlaylist;
-            await AddTracksToPlaylist();
-            DialogResult = true;
         }
 
         private async void BtnConfirm_Click(object sender, RoutedEventArgs e)
         {
-            SelectedPlaylist = PlaylistListBox.SelectedItem as Playlist;
+            await HandleConfirmAction();
+        }
+
+        private async System.Threading.Tasks.Task HandleConfirmAction()
+        {
+            var newName = TxtNewPlaylistName.Text?.Trim();
+            
+            // 如果展开了新建面板且输入了内容，则优先创建新歌单
+            if (NewPlaylistExpander.IsExpanded && !string.IsNullOrEmpty(newName))
+            {
+                // 查重逻辑
+                var allPlaylists = await _playlistManager.GetAllPlaylistsAsync();
+                if (allPlaylists.Any(p => string.Equals(p.Name, newName, System.StringComparison.OrdinalIgnoreCase)))
+                {
+                    var msg = string.Format(seamless_loop_music.Properties.Resources.MsgPlaylistExists, newName);
+                    MessageBox.Show(msg, seamless_loop_music.Properties.Resources.DialogNewPlaylist, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    return;
+                }
+
+                SelectedPlaylist = await _playlistManager.CreatePlaylistAsync(newName);
+            }
+            else
+            {
+                // 否则使用选中的现有歌单
+                SelectedPlaylist = PlaylistListBox.SelectedItem as Playlist;
+            }
+
             if (SelectedPlaylist == null)
             {
-                MessageBox.Show("请先选择一个播放列表。", "提示", MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(seamless_loop_music.Properties.Resources.MsgNameEmpty, seamless_loop_music.Properties.Resources.DialogSelectPlaylist, MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -101,8 +115,8 @@ namespace seamless_loop_music.UI.Views
             
             // 发送成功反馈
             var message = _tracks.Count == 1 
-                ? $"已将「{_tracks[0].Title}」添加到「{SelectedPlaylist.Name}」"
-                : $"已将 {_tracks.Count} 首曲目添加到「{SelectedPlaylist.Name}」";
+                ? string.Format(seamless_loop_music.Properties.Resources.StatusAddedSingleTo, _tracks[0].Title, SelectedPlaylist.Name)
+                : string.Format(seamless_loop_music.Properties.Resources.StatusAddedMultipleTo, _tracks.Count, SelectedPlaylist.Name);
             _eventAggregator.GetEvent<StatusMessageEvent>().Publish(message);
         }
     }

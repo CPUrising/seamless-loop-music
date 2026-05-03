@@ -34,7 +34,7 @@
         </Border>
 
         <!-- 新建歌单区 -->
-        <Expander Header="{Binding [PromptNewPlaylist], Source={StaticResource Loc}}" Foreground="{StaticResource BrushAccent}" Margin="0,14,0,0"
+        <Expander x:Name="NewPlaylistExpander" Header="{Binding [PromptNewPlaylist], Source={StaticResource Loc}}" Foreground="{StaticResource BrushAccent}" Margin="0,14,0,0"
                   BorderThickness="0">
             <StackPanel Margin="0,8,0,0">
                 <TextBox x:Name="TxtNewPlaylistName"
@@ -49,7 +49,7 @@
             <Button x:Name="BtnCancel" Content="{Binding [BtnCancel], Source={StaticResource Loc}}" Style="{StaticResource SecondaryButton}"
                     Margin="0,0,10,0" Click="BtnCancel_Click"/>
             <Button x:Name="BtnConfirm" Content="{Binding [BtnAdd], Source={StaticResource Loc}}" Style="{StaticResource PrimaryButton}"
-                    Click="BtnConfirm_Click"/>
+                    IsDefault="True" Click="BtnConfirm_Click"/>
         </StackPanel>
     </StackPanel>
 </Window>
