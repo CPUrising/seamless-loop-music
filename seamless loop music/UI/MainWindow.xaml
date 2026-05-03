@@ -5,7 +5,7 @@
         xmlns:prism="http://prismlibrary.com/"
         Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="800" Width="1200"
         Icon="/Resources/app_icon.png"
-        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei"
+        Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None">
     
@@ -49,7 +49,7 @@
         </Grid.RowDefinitions>
 
         <!-- Custom Title Bar -->
-        <Grid Grid.Row="0" Height="40" Background="#181825">
+        <Grid Grid.Row="0" Height="40" Background="{StaticResource BrushSurfaceDark}">
             <!-- Left Side: Icon and Title -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0">
                 <Image Source="/Resources/app_icon.png" Width="18" Height="18" Margin="0,0,10,0"/>
@@ -89,7 +89,7 @@
         </Grid>
 
         <!-- Bottom Bar: Playback Controls (Always visible) -->
-        <Border Grid.Row="2" Background="#11111B" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="#313244">
+        <Border Grid.Row="2" Background="{StaticResource BrushTitleBar}" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BrushBorder}">
             <views:PlaybackControlBar />
         </Border>
     </Grid>

@@ -12,7 +12,14 @@
     <Color x:Key="ColorTextMuted">#585B70</Color>
     <Color x:Key="ColorDanger">#F38BA8</Color>
     <Color x:Key="ColorWarning">#F9E2AF</Color>
+    <Color x:Key="ColorMauve">#CBA6F7</Color>
     <Color x:Key="ColorSelection">#2D3F5E</Color>
+    <Color x:Key="ColorSurfaceDark">#181825</Color>
+    <Color x:Key="ColorTitleBar">#11111B</Color>
+    <Color x:Key="ColorSky">#89DCEB</Color>
+    <Color x:Key="ColorTeal">#94E2D5</Color>
+    <Color x:Key="ColorPink">#F5C2E7</Color>
+    <Color x:Key="ColorRosewater">#F2CDCD</Color>
 
     <!-- Brush Resources -->
     <SolidColorBrush x:Key="BrushBackground" Color="{StaticResource ColorBackground}"/>
@@ -25,9 +32,16 @@
     <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
     <SolidColorBrush x:Key="BrushDanger" Color="{StaticResource ColorDanger}"/>
     <SolidColorBrush x:Key="BrushWarning" Color="{StaticResource ColorWarning}"/>
+    <SolidColorBrush x:Key="BrushMauve" Color="{StaticResource ColorMauve}"/>
     <SolidColorBrush x:Key="BrushSelection" Color="{StaticResource ColorSelection}"/>
+    <SolidColorBrush x:Key="BrushSurfaceDark" Color="{StaticResource ColorSurfaceDark}"/>
+    <SolidColorBrush x:Key="BrushTitleBar" Color="{StaticResource ColorTitleBar}"/>
+    <SolidColorBrush x:Key="BrushSky" Color="{StaticResource ColorSky}"/>
+    <SolidColorBrush x:Key="BrushTeal" Color="{StaticResource ColorTeal}"/>
+    <SolidColorBrush x:Key="BrushPink" Color="{StaticResource ColorPink}"/>
+    <SolidColorBrush x:Key="BrushRosewater" Color="{StaticResource ColorRosewater}"/>
     
-    <SolidColorBrush x:Key="BrushBorder" Color="#313244"/>
-    <SolidColorBrush x:Key="BrushSeparator" Color="#45475A"/>
+    <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource ColorSurface}"/>
+    <SolidColorBrush x:Key="BrushSeparator" Color="{StaticResource ColorSurfaceHighlight}"/>
 
 </ResourceDictionary>

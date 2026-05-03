@@ -38,7 +38,7 @@
     <!-- Modern Text Button (Hyperlink style) -->
     <Style x:Key="ModernTextButton" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="White"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -213,20 +213,20 @@
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ContentBorder" Property="Background" Value="#11111B"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushTitleBar}"/>
                             <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource BrushAccent}"/>
                             <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushSurface}"/>
-                            <Setter TargetName="Icon" Property="Foreground" Value="White"/>
+                            <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsSelected" Value="True"/>
                                 <Condition Property="IsMouseOver" Value="True"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="ContentBorder" Property="Background" Value="#0D0D16"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushTitleBar}"/>
                         </MultiTrigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Trigger.EnterActions>
@@ -269,7 +269,7 @@
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
                             <Setter Property="Background" Value="#1FFFFFFF"/>
-                            <Setter Property="Foreground" Value="White"/>
+                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Background" Value="#2FFFFFFF"/>
@@ -285,7 +285,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="#E81123"/>
-                <Setter Property="Foreground" Value="White"/>
+                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
             </Trigger>
         </Style.Triggers>
     </Style>

@@ -1,13 +1,13 @@
 <Window x:Class="seamless_loop_music.UI.Views.AddToPlaylistDialog"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="添加到播放列表"
+        Title="{Binding [MenuAddToPlaylist], Source={StaticResource Loc}}"
         Width="360" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="#1E1E2E"
-        Foreground="White"
-        FontFamily="Segoe UI">
+        Background="{StaticResource BrushBackground}"
+        Foreground="{StaticResource BrushTextPrimary}"
+        FontFamily="Microsoft YaHei">
 
     <Window.Resources>
         <!-- 使用全局样式，这里可以添加特定的覆写（如有必要） -->
@@ -15,12 +15,12 @@
 
     <StackPanel Margin="24">
         <!-- Header -->
-        <TextBlock Text="选择播放列表" FontSize="18" FontWeight="Bold"
-                   Foreground="White" Margin="0,0,0,6"/>
+        <TextBlock Text="{Binding [DialogSelectPlaylist], Source={StaticResource Loc}}" FontSize="18" FontWeight="Bold"
+                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
         <TextBlock x:Name="TxtSubtitle" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16"/>
 
         <!-- 现有歌单列表 -->
-        <Border Background="#181825" CornerRadius="8" MaxHeight="260">
+        <Border Background="{StaticResource BrushSurfaceDark}" CornerRadius="8" MaxHeight="260">
             <ListBox x:Name="PlaylistListBox"
                      Background="Transparent" BorderThickness="0"
                      Padding="4" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
@@ -34,21 +34,21 @@
         </Border>
 
         <!-- 新建歌单区 -->
-        <Expander Header="＋ 新建播放列表" Foreground="{StaticResource BrushAccent}" Margin="0,14,0,0"
+        <Expander Header="{Binding [PromptNewPlaylist], Source={StaticResource Loc}}" Foreground="{StaticResource BrushAccent}" Margin="0,14,0,0"
                   BorderThickness="0">
             <StackPanel Margin="0,8,0,0">
                 <TextBox x:Name="TxtNewPlaylistName"
                          Style="{StaticResource ModernTextBox}"
                          KeyDown="TxtNewPlaylistName_KeyDown"/>
-                <TextBlock Text="输入名称后按 Enter 创建" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,6,0,0"/>
+                <TextBlock Text="{Binding [PromptEnterNameToCreate], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,6,0,0"/>
             </StackPanel>
         </Expander>
 
         <!-- 操作按钮 -->
         <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
-            <Button x:Name="BtnCancel" Content="取消" Style="{StaticResource SecondaryButton}"
+            <Button x:Name="BtnCancel" Content="{Binding [BtnCancel], Source={StaticResource Loc}}" Style="{StaticResource SecondaryButton}"
                     Margin="0,0,10,0" Click="BtnCancel_Click"/>
-            <Button x:Name="BtnConfirm" Content="添加" Style="{StaticResource PrimaryButton}"
+            <Button x:Name="BtnConfirm" Content="{Binding [BtnAdd], Source={StaticResource Loc}}" Style="{StaticResource PrimaryButton}"
                     Click="BtnConfirm_Click"/>
         </StackPanel>
     </StackPanel>

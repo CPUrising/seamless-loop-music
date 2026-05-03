@@ -379,4 +379,22 @@
   <data name="MenuPrevious" xml:space="preserve">
     <value>⏮  上一首</value>
   </data>
+  <data name="Settings" xml:space="preserve">
+    <value>设置</value>
+  </data>
+  <data name="DialogSelectPlaylist" xml:space="preserve">
+    <value>选择播放列表</value>
+  </data>
+  <data name="PromptNewPlaylist" xml:space="preserve">
+    <value>＋ 新建播放列表</value>
+  </data>
+  <data name="PromptEnterNameToCreate" xml:space="preserve">
+    <value>输入名称后按 Enter 创建</value>
+  </data>
+  <data name="BtnAdd" xml:space="preserve">
+    <value>添加</value>
+  </data>
+  <data name="HeaderPlaylist" xml:space="preserve">
+    <value>播放列表</value>
+  </data>
 </root>

@@ -51,7 +51,7 @@
 
                 <!-- Start Point -->
                 <StackPanel Grid.Column="0" Margin="0,0,10,0">
-                    <Border Background="#181825" CornerRadius="12" Padding="20">
+                    <Border Background="{StaticResource BrushSurfaceDark}" CornerRadius="12" Padding="20">
                         <StackPanel>
                             <TextBlock Text="{Binding [LoopStartLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="{StaticResource BrushAccent}" Margin="0,0,0,15" FontWeight="Bold"/>
                             <TextBox Text="{Binding LoopStartSample, UpdateSourceTrigger=PropertyChanged}" 
@@ -86,7 +86,7 @@
 
                 <!-- End Point -->
                 <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                    <Border Background="#181825" CornerRadius="12" Padding="20">
+                    <Border Background="{StaticResource BrushSurfaceDark}" CornerRadius="12" Padding="20">
                         <StackPanel>
                             <TextBlock Text="{Binding [LoopEndLabel], Source={StaticResource Loc}}" HorizontalAlignment="Center" Foreground="{StaticResource BrushDanger}" Margin="0,0,0,15" FontWeight="Bold"/>
                             <TextBox Text="{Binding LoopEndSample, UpdateSourceTrigger=PropertyChanged}" 
@@ -125,21 +125,21 @@
                     <!-- Row 1: Match controls -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center" Margin="0,0,0,12">
                         <Button Content="{Binding [MatchStart], Source={StaticResource Loc}}" Command="{Binding SmartMatchReverseCommand}" Width="110" Height="42"
-                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#89DCEB" Foreground="#11111B"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="{StaticResource BrushSky}" Foreground="{StaticResource BrushTitleBar}"
                                 ToolTip="{Binding [MatchStartToolTip], Source={StaticResource Loc}}"/>
                         <Button Content="{Binding [MatchEnd], Source={StaticResource Loc}}" Command="{Binding SmartMatchForwardCommand}" Width="110" Height="42"
-                                Style="{StaticResource PrimaryButton}" Margin="0,0,0,0" Background="#94E2D5" Foreground="#11111B"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,0,0" Background="{StaticResource BrushTeal}" Foreground="{StaticResource BrushTitleBar}"
                                 ToolTip="{Binding [MatchEndToolTip], Source={StaticResource Loc}}"/>
                     </StackPanel>
 
                     <!-- Row 2: Action controls -->
                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                         <Button Content="{Binding [ResetAB], Source={StaticResource Loc}}" Command="{Binding ResetABCommand}" Width="100" Height="42"
-                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#F5C2E7" Foreground="#11111B"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="{StaticResource BrushPink}" Foreground="{StaticResource BrushTitleBar}"
                                 IsEnabled="{Binding IsABMode}"
                                 ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
                         <Button Content="{Binding [PyRanking], Source={StaticResource Loc}}" Command="{Binding PyRankingCommand}" Width="100" Height="42"
-                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="#F2CDCD" Foreground="#11111B"
+                                Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="{StaticResource BrushRosewater}" Foreground="{StaticResource BrushTitleBar}"
                                 ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
                         <Button Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Command="{Binding ApplyLoopCommand}" Width="130" Height="42"
                                 Style="{StaticResource PrimaryButton}" FontWeight="Bold" Background="{StaticResource BrushAccent}"/>
@@ -161,7 +161,7 @@
                     <StackPanel Grid.Column="1" Margin="8">
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                             <TextBlock Text="{Binding SearchRadiusTitle}" FontSize="11" Foreground="{StaticResource BrushTextSecondary}"/>
-                            <TextBlock Text="{Binding SearchRadius, StringFormat={}{0:F0}}" FontSize="15" Foreground="#94E2D5" FontWeight="Bold" Margin="8,0,0,0"/>
+                            <TextBlock Text="{Binding SearchRadius, StringFormat={}{0:F0}}" FontSize="15" Foreground="{StaticResource BrushTeal}" FontWeight="Bold" Margin="8,0,0,0"/>
                         </StackPanel>
                         <Slider Style="{StaticResource ModernSlider}" Minimum="1" Maximum="20" Value="{Binding SearchRadius}" TickFrequency="1" IsSnapToTickEnabled="True" Height="30"/>
                     </StackPanel>

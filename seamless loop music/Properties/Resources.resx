@@ -379,4 +379,22 @@
   <data name="MenuPrevious" xml:space="preserve">
     <value>⏮ Previous</value>
   </data>
+  <data name="Settings" xml:space="preserve">
+    <value>Settings</value>
+  </data>
+  <data name="DialogSelectPlaylist" xml:space="preserve">
+    <value>Select Playlist</value>
+  </data>
+  <data name="PromptNewPlaylist" xml:space="preserve">
+    <value>＋ New Playlist</value>
+  </data>
+  <data name="PromptEnterNameToCreate" xml:space="preserve">
+    <value>Enter name and press Enter to create</value>
+  </data>
+  <data name="BtnAdd" xml:space="preserve">
+    <value>Add</value>
+  </data>
+  <data name="HeaderPlaylist" xml:space="preserve">
+    <value>Playlist</value>
+  </data>
 </root>

@@ -20,7 +20,7 @@
         </ResourceDictionary>
     </Window.Resources>
 
-    <Border Background="#1E1E2E" CornerRadius="16" BorderThickness="1" BorderBrush="#313244" Margin="10">
+    <Border Background="{StaticResource BrushBackground}" CornerRadius="16" BorderThickness="1" BorderBrush="{StaticResource BrushBorder}" Margin="10">
         <Border.Effect>
             <DropShadowEffect BlurRadius="15" ShadowDepth="0" Color="Black" Opacity="0.6"/>
         </Border.Effect>

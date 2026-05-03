@@ -1,50 +1,46 @@
 <Window x:Class="seamless_loop_music.UI.LoopListWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
-        Title="{Binding [TitleLoopCandidates], Source={StaticResource Loc}}" Height="450" Width="600" WindowStartupLocation="CenterOwner">
-    <Window.Resources>
-        <!-- Standard WPF Button Style -->
-        <Style x:Key="WPFButtonStyle" TargetType="Button">
-            <Setter Property="Padding" Value="15,5"/>
-            <Setter Property="Height" Value="28"/>
-        </Style>
-
-        <!-- Bold Accent Button -->
-        <Style x:Key="WPFAccentButtonStyle" TargetType="Button" BasedOn="{StaticResource WPFButtonStyle}">
-            <Setter Property="FontWeight" Value="Bold"/>
-        </Style>
-    </Window.Resources>
-    
-    <Grid Margin="15">
+        Title="{Binding [TitleLoopCandidates], Source={StaticResource Loc}}" Height="500" Width="650" 
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}"
+        FontFamily="Microsoft YaHei">
+    <Grid Margin="20">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
         
-        <TextBlock Text="{Binding [PromptSelectLoop], Source={StaticResource Loc}}" Margin="0,0,0,10" Foreground="Black" FontSize="14"/>
+        <TextBlock Text="{Binding [PromptSelectLoop], Source={StaticResource Loc}}" Margin="0,0,0,15" Foreground="{StaticResource BrushAccent}" FontSize="16" FontWeight="Bold"/>
         
-        <!-- Standard ListView with White Background and Borders -->
-        <ListView Grid.Row="1" Name="lstCandidates" Background="White" Foreground="Black" BorderBrush="Gray" BorderThickness="1" 
-                  SelectionMode="Single" MouseDoubleClick="LstCandidates_MouseDoubleClick">
-            <ListView.View>
-                <GridView>
-                    <GridViewColumn Header="{Binding [HeaderScore], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding ScoreDisplay}" Width="80"/>
-                    <GridViewColumn Header="{Binding [HeaderStart], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Start}" Width="100"/>
-                    <GridViewColumn Header="{Binding [HeaderEnd], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding End}" Width="100"/>
-                    <GridViewColumn Header="{Binding [HeaderDuration], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Duration}" Width="80"/>
-                    <GridViewColumn Header="{Binding [HeaderNoteDistance], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding NoteDistance}" Width="100"/>
-                </GridView>
-            </ListView.View>
-        </ListView>
+        <Border Grid.Row="1" Background="{StaticResource BrushSurfaceDark}" CornerRadius="12" BorderThickness="1" BorderBrush="{StaticResource BrushBorder}">
+            <ListView Name="lstCandidates" Background="Transparent" Foreground="{StaticResource BrushTextPrimary}" BorderThickness="0" 
+                      SelectionMode="Single" MouseDoubleClick="LstCandidates_MouseDoubleClick" Margin="5">
+                <ListView.ItemContainerStyle>
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource ModernListBoxItem}">
+                        <Setter Property="Padding" Value="10,8"/>
+                    </Style>
+                </ListView.ItemContainerStyle>
+                <ListView.View>
+                    <GridView>
+                        <GridViewColumn Header="{Binding [HeaderScore], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding ScoreDisplay}" Width="80"/>
+                        <GridViewColumn Header="{Binding [HeaderStart], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Start}" Width="120"/>
+                        <GridViewColumn Header="{Binding [HeaderEnd], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding End}" Width="120"/>
+                        <GridViewColumn Header="{Binding [HeaderDuration], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Duration}" Width="100"/>
+                        <GridViewColumn Header="{Binding [HeaderNoteDistance], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding NoteDistance}" Width="100"/>
+                    </GridView>
+                </ListView.View>
+            </ListView>
+        </Border>
         
-        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,15,0,0">
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,20,0,0">
             <Button x:Name="btnUpdate" Content="{Binding [ButtonUpdate], Source={StaticResource Loc}}" Click="BtnUpdate_Click" 
-                    Style="{StaticResource WPFAccentButtonStyle}" Width="110" Margin="0,0,10,0" />
+                    Style="{StaticResource SecondaryButton}" Width="120" Margin="0,0,12,0" />
             <Button x:Name="btnApply" Content="{Binding [ButtonApply], Source={StaticResource Loc}}" Click="BtnApply_Click" 
-                    Style="{StaticResource WPFAccentButtonStyle}" Width="75" Margin="0,0,10,0" />
+                    Style="{StaticResource PrimaryButton}" Width="100" Margin="0,0,12,0" />
             <Button Content="{Binding [ButtonClose], Source={StaticResource Loc}}" Click="BtnClose_Click" 
-                    Style="{StaticResource WPFButtonStyle}" Width="75"/>
+                    Style="{StaticResource SecondaryButton}" Width="100"/>
         </StackPanel>
     </Grid>
 </Window>

@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="{Binding [SettingsTitle], Source={StaticResource Loc}}" Height="550" Width="600"
-        Background="#1E1E2E" Foreground="#CDD6F4" FontFamily="Microsoft YaHei"
+        Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterOwner">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -12,36 +12,36 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Grid.Row="0" Text="{Binding [SettingsTitle], Source={StaticResource Loc}}" FontSize="24" FontWeight="Bold" Foreground="#89B4FA" Margin="0,0,0,20"/>
+        <TextBlock Grid.Row="0" Text="{Binding [SettingsTitle], Source={StaticResource Loc}}" FontSize="24" FontWeight="Bold" Foreground="{StaticResource BrushAccent}" Margin="0,0,0,20"/>
 
         <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto">
             <StackPanel>
-                <Border Background="#313244" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                <Border Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="{Binding [MusicFoldersHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="#CBA6F7" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding [MusicFoldersSub], Source={StaticResource Loc}}" Foreground="#7F849C" FontSize="12" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [MusicFoldersHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource BrushMauve}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [MusicFoldersSub], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,0,0,10"/>
 
-                        <ListBox x:Name="lstFolders" Background="#181825" Foreground="#CDD6F4" BorderThickness="0" MaxHeight="150" Margin="0,0,0,10">
+                        <ListBox x:Name="lstFolders" Background="{StaticResource BrushSurfaceDark}" Foreground="{StaticResource BrushTextPrimary}" BorderThickness="0" MaxHeight="150" Margin="0,0,0,10">
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding}" Foreground="#CDD6F4" Padding="5"/>
+                                    <TextBlock Text="{Binding}" Foreground="{StaticResource BrushTextPrimary}" Padding="5"/>
                                 </DataTemplate>
                             </ListBox.ItemTemplate>
                         </ListBox>
 
                         <StackPanel Orientation="Horizontal">
-                            <Button x:Name="btnAddFolder" Content="{Binding [BtnAddFolder], Source={StaticResource Loc}}" Background="#45475A" Foreground="#CDD6F4" Padding="15,8" BorderThickness="0" Click="BtnAddFolder_Click"/>
-                            <Button x:Name="btnRemoveFolder" Content="{Binding [BtnRemove], Source={StaticResource Loc}}" Background="#45475A" Foreground="#CDD6F4" Padding="15,8" BorderThickness="0" Margin="10,0,0,0" Click="BtnRemoveFolder_Click"/>
-                            <Button x:Name="btnScan" Content="{Binding [BtnScan], Source={StaticResource Loc}}" Background="#89B4FA" Foreground="#1E1E2E" Padding="15,8" BorderThickness="0" Margin="10,0,0,0" Click="BtnScan_Click"/>
+                            <Button x:Name="btnAddFolder" Content="{Binding [BtnAddFolder], Source={StaticResource Loc}}" Background="{StaticResource BrushSurfaceHighlight}" Foreground="{StaticResource BrushTextPrimary}" Padding="15,8" BorderThickness="0" Click="BtnAddFolder_Click"/>
+                            <Button x:Name="btnRemoveFolder" Content="{Binding [BtnRemove], Source={StaticResource Loc}}" Background="{StaticResource BrushSurfaceHighlight}" Foreground="{StaticResource BrushTextPrimary}" Padding="15,8" BorderThickness="0" Margin="10,0,0,0" Click="BtnRemoveFolder_Click"/>
+                            <Button x:Name="btnScan" Content="{Binding [BtnScan], Source={StaticResource Loc}}" Background="{StaticResource BrushAccent}" Foreground="{StaticResource BrushTitleBar}" Padding="15,8" BorderThickness="0" Margin="10,0,0,0" Click="BtnScan_Click"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
                 <!-- Language Section -->
-                <Border Background="#313244" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                <Border Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="{Binding [LanguageHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="#CBA6F7" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding [LanguageSub], Source={StaticResource Loc}}" Foreground="#7F849C" FontSize="12" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [LanguageHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource BrushMauve}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [LanguageSub], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,0,0,10"/>
 
                         <ComboBox x:Name="cmbLanguage" Width="220" HorizontalAlignment="Left" 
                                   Style="{StaticResource MaterialDesignOutlinedComboBox}"
@@ -59,31 +59,31 @@
                 </Border>
                 
                 <!-- Tray Behavior Section -->
-                <Border Background="#313244" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                <Border Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="{Binding [TrayHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="#CBA6F7" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding [TraySub], Source={StaticResource Loc}}" Foreground="#7F849C" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding [TrayHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource BrushMauve}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [TraySub], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
 
                         <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
                             <ToggleButton x:Name="tgMinimizeToTray" Style="{StaticResource MaterialDesignSwitchToggleButton}" 
                                           Click="TraySetting_Changed"/>
-                            <TextBlock Text="{Binding [TrayMinimizeToTray], Source={StaticResource Loc}}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#CDD6F4"/>
+                            <TextBlock Text="{Binding [TrayMinimizeToTray], Source={StaticResource Loc}}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{StaticResource BrushTextPrimary}"/>
                         </StackPanel>
 
                         <StackPanel Orientation="Horizontal">
                             <ToggleButton x:Name="tgCloseToTray" Style="{StaticResource MaterialDesignSwitchToggleButton}" 
                                           Click="TraySetting_Changed"/>
-                            <TextBlock Text="{Binding [TrayCloseToTray], Source={StaticResource Loc}}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#CDD6F4"/>
+                            <TextBlock Text="{Binding [TrayCloseToTray], Source={StaticResource Loc}}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="{StaticResource BrushTextPrimary}"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
 
-                <Border Background="#313244" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                <Border Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                     <StackPanel>
-                        <TextBlock Text="{Binding [DataManagementHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="#CBA6F7" Margin="0,0,0,10"/>
-                        <TextBlock Text="{Binding [DataManagementSub], Source={StaticResource Loc}}" Foreground="#7F849C" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
+                        <TextBlock Text="{Binding [DataManagementHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource BrushMauve}" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [DataManagementSub], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
 
-                        <Button x:Name="btnSync" Content="{Binding [BtnSync], Source={StaticResource Loc}}" Background="#45475A" Foreground="#CDD6F4" Padding="15,8" BorderThickness="0" HorizontalAlignment="Left" Click="BtnSync_Click"/>
+                        <Button x:Name="btnSync" Content="{Binding [BtnSync], Source={StaticResource Loc}}" Background="{StaticResource BrushSurfaceHighlight}" Foreground="{StaticResource BrushTextPrimary}" Padding="15,8" BorderThickness="0" HorizontalAlignment="Left" Click="BtnSync_Click"/>
                     </StackPanel>
                 </Border>
             </StackPanel>

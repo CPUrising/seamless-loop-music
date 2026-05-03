@@ -32,7 +32,7 @@
                 </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
-                    <TextBlock Text="{Binding Title}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                 </StackPanel>
             </Grid>
@@ -61,7 +61,7 @@
 
                 <!-- Title & Filename -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0">
-                    <TextBlock Text="{Binding Title}" Foreground="White" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource BrushTextPrimary}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
                     <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                 </StackPanel>
 
@@ -122,7 +122,7 @@
                 </Border>
                 <StackPanel VerticalAlignment="Center">
                     <Viewbox HorizontalAlignment="Left" MaxHeight="45" StretchDirection="DownOnly" MaxWidth="600">
-                        <TextBlock Text="{Binding CategoryName}" Foreground="White" FontSize="28" FontWeight="Bold"/>
+                        <TextBlock Text="{Binding CategoryName}" Foreground="{StaticResource BrushTextPrimary}" FontSize="28" FontWeight="Bold"/>
                     </Viewbox>
                     <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
                                Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
@@ -149,7 +149,7 @@
                 <TextBox Grid.Column="1" x:Name="SearchTextBox"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          Background="Transparent" BorderThickness="0" 
-                         Foreground="White" VerticalContentAlignment="Center"
+                         Foreground="{StaticResource BrushTextPrimary}" VerticalContentAlignment="Center"
                          FontSize="15" CaretBrush="{StaticResource BrushAccent}"
                          Margin="5,0,15,0"/>
                 
