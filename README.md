@@ -1,115 +1,115 @@
 # Seamless Loop Music Player (无缝循环音乐播放器)
 
-[![License: Ms-PL](https://img.shields.io/badge/License-Ms--PL-blue.svg)](https://opensource.org/licenses/MS-PL)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![Framework](https://img.shields.io/badge/.NET%20Framework-4.8-purple.svg)](https://dotnet.microsoft.com/)
 [![Database](https://img.shields.io/badge/Database-SQLite-green.svg)](https://www.sqlite.org/)
 
 [中文版](README.md) | [English Version](README_EN.md)
 
-一款专为游戏 BGM（如 Galgame、RPG）及环境音效（如白噪音）打造的无缝循环播放与高效管理工具。依托自研算法与顶级开源引擎双重驱动，实现采样级的精准循环对齐。
+一款专为游戏 BGM（如 Galgame、RPG）及环境音效（如白噪音）打造的无缝循环播放与管理工具。通过自研算法与开源引擎双重驱动，实现采样级的精准循环对齐。
 
-目前只支持win10及以上的操作系统，MP3、OGG、WAV音乐格式
+**运行环境**：Windows 10 及以上
+**支持格式**：MP3, OGG, WAV
 
-![1771557603679](image/README/1771557603679.png)
+![image-20260504004748183](./image/README/image-20260504004748183.png)
 
----
-
-## 🛠️ 核心功能
-
-### 1. 智能循环对齐 (Smart & Deep Match)
-
-- **手动智能匹配**：支持“寻找起点” (Reverse) 与“寻找终点” (Forward) 两种模式，完美适配 Intro+循环节+循环节开头一部分 的 OST 音轨。
-  寻找起点：以当前循环终点的前一秒为指纹，在当前循环起点的前后共10秒寻找匹配程度最高处，将此处更新为循环起点
-  寻找终点：以当前循环起点的后一秒为指纹，在当前循环终点的前后共10秒寻找匹配程度最高处，将此处更新为循环终点
-- **自动智能匹配**：集成业界领先的极致匹配引擎PyMusicLooper，使得可以批量一键匹配循环点（需要用户先自行安装）
-
-### 2. A/B 拼接模式 (A/B Looping)
-
-- **双文件合体**：支持将两个独立的音轨（如 Intro.wav + Loop.wav，01_a.ogg+01_b.ogg，02_A.mp3+02_B.mp3）逻辑拼接为单曲播放，适用于白色相簿2、流星世界演绎者的游戏原始BGM匹配
-  但是因为采取了把两首歌直接吞进内存里进行操作的方式，所以A\B段**不要**使用长达**几个小时**的音乐文件，这只会让你的电脑红温。
-- 用户可以自己设置合并后的循环起始点，同时可以通过“恢复AB接缝”恢复AB的原始循环
-
-### 3.三种播放模式
-
-- 支持单曲循环
-- 支持列表循环播放与列表随机播放，同时可以修改循环次数，自定义循环几次切换到下一首歌。
-
-### 4. 持久化数据管理 (Safe & Portable)
-
-- **指纹识别系统**：基于 `(文件名 + 总采样数)` 的音频指纹技术。即使移动文件位置，其别名、循环配置也能自动找回。
-- **工业级后端**：基于 SQLite + Dapper 架构，开启 WAL 并发模式，支持大规模曲库的高速读写与管理。
-- **别名系统**：支持在不修改物理文件名的前提下，在 UI 界面自定义显示名称。
-
-### 5. 现代交互体验 (UX & Interaction)
-
-- **原生拖拽重排**：支持在歌单和曲目列表中直接拖拽调整顺序，排序结果实时持久化到数据库。
-- **批量管理引擎**：支持多选歌单执行一键刷新、批量极致匹配及删除操作。
-- **智能边缘滚动**：长列表拖拽时自动感知边界并自动滚动，操作顺滑。
+![image-20260504014156975](./image/README/image-20260504014156975.png)
 
 ---
 
-## 🚀 技术栈
+## 🛠️ 技术栈
 
-- **音频后端**：NAudio (基于环形缓冲区的无缝流技术)
-- **数据存储**：SQLite + Dapper (ORM)
-- **界面框架**：WPF (支持 UI 虚拟化与动态列表重绘)
-- **匹配算法**：时域互相关 (自研) + PyMusicLooper (集成)
+- **音频引擎**：NAudio (基于环形缓冲区的无缝流处理技术)
+- **开发框架**：WPF + Prism (MVVM) + Unity (依赖注入)
+- **数据管理**：SQLite + Dapper (开启 WAL 并发模式)
+- **核心算法**：时域互相关 (自研) + PyMusicLooper (集成)
+
+---
+
+## 🚀 核心功能
+
+### 1. 智能循环对齐 (Smart Match)
+
+针对具有“开场白 + 循环节”结构的音轨，提供两种相位对齐模式：
+
+- **寻找起点 (Reverse Match)**：以当前终点前几秒为指纹，在起点附近寻找匹配度最高的位置并自动更新。
+- **寻找终点 (Forward Match)**：以当前起点后几秒为指纹，在终点附近寻找匹配度最高的位置并自动更新。
+- **极致寻环**：集成 `PyMusicLooper` 引擎，支持一键自动化分析并给出候选方案。需要用户自行安装，简要安装方法在使用教程中，或查看项目[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 
+
+### 2. A/B 逻辑拼接 (A/B Splicing)
+
+支持将两个独立音轨（如 `Intro.wav` + `Loop.wav`）逻辑拼接为单曲。
+
+- 适用于提取自游戏原始资源中分离的 Intro 和 Loop 片段。
+- 支持自定义合并后的循环点，并提供“恢复 A/B 接缝”功能以还原原始状态。
+
+### 3. 无缝播放系统
+
+- **无缝循环模式**：开启后，播放器在到达循环终点时将实现采样级跳转。
+- **常规模式切换**：支持普通播放与无缝循环的快速切换，适配不同收听需求。
+
+### 4. 健壮的数据管理
+
+- **音频指纹系统**：基于“文件名 + 总采样数”生成指纹。即使移动文件位置或重命名，其循环配置、别名和歌单信息也能自动找回。
+- **数据库同步**：支持同步其他设备的数据库文件。系统会以指纹为依据，自动覆盖或更新本机的循环点及元数据。
+- **别名系统**：支持在不修改物理文件名的前提下自定义 UI 显示名称。
 
 ---
 
 ## 📖 使用指南
 
-1. **批量操作的解释**：同windows多选文件的操作，即CTRL单个多选，CTRL+A列表内全选，shift选范围
-2. **导入**：点击左上方“我的歌单”右侧的 `+` 号添加歌单，歌单有两种：一种只能通过添加删除文件夹管理，另一种只能通过添加删除单个系统会自动扫描并建立指纹映射。
-3. **自动匹配**：
-   **手动智能匹配**：
-   在主界面输入或按钮修改得到粗略采样点或时间，利用“寻找起点/终点”进行局部相位对齐，通过“确认并试听”跳转到循环终点前3秒比对是否无缝。
-   同时也可以修改作为比对标准的匹配长度，搜索半径，实现更加精确的匹配。
+### 1. 导入与扫描
 
-   **极致匹配**：首先需要配置好PyMusicLooper，参见[[PyMusicLooper/README.md at master · arkrow/PyMusicLooper](https://github.com/arkrow/PyMusicLooper/blob/master/README.md)](https://github.com/arkrow/PyMusicLooper)
-   或看本文档使用指南的第5点。
+点击主界面“设置（齿轮）”，添加音乐所在文件夹后点击“立即扫描”。系统将自动提取元数据。
 
-   可以批量选择歌曲进行“极致匹配”，让引擎自动为你寻找最佳循环节位置，然后点击排行榜，在排行榜界面双击选择循环点试听选择。如果这首歌还没有极致匹配过，点击排行榜后，会先对这首歌极致匹配，再进入排行榜界面。
-   经实际测试，极致匹配所用的算法不一定准确，可能还需要用户自行手动调整。
+### 2. 匹配循环点
 
-   **A\B段匹配**：歌单添加歌曲时，就会自动设置循环起始点为B段的开头结尾，也支持上述两种匹配方式。如果要恢复原循环起始点，可按下“恢复A\B接缝”回到最初状态。
+点击列表歌曲右侧的**循环图标（倒8字 ∞）**进入编辑界面：
 
-   **匹配问题**：小概率所取的循环点位置不易解码，导致不能正常循环，如过了循环点直接回到歌曲开头停止。此时微调循环点几毫秒即可解决。
-4. **歌单歌曲管理**：
-   歌单分为两类：一种只能通过添加删除文件夹管理，另一种只能通过添加删除单个（或歌单里批量选中的）歌曲管理。
-   右键歌单或歌曲进行相应管理操作，删除，重命名，添加歌单，
-   支持列表中左键拖拽歌曲，排列你喜欢的播放顺序。
-5. **PyMusicLooper安装教程**：
+- **手动对齐**：输入或通过按钮调整大致采样点，利用“匹配起点/终点”进行局部对齐。点击“确认并试听”可跳转至终点前 3 秒以验证衔接效果。
+- **参数微调**：支持修改“匹配长度”与“搜索半径”，以更改匹配的范围。
 
-   **uv版：**
+### 3. 自动寻环 (PyMusicLooper)
 
-   安装时“网络环境”要求较高，尤其是uv工具的安装。我写下这句话时，真希望所有人都是程序员，或至少懂得双引号内含义。
+1. **分析**：批量选择歌曲后选择“自动寻环”，引擎将计算最佳循环位置。
+2. **选择**：在自动寻环的“排行榜”界面双击不同方案进行试听，确认后保存。
+   *注意：自动寻环结果受算法限制，可能仍需手动微调。*
 
-   先进入powershell,输入powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"，等待下载完成，安装时“网络环境”要求较高。下载完成后
+### 4. PyMusicLooper 安装教程
 
-   win+R,输入cmd,打开cmd终端，输入uv tool install pymusiclooper，下载。这一步对国内网络要求似乎小一点。完成后。。。
+可查看[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 项目界面
 
-   嗯，就可以匹配了。
+本项目推荐使用以下两种方式安装环境：
 
-   问题主要在于uv工具的安装。应该也可以通过python的pip安装，只是我目前不会清理之前安装PyMusicLooper的环境变量，而且我的python环境有点乱，这些会对pip安装造成干扰，所以没有尝试。但根据原仓库文档，应当可以。
+#### 方法 A：使用 uv (推荐，速度快，但是国内网络可能难以下载)
 
-   **pip版：**
+1. 打开 PowerShell，执行安装脚本：
+   `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
+2. 重启终端，执行下载：
+   `uv tool install pymusiclooper`
 
-   如果已经配置好pip，就进入第二步，几乎一样：
-   pipx install pymusiclooper或
-   pip install pymusiclooper
+#### 方法 B：使用 pip (传统方式)
+
+在已配置 Python 环境的终端中执行：
+`pipx install pymusiclooper` 或 `pip install pymusiclooper`
 
 ---
 
-## 🕹️ 致敬
+## ⚠️ 注意事项
 
-本项目最初的灵感与开发动力来源于 [melodicule/AokanaMusicPlayer: 苍彼音乐无缝播放/Play Aokana&#39;s BGM seamless](https://github.com/melodicule/AokanaMusicPlayer)，其中循环相关代码对我们后期AB段的处理有很大的启发（直接把歌曲吞进内存...）
-我们在其基础上进行了扩展与增强，使得具有更加广泛的应用
+- **命名规范**：歌曲名请避免使用乱码，以免跨设备同步时产生识别错误。建议先将文件名修改为标准字符。
+- **分类逻辑**：系统目前按“专辑名”进行归类，同名专辑将被视为同一集合。
+- **解码异常**：若遇到循环点位置无法正常解码（如跳转后停止），请尝试微调循环点数毫秒。
 
-本项目的批量极致匹配，由业界领先超级无敌神通广大无所不能的自动寻找循环节的开源项目[arkrow/PyMusicLooper: A python program for repeating music endlessly and creating seamless music loops, with play/export/tagging support.](https://github.com/arkrow/PyMusicLooper)提供支持，请大家给这个仓库一个大大的star！
+---
+
+## 🕹️ 致敬与引用
+
+- **灵感来源**：[AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer)
+- **核心依赖**：[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 
 
 ---
 
 ## 📜 许可证
 
-本项目尊敬[melodicule/AokanaMusicPlayer: 苍彼音乐无缝播放/Play Aokana&#39;s BGM seamless](https://github.com/melodicule/AokanaMusicPlayer)的开源贡献，根据其协议遵循 **Microsoft Public License (Ms-PL)** 协议。
+本项目遵守 **MIT** 协议。

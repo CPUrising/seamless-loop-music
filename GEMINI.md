@@ -2,8 +2,8 @@
 
 ---
 **编写者**: 莱芙・泽诺 (Lev Zenith)
-**日期**: 2026-05-02
-**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理（注：IAppStateService.cs 接口未找到）。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类（已补充对应文件记录）。新增 PlayPauseIconConverter 值转换器。新增 FoldersService 文件夹浏览服务与 SubfolderItem 模型。新增 TestDatabaseSeed、SyncTests、DatabaseTests 测试模块。FolderManagerWindow 已移除。PlaylistFolder.cs 已重命名为 Playlist.cs。
+**日期**: 2026-05-04
+**状态**: 采用 Repository 仓储模式 + Prism MVVM 完整分离，架构日趋完善。已集成 Prism.Unity 依赖注入框架和 Material Design UI 风格。新增 Album/Artist/UserRating 数据模型和 PlaybackQueueService 播放队列服务。新增 IPlaylistManager.cs 接口和 IPlaylistManagerService.cs 接口（冗余但保留）。PlaylistSidebar 视图与 ViewModel 均已移除（功能已重构）。新增 ConcatenatedStream 无缝拼接流、AppStateService 应用状态持久化、TaskbarService 任务栏控制、NotifyIconService 托盘图标管理（注：IAppStateService.cs 接口未找到）。新增 TrayControlsWindow 托盘控制窗口及配套 MVVM 组件。新增 PlaybackControls、VolumeControls、TrackInfoControl、ProgressControls 等自定义控件。新增 UI/Themes 主题资源目录（Icons.xaml、Colors.xaml、Styles.xaml、Controls.xaml）。AudioLooper 核心已拆分为 Analysis/Loader/Mixing 分部类（已补充对应文件记录）。新增 PlayPauseIconConverter 值转换器。新增 FoldersService 文件夹浏览服务与 SubfolderItem 模型。新增 TestDatabaseSeed、SyncTests、DatabaseTests、ArtistCoverTests 测试模块。FolderManagerWindow 已移除。PlaylistFolder.cs 已重命名为 Playlist.cs。
 
 ---
 
@@ -132,6 +132,7 @@
 - `TestDatabaseSeed.cs`: 测试数据库种子数据生成器，提供黄金数据集和大规模测试数据生成。
 - `SyncTests.cs`: 数据库同步测试，验证从外部数据库同步数据的各种场景。
 - `DatabaseTests.cs`: 数据库完整性测试，包含 3NF 架构验证、循环参数边界测试、事务并发测试和性能测试。
+- `ArtistCoverTests.cs`: 艺术家与专辑封面测试，验证首次扫描设置封面、后续扫描保持首封面、空封面更新、批量插入封面处理、修复缺失分类封面以及 Unknown 分类不应回填等场景。
 - `UnitTest1.cs`: 基础测试用例。
 
 ## 3. Prism 框架集成
