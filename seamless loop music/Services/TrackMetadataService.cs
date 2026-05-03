@@ -8,6 +8,8 @@ using System.Windows.Media;
 using System.Windows.Media.Imaging;
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
+using Prism.Events;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.Services
 {
@@ -18,10 +20,12 @@ namespace seamless_loop_music.Services
     public class TrackMetadataService
     {
         private readonly IDatabaseHelper _dbHelper;
+        private readonly IEventAggregator _eventAggregator;
 
-        public TrackMetadataService(IDatabaseHelper dbHelper)
+        public TrackMetadataService(IDatabaseHelper dbHelper, IEventAggregator eventAggregator)
         {
             _dbHelper = dbHelper;
+            _eventAggregator = eventAggregator;
         }
 
         public string FindPartB(string filePath)
@@ -195,6 +199,7 @@ namespace seamless_loop_music.Services
                     if (IsFileValid(existingPath))
                     {
                         track.CoverPath = existingPath;
+                        track.AlbumCoverPath = existingPath; // 同步内存中的专辑封面路径
                         return existingPath;
                     }
                 }
@@ -240,6 +245,10 @@ namespace seamless_loop_music.Services
                         }
                         
                         track.CoverPath = cachePath;
+                        
+                        // 关键修复：一旦提取到新封面，立即触发全局扩散修复并刷新 UI
+                        _dbHelper.RepairMissingCategoryCovers();
+                        _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
                         return cachePath;
                     }
                 }

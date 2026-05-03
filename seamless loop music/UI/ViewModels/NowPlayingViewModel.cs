@@ -108,45 +108,29 @@ namespace seamless_loop_music.UI.ViewModels
                     return;
                 }
 
-                // 1. 优先使用已缓存的路径
-                string path = track.CoverPath;
+                // 1. 使用计算属性获取最终有效路径 (Album > Track)
+                string path = track.EffectiveCoverPath;
                 
-                // 2. 如果路径为空，尝试从文件动态提取（兜底逻辑）
+                // 2. 如果路径为空，尝试寻找/提取
                 if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
                 {
-                    // 使用服务进行提取并补充 (一个专辑一个图片，GUID命名)
                     path = _metadataService.GetOrExtractCover(track);
-                    
-                    if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
-                    {
-                        AlbumCoverImage = null;
-                        return;
-                    }
-                    
-                    // 如果提取成功，保存曲目状态（这样下次就有了）
-                    _metadataService.SaveTrack(track);
-
-                    // 关键：触发全向修复，让同专辑的曲目以及艺术家表也瞬间获得封面
-                    _trackRepository.RepairMissingCategoryCovers();
-
-                    // 关键：通知 UI 刷新库，因为艺术家/专辑的封面可能已经同步补全了
-                    _eventAggregator.GetEvent<seamless_loop_music.Events.LibraryRefreshedEvent>().Publish();
+                    if (!string.IsNullOrEmpty(path)) _metadataService.SaveTrack(track);
                 }
 
-                // 3. 从最终确定的路径加载
-                var bitmap = new BitmapImage();
-                bitmap.BeginInit();
-                bitmap.UriSource = new Uri(path);
-                bitmap.CacheOption = BitmapCacheOption.OnLoad;
-                bitmap.EndInit();
-                bitmap.Freeze();
-                AlbumCoverImage = bitmap;
-                return;
+                if (!string.IsNullOrEmpty(path) && System.IO.File.Exists(path))
+                {
+                    var bitmap = new BitmapImage();
+                    bitmap.BeginInit();
+                    bitmap.UriSource = new Uri(path);
+                    bitmap.CacheOption = BitmapCacheOption.OnLoad;
+                    bitmap.EndInit();
+                    bitmap.Freeze();
+                    AlbumCoverImage = bitmap;
+                    return;
+                }
             }
-            catch
-            {
-                // Ignore errors
-            }
+            catch { }
             AlbumCoverImage = null;
         }
 

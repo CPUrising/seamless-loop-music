@@ -44,6 +44,7 @@ namespace seamless_loop_music.Data
         
         (int tracksSynced, int playlistsSynced) SyncWithExternalDatabase(string externalDbPath);
         int CleanupMissingFiles();
+        void RepairMissingCategoryCovers();
     }
 
     public class DatabaseHelper : IDatabaseHelper
@@ -92,7 +93,7 @@ namespace seamless_loop_music.Data
 
                 // --- 纯净 3NF 架构创建 ---
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Artists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE, CoverPath TEXT);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS Albums (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, ArtistId INTEGER, CoverPath TEXT, FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL, UNIQUE(Name, ArtistId));");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS Albums (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, ArtistId INTEGER, CoverPath TEXT, FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL, UNIQUE(Name));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
@@ -161,8 +162,9 @@ namespace seamless_loop_music.Data
 
         private int? UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist, string album, string coverPath, IDbTransaction trans)
         {
-            string artistName = !string.IsNullOrEmpty(artist) ? artist : (!string.IsNullOrEmpty(albumArtist) ? albumArtist : "Unknown Artist");
-            string albumName = !string.IsNullOrEmpty(album) ? album : "Unknown Album";
+            // 严格统一：如果为空，则使用标准占位符，避免 NULL 破坏 UNIQUE 约束
+            string artistName = !string.IsNullOrWhiteSpace(artist) ? artist.Trim() : (!string.IsNullOrWhiteSpace(albumArtist) ? albumArtist.Trim() : "Unknown Artist");
+            string albumName = !string.IsNullOrWhiteSpace(album) ? album.Trim() : "Unknown Album";
             
             db.Execute("INSERT OR IGNORE INTO Artists (Name, CoverPath) VALUES (@Name, NULL)", new { Name = artistName }, transaction: trans);
             int artistId = db.ExecuteScalar<int>("SELECT Id FROM Artists WHERE Name = @Name", new { Name = artistName }, transaction: trans);
@@ -176,16 +178,15 @@ namespace seamless_loop_music.Data
                             new { Name = artistName, Cover = coverPath }, transaction: trans);
             }
 
-            // Album: 升级为 ON CONFLICT 模式，如果发现新封面则自动补全
+            // Album: 严格执行 CPU 大人指令，以 Name 为唯一指纹
             db.Execute(@"
                 INSERT INTO Albums (Name, ArtistId, CoverPath)
                 VALUES (@Name, @ArtistId, @Cover)
-                ON CONFLICT(Name, ArtistId) DO UPDATE SET
-                    CoverPath = excluded.CoverPath
-                WHERE Albums.CoverPath IS NULL OR Albums.CoverPath = '';", 
+                ON CONFLICT(Name) DO UPDATE SET
+                    CoverPath = CASE WHEN Albums.CoverPath IS NULL OR Albums.CoverPath = '' THEN excluded.CoverPath ELSE Albums.CoverPath END;", 
                 new { Name = albumName, ArtistId = artistId, Cover = coverPath }, transaction: trans);
-            return db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name = @Name AND ArtistId = @ArtistId", 
-                new { Name = albumName, ArtistId = artistId }, transaction: trans);
+            return db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name = @Name", 
+                new { Name = albumName }, transaction: trans);
         }
 
         public void UpdateTrackAnalysis(MusicTrack track) => SaveTrack(track);
@@ -532,59 +533,100 @@ namespace seamless_loop_music.Data
         {
             using (var db = GetConnection())
             {
-                // 1. 【向上扩散】曲目封面 -> 专辑封面
-                db.Execute(@"
-                    UPDATE Albums 
-                    SET CoverPath = (
-                        SELECT t.CoverPath 
-                        FROM Tracks t 
-                        WHERE t.AlbumId = Albums.Id 
-                          AND t.CoverPath IS NOT NULL 
-                          AND t.CoverPath != '' 
-                        LIMIT 1
-                    )
-                    WHERE (CoverPath IS NULL OR CoverPath = '')
-                      AND EXISTS (
-                        SELECT 1 FROM Tracks t 
-                        WHERE t.AlbumId = Albums.Id 
-                          AND t.CoverPath IS NOT NULL 
-                          AND t.CoverPath != ''
-                      )");
+                if (db.State != ConnectionState.Open) db.Open();
 
-                // 2. 【向上扩散】专辑封面 -> 艺术家封面
-                db.Execute(@"
-                    UPDATE Artists 
-                    SET CoverPath = (
-                        SELECT al.CoverPath 
-                        FROM Albums al 
-                        WHERE al.ArtistId = Artists.Id 
-                          AND al.CoverPath IS NOT NULL 
-                          AND al.CoverPath != '' 
-                        LIMIT 1
-                    )
-                    WHERE (CoverPath IS NULL OR CoverPath = '')
-                      AND EXISTS (
-                        SELECT 1 FROM Albums al 
-                        WHERE al.ArtistId = Artists.Id 
-                          AND al.CoverPath IS NOT NULL 
-                          AND al.CoverPath != ''
-                      )");
+                // 1. 获取所有专辑，准备进行物理有效性校验
+                var albums = db.Query("SELECT Id, Name, CoverPath FROM Albums").ToList();
+                foreach (var album in albums)
+                {
+                    string name = (string)album.Name;
+                    string path = (string)album.CoverPath;
 
-                // 3. 【向下补完】专辑封面 -> 曲目封面 (核心：确保同专辑曲目同步)
+                    // 规则 A：如果是 Unknown 专辑，严禁任何形式的封面扩散
+                    if (name == "Unknown Album")
+                    {
+                        if (!string.IsNullOrEmpty(path))
+                            db.Execute("UPDATE Albums SET CoverPath = NULL WHERE Id = @Id", new { Id = album.Id });
+                        continue;
+                    }
+
+                    // 规则 B：校验物理文件是否存在，不存在则清理
+                    if (!string.IsNullOrEmpty(path) && !File.Exists(path))
+                    {
+                        db.Execute("UPDATE Albums SET CoverPath = NULL WHERE Id = @Id", new { Id = album.Id });
+                        path = null;
+                    }
+
+                    // 规则 C：向上扩散 (Track -> Album)
+                    if (string.IsNullOrEmpty(path))
+                    {
+                        // 寻找该专辑下第一个具备有效物理封面的曲目
+                        var tracks = db.Query("SELECT CoverPath FROM Tracks WHERE AlbumId = @Id AND CoverPath IS NOT NULL AND CoverPath != ''", new { Id = album.Id });
+                        foreach (var t in tracks)
+                        {
+                            string tPath = (string)t.CoverPath;
+                            if (File.Exists(tPath))
+                            {
+                                db.Execute("UPDATE Albums SET CoverPath = @Path WHERE Id = @Id", new { Path = tPath, Id = album.Id });
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 2. 艺术家层面同步 (Album -> Artist)
+                var artists = db.Query("SELECT Id, Name, CoverPath FROM Artists").ToList();
+                foreach (var artist in artists)
+                {
+                    string name = (string)artist.Name;
+                    string path = (string)artist.CoverPath;
+
+                    if (name == "Unknown Artist")
+                    {
+                        if (!string.IsNullOrEmpty(path))
+                            db.Execute("UPDATE Artists SET CoverPath = NULL WHERE Id = @Id", new { Id = artist.Id });
+                        continue;
+                    }
+
+                    if (!string.IsNullOrEmpty(path) && !File.Exists(path))
+                    {
+                        db.Execute("UPDATE Artists SET CoverPath = NULL WHERE Id = @Id", new { Id = artist.Id });
+                        path = null;
+                    }
+
+                    if (string.IsNullOrEmpty(path))
+                    {
+                        // 寻找该艺术家下第一个具备有效物理封面的专辑
+                        var artistAlbums = db.Query("SELECT CoverPath FROM Albums WHERE ArtistId = @Id AND CoverPath IS NOT NULL AND CoverPath != ''", new { Id = artist.Id });
+                        foreach (var al in artistAlbums)
+                        {
+                            string alPath = (string)al.CoverPath;
+                            if (File.Exists(alPath))
+                            {
+                                db.Execute("UPDATE Artists SET CoverPath = @Path WHERE Id = @Id", new { Path = alPath, Id = artist.Id });
+                                break;
+                            }
+                        }
+                    }
+                }
+
+                // 3. 向下补全 (Album -> Track)
+                // 只有当曲目本身没封面（或坏了），且它不是 Unknown 专辑时，才从专辑拉取封面
                 db.Execute(@"
                     UPDATE Tracks 
-                    SET CoverPath = (
-                        SELECT al.CoverPath 
-                        FROM Albums al 
-                        WHERE al.Id = Tracks.AlbumId
-                    )
+                    SET CoverPath = (SELECT al.CoverPath FROM Albums al WHERE al.Id = Tracks.AlbumId)
                     WHERE (CoverPath IS NULL OR CoverPath = '')
-                      AND EXISTS (
-                        SELECT 1 FROM Albums al 
-                        WHERE al.Id = Tracks.AlbumId 
-                          AND al.CoverPath IS NOT NULL 
-                          AND al.CoverPath != ''
-                      )");
+                      AND AlbumId IN (SELECT Id FROM Albums WHERE Name != 'Unknown Album' AND CoverPath IS NOT NULL AND CoverPath != '')");
+                
+                // 物理校验：如果 Track 现有的 CoverPath 坏了，也尝试补全
+                var brokenTracks = db.Query("SELECT t.Id, t.CoverPath, al.CoverPath as AlbumPath FROM Tracks t JOIN Albums al ON al.Id = t.AlbumId WHERE t.CoverPath IS NOT NULL AND t.CoverPath != '' AND al.Name != 'Unknown Album' AND al.CoverPath IS NOT NULL AND al.CoverPath != ''").ToList();
+                foreach (var t in brokenTracks)
+                {
+                    if (!File.Exists((string)t.CoverPath))
+                    {
+                        db.Execute("UPDATE Tracks SET CoverPath = @Path WHERE Id = @Id", new { Path = (string)t.AlbumPath, Id = (long)t.Id });
+                    }
+                }
             }
         }
     }

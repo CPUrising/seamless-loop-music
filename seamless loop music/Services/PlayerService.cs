@@ -181,6 +181,10 @@ namespace seamless_loop_music.Services
             if (newOrUpdatedTracks.Count > 0)
             {
                 _databaseHelper.BulkInsert(newOrUpdatedTracks);
+                
+                // 扫描完成后，触发一次全局封面修复逻辑
+                // 这样如果扫描过程中后期才发现专辑封面，也能同步给之前扫描过的同专辑歌曲
+                _databaseHelper.RepairMissingCategoryCovers();
             }
         }
 
@@ -231,7 +235,12 @@ namespace seamless_loop_music.Services
             if (string.IsNullOrEmpty(externalDbPath) || !System.IO.File.Exists(externalDbPath))
                 return (0, 0);
 
-            return await Task.Run(() => _databaseHelper.SyncWithExternalDatabase(externalDbPath));
+            var result = await Task.Run(() => _databaseHelper.SyncWithExternalDatabase(externalDbPath));
+            
+            // 同步完成后也跑一遍修复逻辑
+            _databaseHelper.RepairMissingCategoryCovers();
+            
+            return result;
         }
 
         public void Dispose() { }

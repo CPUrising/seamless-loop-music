@@ -64,7 +64,7 @@ namespace seamless_loop_music.Data.Repositories
                             ArtistId  INTEGER,
                             CoverPath TEXT,
                             FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL,
-                            UNIQUE(Name, ArtistId)
+                            UNIQUE(Name)
                         );");
 
                     // ── Tracks 表（核心实体，FileName+TotalSamples 作为业务主键）──

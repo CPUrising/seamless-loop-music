@@ -110,7 +110,18 @@ namespace seamless_loop_music.Models
             }
         }
 
-        public string EffectiveCoverPath => !string.IsNullOrEmpty(CoverPath) ? CoverPath : AlbumCoverPath;
+        public string EffectiveCoverPath
+        {
+            get
+            {
+                // 优先级：AlbumCoverPath > CoverPath，且必须物理存在
+                if (!string.IsNullOrEmpty(AlbumCoverPath) && System.IO.File.Exists(AlbumCoverPath))
+                    return AlbumCoverPath;
+                if (!string.IsNullOrEmpty(CoverPath) && System.IO.File.Exists(CoverPath))
+                    return CoverPath;
+                return null;
+            }
+        }
 
         private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)
         {

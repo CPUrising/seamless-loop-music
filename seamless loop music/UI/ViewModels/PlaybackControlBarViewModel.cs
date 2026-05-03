@@ -253,8 +253,8 @@ namespace seamless_loop_music.UI.ViewModels
                     return;
                 }
 
-                // 1. 优先使用已缓存的路径
-                string path = track.CoverPath;
+// 1. 按优先级获取封面路径：曲目封面 -> 专辑封面 -> 艺术家封面
+string path = track.EffectiveCoverPath;
                 
                 // 2. 如果路径为空，尝试寻找/提取 (一个专辑一个图片，GUID命名)
                 if (string.IsNullOrEmpty(path) || !System.IO.File.Exists(path))
