@@ -30,9 +30,9 @@
                         </ListBox>
 
                         <StackPanel Orientation="Horizontal">
-                            <Button x:Name="btnAddFolder" Content="{Binding [BtnAddFolder], Source={StaticResource Loc}}" Background="{StaticResource BrushSurfaceHighlight}" Foreground="{StaticResource BrushTextPrimary}" Padding="15,8" BorderThickness="0" Click="BtnAddFolder_Click"/>
-                            <Button x:Name="btnRemoveFolder" Content="{Binding [BtnRemove], Source={StaticResource Loc}}" Background="{StaticResource BrushSurfaceHighlight}" Foreground="{StaticResource BrushTextPrimary}" Padding="15,8" BorderThickness="0" Margin="10,0,0,0" Click="BtnRemoveFolder_Click"/>
-                            <Button x:Name="btnScan" Content="{Binding [BtnScan], Source={StaticResource Loc}}" Background="{StaticResource BrushAccent}" Foreground="{StaticResource BrushTitleBar}" Padding="15,8" BorderThickness="0" Margin="10,0,0,0" Click="BtnScan_Click"/>
+                            <Button x:Name="btnAddFolder" Content="{Binding [BtnAddFolder], Source={StaticResource Loc}}" Style="{StaticResource SecondaryButton}" Padding="15,8" Click="BtnAddFolder_Click"/>
+                            <Button x:Name="btnRemoveFolder" Content="{Binding [BtnRemove], Source={StaticResource Loc}}" Style="{StaticResource SecondaryButton}" Padding="15,8" Margin="10,0,0,0" Click="BtnRemoveFolder_Click"/>
+                            <Button x:Name="btnScan" Content="{Binding [BtnScan], Source={StaticResource Loc}}" Style="{StaticResource PrimaryButton}" Padding="15,8" Margin="10,0,0,0" Click="BtnScan_Click"/>
                         </StackPanel>
                     </StackPanel>
                 </Border>
@@ -83,7 +83,7 @@
                         <TextBlock Text="{Binding [DataManagementHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="{StaticResource BrushMauve}" Margin="0,0,0,10"/>
                         <TextBlock Text="{Binding [DataManagementSub], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
 
-                        <Button x:Name="btnSync" Content="{Binding [BtnSync], Source={StaticResource Loc}}" Background="{StaticResource BrushSurfaceHighlight}" Foreground="{StaticResource BrushTextPrimary}" Padding="15,8" BorderThickness="0" HorizontalAlignment="Left" Click="BtnSync_Click"/>
+                        <Button x:Name="btnSync" Content="{Binding [BtnSync], Source={StaticResource Loc}}" Style="{StaticResource SecondaryButton}" Padding="15,8" HorizontalAlignment="Left" Click="BtnSync_Click"/>
                     </StackPanel>
                 </Border>
             </StackPanel>
