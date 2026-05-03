@@ -98,7 +98,6 @@ namespace seamless_loop_music.Data.Repositories
                         CREATE TABLE IF NOT EXISTS UserRatings (
                             TrackId      INTEGER PRIMARY KEY,
                             Rating       INTEGER DEFAULT 0,
-                            IsLoved      INTEGER DEFAULT 0,
                             LastModified DATETIME,
                             FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE
                         );");

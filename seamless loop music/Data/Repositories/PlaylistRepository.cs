@@ -17,12 +17,13 @@ namespace seamless_loop_music.Data.Repositories
             SELECT 
                 t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.LastModified, t.CoverPath,
                 al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist,
+                al.CoverPath AS AlbumCoverPath, ar.CoverPath AS ArtistCoverPath,
                 COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
                 lp.LoopCandidatesJson,
-                COALESCE(ur.IsLoved, 0) AS IsLoved, COALESCE(ur.Rating, 0) AS Rating
+                COALESCE(ur.Rating, 0) AS Rating
             FROM Tracks t
             LEFT JOIN Albums al ON t.AlbumId = al.Id
-            LEFT JOIN Artists ar ON al.ArtistId = ar.Id
+            LEFT JOIN Artists ar ON t.ArtistId = ar.Id
             LEFT JOIN LoopPoints lp ON t.Id = lp.TrackId
             LEFT JOIN UserRatings ur ON t.Id = ur.TrackId ";
 

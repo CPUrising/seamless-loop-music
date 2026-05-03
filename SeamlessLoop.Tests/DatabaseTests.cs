@@ -233,5 +233,73 @@ namespace SeamlessLoop.Tests
         }
 
         #endregion
+        
+        #region 5. 3NF 关联查询深度测试 (Complex Joins)
+
+        [Test]
+        public async Task GetTracksInPlaylistAsync_ShouldReturnTracksWithFull3NFMetadata()
+        {
+            // 1. 注入黄金数据集
+            var tracks = TestDatabaseSeed.GetGoldenTracks().ToList();
+            // 创建一个真实的临时文件，否则 RepairMissingCategoryCovers 会因为物理文件不存在而清理掉数据库记录
+            string testCover = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "test_cover.jpg");
+            File.WriteAllText(testCover, "fake data");
+            tracks[0].CoverPath = testCover;
+            _trackRepo.BulkInsert(tracks);
+            
+            // 2. 创建歌单并关联 Standard_Track.mp3（它带有封面）
+            int pid = _playlistRepo.Add("Metadata Test Playlist");
+            var allTracks = await _trackRepo.GetAllAsync();
+            var targetTrack = allTracks.FirstOrDefault(t => t.FileName == "Standard_Track.mp3");
+            Assert.That(targetTrack, Is.Not.Null);
+            _playlistRepo.AddTrack(pid, targetTrack.Id);
+
+            // 3. 执行待测方法
+            var playlistTracks = await _playlistRepo.GetTracksInPlaylistAsync(pid);
+
+            // 4. 验证：不仅数量对，元数据也要全
+            Assert.That(playlistTracks.Count, Is.EqualTo(1));
+            var t = playlistTracks[0];
+            Assert.That(t.Artist, Is.Not.Null.And.Not.Empty, $"曲目 {t.FileName} 的 Artist 不能为空");
+            Assert.That(t.Album, Is.Not.Null.And.Not.Empty, $"曲目 {t.FileName} 的 Album 不能为空");
+            
+            // 验证封面路径是否从 Album 表中正确关联拉取
+            Assert.That(t.FileName, Is.EqualTo("Standard_Track.mp3"));
+            Assert.That(t.AlbumCoverPath, Is.EqualTo(testCover), "应从关联的 Album 表中拉取封面路径");
+        }
+
+        [Test]
+        public async Task GetByArtist_ShouldReturnCorrectTracks()
+        {
+            var tracks = TestDatabaseSeed.GetGoldenTracks().ToList();
+            _trackRepo.BulkInsert(tracks);
+            
+            string targetArtist = "Pop Star"; // 黄金数据中真实存在的歌手
+            var result = await _trackRepo.GetByArtistAsync(targetArtist);
+            
+            Assert.That(result.Any(), Is.True, $"应找到歌手 {targetArtist} 的曲目");
+            foreach(var t in result)
+            {
+                Assert.That(t.Artist, Is.EqualTo(targetArtist));
+            }
+        }
+
+        [Test]
+        public async Task GetByAlbum_ShouldReturnCorrectTracks()
+        {
+            var tracks = TestDatabaseSeed.GetGoldenTracks().ToList();
+            _trackRepo.BulkInsert(tracks);
+            
+            string targetAlbum = "Greatest Hits"; // 黄金数据中真实存在的专辑
+            var result = await _trackRepo.GetByAlbumAsync(targetAlbum);
+            
+            Assert.That(result.Count, Is.EqualTo(2), "Greatest Hits 专辑应有 2 首曲目");
+            foreach(var t in result)
+            {
+                Assert.That(t.Album, Is.EqualTo(targetAlbum));
+            }
+        }
+
+        #endregion
     }
 }
