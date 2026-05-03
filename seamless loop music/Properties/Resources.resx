@@ -406,4 +406,7 @@
   <data name="StatusAddedMultipleTo" xml:space="preserve">
     <value>Added {0} tracks to 「{1}」</value>
   </data>
+  <data name="BtnNow" xml:space="preserve">
+    <value>Now</value>
+  </data>
 </root>

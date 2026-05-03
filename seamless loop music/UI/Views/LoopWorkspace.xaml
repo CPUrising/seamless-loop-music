@@ -64,8 +64,9 @@
                                      BorderBrush="{StaticResource BrushAccent}" Margin="30,5,30,0"
                                      CaretBrush="{StaticResource BrushTextPrimary}"/>
 
-                            <UniformGrid Columns="2" Margin="0,20,0,0">
+                            <UniformGrid Columns="3" Margin="0,20,0,0">
                                 <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Command="{Binding AdjustCommand}" CommandParameter="Start:Min" Style="{StaticResource SecondaryButton}" Margin="3"/>
+                                <Button Content="{Binding [BtnNow], Source={StaticResource Loc}, TargetNullValue='Now'}" Command="{Binding AdjustCommand}" CommandParameter="Start:Now" Style="{StaticResource SecondaryButton}" Margin="3"/>
                                 <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Command="{Binding AdjustCommand}" CommandParameter="Start:Max" Style="{StaticResource SecondaryButton}" Margin="3"/>
                             </UniformGrid>
 
@@ -99,8 +100,9 @@
                                      BorderBrush="{StaticResource BrushDanger}" Margin="30,5,30,0"
                                      CaretBrush="{StaticResource BrushTextPrimary}"/>
 
-                            <UniformGrid Columns="2" Margin="0,20,0,0">
+                            <UniformGrid Columns="3" Margin="0,20,0,0">
                                 <Button Content="{Binding [BtnMin], Source={StaticResource Loc}, TargetNullValue='Min'}" Command="{Binding AdjustCommand}" CommandParameter="End:Min" Style="{StaticResource SecondaryButton}" Margin="3"/>
+                                <Button Content="{Binding [BtnNow], Source={StaticResource Loc}, TargetNullValue='Now'}" Command="{Binding AdjustCommand}" CommandParameter="End:Now" Style="{StaticResource SecondaryButton}" Margin="3"/>
                                 <Button Content="{Binding [BtnMax], Source={StaticResource Loc}, TargetNullValue='Max'}" Command="{Binding AdjustCommand}" CommandParameter="End:Max" Style="{StaticResource SecondaryButton}" Margin="3"/>
                             </UniformGrid>
 

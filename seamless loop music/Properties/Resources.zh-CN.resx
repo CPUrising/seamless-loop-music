@@ -406,4 +406,7 @@
   <data name="StatusAddedMultipleTo" xml:space="preserve">
     <value>已将 {0} 首曲目添加到「{1}」</value>
   </data>
+  <data name="BtnNow" xml:space="preserve">
+    <value>现在</value>
+  </data>
 </root>

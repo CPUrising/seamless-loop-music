@@ -282,6 +282,14 @@ namespace seamless_loop_music.UI.ViewModels
             long targetVal = current;
             if (value == "Min") targetVal = 0;
             else if (value == "Max") targetVal = total;
+            else if (value == "Now")
+            {
+                // 仅当正在播放且是同一首歌时获取位置
+                if (_playbackService.CurrentTrack?.Id == _currentTrack?.Id)
+                {
+                    targetVal = _playbackService.CurrentSample;
+                }
+            }
             else if (double.TryParse(value, out double deltaSec))
             {
                 long delta = (long)(rate * deltaSec);
