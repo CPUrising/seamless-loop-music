@@ -61,13 +61,11 @@ namespace seamless_loop_music.Data.Repositories
                         CREATE TABLE IF NOT EXISTS Albums (
                             Id        INTEGER PRIMARY KEY AUTOINCREMENT,
                             Name      TEXT NOT NULL,
-                            ArtistId  INTEGER,
                             CoverPath TEXT,
-                            FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL,
                             UNIQUE(Name)
                         );");
 
-                    // ── Tracks 表（核心实体，FileName+TotalSamples 作为业务主键）──
+                    // ── Tracks 表 (直接挂载 ArtistId) ──────────────────────
                     conn.Execute(@"
                         CREATE TABLE IF NOT EXISTS Tracks (
                             Id            INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -78,7 +76,9 @@ namespace seamless_loop_music.Data.Repositories
                             LastModified  DATETIME,
                             CoverPath     TEXT,
                             AlbumId       INTEGER,
+                            ArtistId      INTEGER,
                             FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL,
+                            FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL,
                             UNIQUE(FileName, TotalSamples)
                         );");
 

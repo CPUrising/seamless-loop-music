@@ -179,5 +179,74 @@ namespace SeamlessLoop.Tests
                 Assert.That(count, Is.EqualTo(1), "同名歌单应合并，不应重复");
             }
         }
+        [Test]
+        public void Sync_From_Intermediate3NF_ShouldMigrateArtistToTrack()
+        {
+            // 场景：外部库是“旧版 3NF”（ArtistId 在 Albums 表上）
+            using (var conn = GetExternalConn())
+            {
+                conn.Execute("CREATE TABLE Artists (Id INTEGER PRIMARY KEY, Name TEXT)");
+                conn.Execute("CREATE TABLE Albums (Id INTEGER PRIMARY KEY, Name TEXT, ArtistId INTEGER)");
+                conn.Execute("CREATE TABLE Tracks (Id INTEGER PRIMARY KEY, FileName TEXT, TotalSamples INTEGER, AlbumId INTEGER)");
+                
+                conn.Execute("INSERT INTO Artists (Id, Name) VALUES (1, 'Legacy Artist')");
+                conn.Execute("INSERT INTO Albums (Id, Name, ArtistId) VALUES (10, 'Legacy Album', 1)");
+                conn.Execute("INSERT INTO Tracks (FileName, TotalSamples, AlbumId) VALUES ('song.mp3', 1000, 10)");
+            }
+
+            // 本地占位
+            using (var conn = new SQLiteConnection($"Data Source={_localDbPath};Version=3;"))
+            {
+                conn.Open();
+                conn.Execute("INSERT INTO Tracks (FileName, TotalSamples) VALUES ('song.mp3', 1000)");
+            }
+
+            // 执行同步
+            _dbHelper.SyncWithExternalDatabase(_externalDbPath);
+
+            // 验证：本地 Tracks 表是否正确拿到了 ArtistId
+            using (var conn = new SQLiteConnection($"Data Source={_localDbPath};Version=3;"))
+            {
+                conn.Open();
+                var track = conn.QueryFirstOrDefault("SELECT t.*, ar.Name as ArtistName FROM Tracks t JOIN Artists ar ON t.ArtistId = ar.Id WHERE t.FileName = 'song.mp3'");
+                Assert.That(track, Is.Not.Null);
+                Assert.That((string)track.ArtistName, Is.EqualTo("Legacy Artist"), "同步应从旧版 Albums.ArtistId 映射到本地的 Tracks.ArtistId");
+            }
+        }
+
+        [Test]
+        public void Sync_From_New3NF_ShouldSyncDirectly()
+        {
+            // 场景：外部库已经是“新版 3NF”（ArtistId 在 Tracks 表上）
+            using (var conn = GetExternalConn())
+            {
+                conn.Execute("CREATE TABLE Artists (Id INTEGER PRIMARY KEY, Name TEXT)");
+                conn.Execute("CREATE TABLE Albums (Id INTEGER PRIMARY KEY, Name TEXT)");
+                conn.Execute("CREATE TABLE Tracks (Id INTEGER PRIMARY KEY, FileName TEXT, TotalSamples INTEGER, AlbumId INTEGER, ArtistId INTEGER)");
+                
+                conn.Execute("INSERT INTO Artists (Id, Name) VALUES (1, 'New Artist')");
+                conn.Execute("INSERT INTO Albums (Id, Name) VALUES (10, 'New Album')");
+                conn.Execute("INSERT INTO Tracks (FileName, TotalSamples, AlbumId, ArtistId) VALUES ('new.mp3', 2000, 10, 1)");
+            }
+
+            // 本地占位
+            using (var conn = new SQLiteConnection($"Data Source={_localDbPath};Version=3;"))
+            {
+                conn.Open();
+                conn.Execute("INSERT INTO Tracks (FileName, TotalSamples) VALUES ('new.mp3', 2000)");
+            }
+
+            // 执行同步
+            _dbHelper.SyncWithExternalDatabase(_externalDbPath);
+
+            // 验证
+            using (var conn = new SQLiteConnection($"Data Source={_localDbPath};Version=3;"))
+            {
+                conn.Open();
+                var track = conn.QueryFirstOrDefault("SELECT t.*, ar.Name as ArtistName FROM Tracks t JOIN Artists ar ON t.ArtistId = ar.Id WHERE t.FileName = 'new.mp3'");
+                Assert.That(track, Is.Not.Null);
+                Assert.That((string)track.ArtistName, Is.EqualTo("New Artist"), "同步应直接从外部 Tracks.ArtistId 映射到本地");
+            }
+        }
     }
 }

@@ -82,13 +82,41 @@ namespace SeamlessLoop.Tests
                 var artistCount = db.ExecuteScalar<int>("SELECT COUNT(1) FROM Artists");
                 var albumCount = db.ExecuteScalar<int>("SELECT COUNT(1) FROM Albums");
 
-                // 黄金数据中有 5 首歌，5 个独立歌手，5 个独立专辑（Greatest Hits 被由于歌手不同而区分为两条）
+                // 黄金数据中有 5 首歌，5 个独立歌手，4 个独立专辑（Greatest Hits 被由于指纹唯一化而合并）
                 Assert.That(artistCount, Is.EqualTo(5), "应识别出 5 位独立艺术家");
-                Assert.That(albumCount, Is.EqualTo(5), "应识别出 5 个独立专辑记录");
+                Assert.That(albumCount, Is.EqualTo(4), "应识别出 4 个独立专辑记录（重名已合并）");
 
-                // 2. 验证重名专辑 (Greatest Hits) 是否由于不同的 ArtistId 而被正确区分
+                // 2. 验证重名专辑 (Greatest Hits) 是否已合并
                 var greatestHitsCount = db.ExecuteScalar<int>("SELECT COUNT(1) FROM Albums WHERE Name = 'Greatest Hits'");
-                Assert.That(greatestHitsCount, Is.EqualTo(2), "同名专辑但不同歌手应作为两条 Album 记录存储");
+                Assert.That(greatestHitsCount, Is.EqualTo(1), "同名专辑应合并为一条 Album 记录");
+            }
+        }
+
+        [Test]
+        public void SharedAlbum_DifferentArtists_ShouldMaintainUniqueArtists()
+        {
+            // 场景：两个艺术家都有同名专辑 "Live"
+            var track1 = new MusicTrack { FileName = "a.mp3", Artist = "Artist X", Album = "Live", TotalSamples = 1000 };
+            var track2 = new MusicTrack { FileName = "b.mp3", Artist = "Artist Y", Album = "Live", TotalSamples = 2000 };
+            
+            _trackRepo.Save(track1);
+            _trackRepo.Save(track2);
+
+            using (var db = _dbHelper.GetConnection())
+            {
+                // 专辑表应只有一条 "Live"
+                var albumCount = db.ExecuteScalar<int>("SELECT COUNT(1) FROM Albums WHERE Name = 'Live'");
+                Assert.That(albumCount, Is.EqualTo(1));
+
+                // 歌曲表应分别对应两个不同的艺术家
+                var tracks = db.Query("SELECT t.FileName, ar.Name as ArtistName FROM Tracks t JOIN Artists ar ON t.ArtistId = ar.Id").ToList();
+                Assert.That(tracks.Count, Is.EqualTo(2));
+                
+                var x = tracks.FirstOrDefault(t => (string)t.FileName == "a.mp3");
+                var y = tracks.FirstOrDefault(t => (string)t.FileName == "b.mp3");
+                
+                Assert.That((string)x.ArtistName, Is.EqualTo("Artist X"));
+                Assert.That((string)y.ArtistName, Is.EqualTo("Artist Y"));
             }
         }
 

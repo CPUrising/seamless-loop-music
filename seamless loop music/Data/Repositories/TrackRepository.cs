@@ -35,7 +35,7 @@ namespace seamless_loop_music.Data.Repositories
                 COALESCE(ur.Rating,    0)  AS Rating
             FROM Tracks t
             LEFT JOIN Albums    al ON al.Id = t.AlbumId
-            LEFT JOIN Artists   ar ON ar.Id = al.ArtistId
+            LEFT JOIN Artists   ar ON ar.Id = t.ArtistId
             LEFT JOIN LoopPoints lp ON lp.TrackId = t.Id
             LEFT JOIN UserRatings ur ON ur.TrackId = t.Id ";
 
@@ -89,8 +89,8 @@ namespace seamless_loop_music.Data.Repositories
             {
                 using (var trans = db.BeginTransaction())
                 {
-                    // 1. Upsert Artist / Album → 获取 AlbumId
-                    int? albumId = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
+                    // 1. Upsert Artist / Album → 获取 IDs
+                    var (albumId, artistId) = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
 
                     if (track.Id > 0)
                     {
@@ -101,9 +101,10 @@ namespace seamless_loop_music.Data.Repositories
                                 FilePath     = @FilePath,
                                 LastModified = @LastModified,
                                 CoverPath    = @CoverPath,
-                                AlbumId      = @AlbumId
+                                AlbumId      = @AlbumId,
+                                ArtistId     = @ArtistId
                             WHERE Id = @Id;",
-                            new { track.DisplayName, track.FilePath, track.LastModified, track.CoverPath, AlbumId = albumId, track.Id },
+                            new { track.DisplayName, track.FilePath, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId, track.Id },
                             transaction: trans);
 
                         // 更新 LoopPoints
@@ -135,10 +136,10 @@ namespace seamless_loop_music.Data.Repositories
                         try
                         {
                             newId = db.ExecuteScalar<long>(@"
-                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId)
-                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId);
+                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId, ArtistId)
+                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId, @ArtistId);
                                 SELECT last_insert_rowid();",
-                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId },
+                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId },
                                 transaction: trans);
                             track.Id = (int)newId;
                         }
@@ -190,7 +191,7 @@ namespace seamless_loop_music.Data.Repositories
                 {
                     foreach (var track in tracks)
                     {
-                        int? albumId = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
+                        var (albumId, artistId) = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
 
                         // --- 核心优化：先尝试进行模糊查重，防止产生采样数微差的影子记录 ---
                         var existingId = db.ExecuteScalar<long?>(@"
@@ -210,18 +211,19 @@ namespace seamless_loop_music.Data.Repositories
                                     CoverPath    = @CoverPath,
                                     LastModified = @LastModified,
                                     AlbumId      = @AlbumId,
+                                    ArtistId     = @ArtistId,
                                     TotalSamples = @TotalSamples  -- 更新为最新的物理采样数
                                 WHERE Id = @Id;",
-                                new { track.FilePath, track.DisplayName, track.CoverPath, track.LastModified, AlbumId = albumId, Id = trackId, track.TotalSamples },
+                                new { track.FilePath, track.DisplayName, track.CoverPath, track.LastModified, AlbumId = albumId, ArtistId = artistId, Id = trackId, track.TotalSamples },
                                 transaction: trans);
                         }
                         else
                         {
                             trackId = db.ExecuteScalar<long>(@"
-                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId)
-                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId);
+                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId, ArtistId)
+                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId, @ArtistId);
                                 SELECT last_insert_rowid();",
-                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId },
+                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId },
                                 transaction: trans);
                         }
 
@@ -343,20 +345,20 @@ namespace seamless_loop_music.Data.Repositories
         }
 
         // ── 辅助：Upsert 艺术家 / 专辑，返回 AlbumId ─────────────────────────
-        private static int? UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist,
+        private static (int? albumId, int? artistId) UpsertArtistAlbum(IDbConnection db, string artist, string albumArtist,
                                                string album, string coverPath, IDbTransaction trans)
         {
             // 严格统一：使用 Trim() 并处理空白字符，确保唯一键匹配
             string artistName = !string.IsNullOrWhiteSpace(artist) ? artist.Trim() : (!string.IsNullOrWhiteSpace(albumArtist) ? albumArtist.Trim() : "Unknown Artist");
             string albumName = !string.IsNullOrWhiteSpace(album) ? album.Trim() : "Unknown Album";
 
+            // 1. 处理艺术家 (独立)
             db.Execute("INSERT OR IGNORE INTO Artists (Name, CoverPath) VALUES (@Name, NULL);",
                 new { Name = artistName }, transaction: trans);
             int artistId = db.ExecuteScalar<int>(
                 "SELECT Id FROM Artists WHERE Name = @Name;",
                 new { Name = artistName }, transaction: trans);
 
-            // 若传入的 coverPath 有效，且 Artist 当前无封面，则更新
             if (!string.IsNullOrEmpty(coverPath))
             {
                 db.Execute(@"UPDATE Artists 
@@ -365,17 +367,19 @@ namespace seamless_loop_music.Data.Repositories
                             new { Name = artistName, Cover = coverPath }, transaction: trans);
             }
 
-            // Album: 严格执行 CPU 大人指令，以 Name 为唯一指纹
+            // 2. 处理专辑 (仅按名称指纹去重)
             db.Execute(@"
-                INSERT INTO Albums (Name, ArtistId, CoverPath)
-                VALUES (@Name, @ArtistId, @CoverPath)
+                INSERT INTO Albums (Name, CoverPath)
+                VALUES (@Name, @CoverPath)
                 ON CONFLICT(Name) DO UPDATE SET
                     CoverPath = CASE WHEN Albums.CoverPath IS NULL OR Albums.CoverPath = '' THEN excluded.CoverPath ELSE Albums.CoverPath END;",
-                new { Name = albumName, ArtistId = artistId, CoverPath = coverPath }, transaction: trans);
+                new { Name = albumName, CoverPath = coverPath }, transaction: trans);
 
-            return db.ExecuteScalar<int?>(
+            int albumId = db.ExecuteScalar<int>(
                 "SELECT Id FROM Albums WHERE Name = @Name;",
                 new { Name = albumName }, transaction: trans);
+
+            return (albumId, artistId);
         }
 
         public void RepairMissingCategoryCovers()
@@ -445,8 +449,15 @@ namespace seamless_loop_music.Data.Repositories
 
                     if (string.IsNullOrEmpty(path))
                     {
-                        // 寻找该艺术家下第一个具备有效物理封面的专辑
-                        var artistAlbums = db.Query("SELECT CoverPath FROM Albums WHERE ArtistId = @Id AND CoverPath IS NOT NULL AND CoverPath != ''", new { Id = artist.Id });
+                        // 寻找该艺术家唱过的歌曲所属的、具备有效物理封面的专辑
+                        var artistAlbums = db.Query(@"
+                            SELECT DISTINCT al.CoverPath 
+                            FROM Tracks t 
+                            JOIN Albums al ON al.Id = t.AlbumId 
+                            WHERE t.ArtistId = @Id 
+                              AND al.CoverPath IS NOT NULL 
+                              AND al.CoverPath != ''", new { Id = artist.Id });
+                        
                         foreach (var al in artistAlbums)
                         {
                             string alPath = (string)al.CoverPath;
