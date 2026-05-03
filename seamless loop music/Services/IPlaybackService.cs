@@ -48,7 +48,7 @@ namespace seamless_loop_music.Services
         Task<(long Start, long End)> FindBestLoopPointsAsync(long currentStart, long currentEnd, bool adjustStart);
 
         Task EnqueueArtistAsync(string artistName);
-        Task EnqueueAlbumAsync(string albumName);
+        Task EnqueueAlbumAsync(string albumName, string artistName = null);
         Task EnqueuePlaylistAsync(CategoryItem playlistItem);
 
         void SetQueue(IEnumerable<MusicTrack> tracks, MusicTrack currentTrack = null, CategoryItem category = null);

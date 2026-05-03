@@ -17,7 +17,7 @@ namespace seamless_loop_music.Data.Repositories
         Task UpdateMetadataAsync(MusicTrack track);
         Task DeleteAsync(int trackId);
         Task<List<MusicTrack>> GetByArtistAsync(string artistName);
-        Task<List<MusicTrack>> GetByAlbumAsync(string albumName);
+        Task<List<MusicTrack>> GetByAlbumAsync(string albumName, string artistName = null);
         Task<string> GetAlbumCoverPathAsync(string albumName);
         Task<string> GetArtistCoverPathAsync(string artistName);
         void RepairMissingCategoryCovers();

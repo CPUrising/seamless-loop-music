@@ -114,7 +114,21 @@
                                                 </Border>
                                                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="12,0,0,0">
                                                     <TextBlock Text="{Binding Name}" Foreground="White" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                                                    <TextBlock Text="{Binding Type}" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,2,0,0"/>
+                                                    <TextBlock x:Name="DescText" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" Margin="0,2,0,0">
+                                                        <TextBlock.Style>
+                                                            <Style TargetType="TextBlock">
+                                                                <Setter Property="Text" Value="{Binding Description}"/>
+                                                                <Style.Triggers>
+                                                                    <DataTrigger Binding="{Binding Description}" Value="{x:Null}">
+                                                                        <Setter Property="Text" Value="{Binding Type}"/>
+                                                                    </DataTrigger>
+                                                                    <DataTrigger Binding="{Binding Description}" Value="">
+                                                                        <Setter Property="Text" Value="{Binding Type}"/>
+                                                                    </DataTrigger>
+                                                                </Style.Triggers>
+                                                            </Style>
+                                                        </TextBlock.Style>
+                                                    </TextBlock>
                                                 </StackPanel>
                                             </Grid>
                                         </Border>

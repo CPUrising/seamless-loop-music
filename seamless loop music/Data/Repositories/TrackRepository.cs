@@ -314,12 +314,21 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
-        public async Task<List<MusicTrack>> GetByAlbumAsync(string albumName)
+        public async Task<List<MusicTrack>> GetByAlbumAsync(string albumName, string artistName = null)
         {
             using (var db = GetConnection())
             {
-                var result = await db.QueryAsync<MusicTrack>(
-                    FullTrackSelect + " WHERE al.Name = @A", new { A = albumName });
+                string sql = FullTrackSelect + " WHERE al.Name = @A";
+                var parameters = new DynamicParameters();
+                parameters.Add("A", albumName);
+
+                if (!string.IsNullOrEmpty(artistName))
+                {
+                    sql += " AND ar.Name = @Artist";
+                    parameters.Add("Artist", artistName);
+                }
+
+                var result = await db.QueryAsync<MusicTrack>(sql, parameters);
                 return result.ToList();
             }
         }

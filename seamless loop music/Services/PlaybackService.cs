@@ -265,12 +265,12 @@ namespace seamless_loop_music.Services
             }
         }
 
-        public async Task EnqueueAlbumAsync(string albumName)
+        public async Task EnqueueAlbumAsync(string albumName, string artistName = null)
         {
-            var tracks = await _trackRepository.GetByAlbumAsync(albumName);
+            var tracks = await _trackRepository.GetByAlbumAsync(albumName, artistName);
             if (tracks != null && tracks.Any())
             {
-                CurrentCategory = new CategoryItem { Name = albumName, Type = CategoryType.Album };
+                CurrentCategory = new CategoryItem { Name = albumName, Description = artistName, Type = CategoryType.Album };
                 _queueManager.SetQueue(tracks, tracks.First());
                 await LoadTrackAsync(tracks.First(), true);
             }

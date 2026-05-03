@@ -265,7 +265,7 @@ namespace seamless_loop_music.UI.ViewModels
                     await _playbackService.EnqueueArtistAsync(item.Name);
                     break;
                 case CategoryType.Album:
-                    await _playbackService.EnqueueAlbumAsync(item.Name);
+                    await _playbackService.EnqueueAlbumAsync(item.Name, item.Description);
                     break;
                 case CategoryType.Playlist:
                     await _playbackService.EnqueuePlaylistAsync(item);
@@ -316,7 +316,7 @@ namespace seamless_loop_music.UI.ViewModels
                 case CategoryType.Album:
                     items = allTracks
                         .Where(t => !string.IsNullOrEmpty(t.Album))
-                        .GroupBy(t => t.Album)
+                        .GroupBy(t => new { t.Album, t.Artist })
                         .Select(g => 
                         {
                             // 优先使用 Albums 表记录的封面，若无则从该专辑下找第一个有封面的曲目作为兜底
@@ -327,7 +327,8 @@ namespace seamless_loop_music.UI.ViewModels
 
                             return new CategoryItem 
                             { 
-                                Name = g.Key, 
+                                Name = g.Key.Album, 
+                                Description = g.Key.Artist,
                                 ImagePath = fallbackCover,
                                 Type = CategoryType.Album
                             };

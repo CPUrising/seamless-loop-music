@@ -247,7 +247,18 @@ namespace seamless_loop_music.UI.ViewModels
             UpdateSearchPlaceholder();
         }
 
-        public string CategoryName => _selectedCategoryItem?.Name ?? LocalizationService.Instance["PlaylistAll"];
+        public string CategoryName 
+        {
+            get 
+            {
+                if (_selectedCategoryItem == null) return LocalizationService.Instance["PlaylistAll"];
+                if (_selectedCategoryItem.Type == CategoryType.Album && !string.IsNullOrEmpty(_selectedCategoryItem.Description))
+                {
+                    return $"{_selectedCategoryItem.Name} - {_selectedCategoryItem.Description}";
+                }
+                return _selectedCategoryItem.Name;
+            }
+        }
 
         private void UpdatePlayingStatus()
         {
@@ -329,6 +340,7 @@ namespace seamless_loop_music.UI.ViewModels
                 {
                     case CategoryType.Album:
                         if (track.Album != _selectedCategoryItem.Name) return false;
+                        if (!string.IsNullOrEmpty(_selectedCategoryItem.Description) && track.Artist != _selectedCategoryItem.Description) return false;
                         break;
                     case CategoryType.Artist:
                         if (track.Artist != _selectedCategoryItem.Name) return false;
