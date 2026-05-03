@@ -18,12 +18,12 @@
             <ListView Name="lstCandidates" Background="Transparent" Foreground="{StaticResource BrushTextPrimary}" BorderThickness="0" 
                       SelectionMode="Single" MouseDoubleClick="LstCandidates_MouseDoubleClick" Margin="5">
                 <ListView.ItemContainerStyle>
-                    <Style TargetType="ListViewItem" BasedOn="{StaticResource ModernListBoxItem}">
+                    <Style TargetType="ListViewItem" BasedOn="{StaticResource ModernListViewItem}">
                         <Setter Property="Padding" Value="10,8"/>
                     </Style>
                 </ListView.ItemContainerStyle>
                 <ListView.View>
-                    <GridView>
+                    <GridView ColumnHeaderContainerStyle="{StaticResource ModernGridViewColumnHeader}">
                         <GridViewColumn Header="{Binding [HeaderScore], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding ScoreDisplay}" Width="80"/>
                         <GridViewColumn Header="{Binding [HeaderStart], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding Start}" Width="120"/>
                         <GridViewColumn Header="{Binding [HeaderEnd], Source={StaticResource Loc}}" DisplayMemberBinding="{Binding End}" Width="120"/>
