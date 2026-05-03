@@ -176,30 +176,33 @@ namespace seamless_loop_music.Services
                 }
 
                 // 2. 尝试寻找同专辑的其他曲目是否已经缓存了封面
-                if (string.IsNullOrEmpty(track.Album)) goto skip_album_sharing;
-
-                using (var db = _dbHelper.GetConnection())
+                if (!string.IsNullOrEmpty(track.Album))
                 {
-                    // 严格按照 CPU 大人要求：匹配 专辑名 + 艺术家名，实现精准的一辑一封
-                    string existingPath = db.QueryFirstOrDefault<string>(@"
-                        SELECT al.CoverPath 
-                        FROM Albums al 
-                        JOIN Artists ar ON ar.Id = al.ArtistId
-                        WHERE al.Name = @Album 
-                          AND ar.Name = @Artist
-                          AND al.CoverPath IS NOT NULL 
-                          AND al.CoverPath != '' 
-                        LIMIT 1",
-                        new { Album = track.Album, Artist = track.Artist });
-
-                    if (IsFileValid(existingPath))
+                    using (var db = _dbHelper.GetConnection())
                     {
-                        track.CoverPath = existingPath;
-                        return existingPath;
+                        // 严格按照 CPU 大人要求：关联 AlbumKey (艺术家 - 专辑名) 从 AlbumArtwork 表获取
+                        string artistName = track.Artist ?? "Unknown Artist";
+                        string albumName = track.Album ?? "Unknown Album";
+                        string albumKey = $"{artistName} - {albumName}";
+
+                        string existingPath = db.QueryFirstOrDefault<string>(@"
+                            SELECT CoverPath 
+                            FROM AlbumArtwork 
+                            WHERE AlbumKey = @AlbumKey 
+                              AND CoverPath IS NOT NULL 
+                              AND CoverPath != '' 
+                            ORDER BY Id DESC 
+                            LIMIT 1",
+                            new { AlbumKey = albumKey });
+
+                        if (IsFileValid(existingPath))
+                        {
+                            track.CoverPath = existingPath;
+                            return existingPath;
+                        }
                     }
                 }
 
-                skip_album_sharing:
                 // 3. 准备缓存目录
                 string cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Covers");
                 if (!System.IO.Directory.Exists(cacheDir)) System.IO.Directory.CreateDirectory(cacheDir);
@@ -207,44 +210,41 @@ namespace seamless_loop_music.Services
                 // 4. 尝试从文件提取 (TagLib)
                 using (var file = TagLib.File.Create(track.FilePath))
                 {
-                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 0)
+                    if (file.Tag.Pictures != null && file.Tag.Pictures.Length > 1 || (file.Tag.Pictures != null && file.Tag.Pictures.Length == 1))
                     {
                         var pic = file.Tag.Pictures[0];
                         
-                        // 生成基于专辑信息的确定性 GUID，确保同专辑共享同一个物理文件
-                        // 逻辑：严格按照 CPU 大人要求，仅使用专辑名（无专辑名则用文件夹名）作为指纹
-                        string folderName = Path.GetFileName(Path.GetDirectoryName(track.FilePath) ?? "UnknownFolder");
-                        string albumKey = track.Album ?? folderName;
+                        // 严格按照 CPU 大人要求：采用随机 GUID + "album-" 前缀
+                        string artworkId = "album-" + Guid.NewGuid().ToString();
+                        string cachePath = Path.Combine(cacheDir, $"{artworkId}.jpg");
                         
-                        string guidKey;
-                        using (var md5 = MD5.Create())
+                        // 如果物理文件不存在（理论上随机GUID肯定不存在），则写入新提取的数据
+                        if (pic.Data.Data != null && pic.Data.Data.Length > 0)
                         {
-                            byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(albumKey));
-                            guidKey = new Guid(hash).ToString();
-                        }
-                        
-                        string cachePath = Path.Combine(cacheDir, $"{guidKey}.jpg");
-                        
-                        // 如果物理文件不存在或已损坏（0字节），则写入新提取的数据
-                        if (!IsFileValid(cachePath))
-                        {
-                            if (pic.Data.Data != null && pic.Data.Data.Length > 0)
+                            SaveCompressedImage(pic.Data.Data, cachePath);
+                            
+                            // 存入数据库 AlbumArtwork 表 (关联 AlbumKey)
+                            string artistName = track.Artist ?? "Unknown Artist";
+                            string albumName = track.Album ?? "Unknown Album";
+                            string albumKey = $"{artistName} - {albumName}";
+
+                            using (var db = _dbHelper.GetConnection())
                             {
-                                SaveCompressedImage(pic.Data.Data, cachePath);
+                                db.Execute(@"INSERT INTO AlbumArtwork (ArtworkID, AlbumKey, CoverPath) VALUES (@ArtworkID, @AlbumKey, @CoverPath)", 
+                                    new { ArtworkID = artworkId, AlbumKey = albumKey, CoverPath = cachePath });
+                                    
+                                // 同步更新 Albums 表，方便主界面快速加载
+                                db.Execute(@"UPDATE Albums SET CoverPath = @CoverPath WHERE Name = @AlbumName AND ArtistId = (SELECT Id FROM Artists WHERE Name = @ArtistName)",
+                                    new { CoverPath = cachePath, AlbumName = albumName, ArtistName = artistName });
                             }
-                            else
-                            {
-                                // 如果提取到的原始数据就是空的，则跳过本次缓存设置
-                                goto skip_to_local_folder;
-                            }
+                            
+                            track.CoverPath = cachePath;
+                            return cachePath;
                         }
-                        
-                        track.CoverPath = cachePath;
-                        return cachePath;
                     }
                 }
 
-                skip_to_local_folder:
+
 
                 // 5. 尝试从本地文件夹匹配常见封面名
                 string trackDir = Path.GetDirectoryName(track.FilePath);

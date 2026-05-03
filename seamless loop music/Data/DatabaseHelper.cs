@@ -100,6 +100,7 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS PlaylistItems (PlaylistId INTEGER, SongId INTEGER, SortOrder INTEGER DEFAULT 0, PRIMARY KEY(PlaylistId, SongId), FOREIGN KEY(PlaylistId) REFERENCES Playlists(Id) ON DELETE CASCADE, FOREIGN KEY(SongId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS AlbumArtwork (Id INTEGER PRIMARY KEY AUTOINCREMENT, ArtworkID TEXT NOT NULL, AlbumKey TEXT NOT NULL, CoverPath TEXT);");
 
                 // 执行迁移（加约束、查重等）
                 ApplyMigrations(db);
