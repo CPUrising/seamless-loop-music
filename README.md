@@ -11,6 +11,8 @@
 **运行环境**：Windows 10 及以上
 **支持格式**：MP3, OGG, WAV
 
+![image-20260504014156975](./image/README/image-20260504014156975.png)
+
 ![image-20260504004748183](./image/README/image-20260504004748183.png)
 
 ![image-20260504014156975](./image/README/image-20260504014156975.png)
