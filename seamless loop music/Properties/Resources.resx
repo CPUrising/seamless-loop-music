@@ -349,4 +349,34 @@
   <data name="TipRateCurrent" xml:space="preserve">
     <value>Rate Current Track (0-5)</value>
   </data>
+  <data name="TrayHeader" xml:space="preserve">
+    <value>Tray Behavior</value>
+  </data>
+  <data name="TraySub" xml:space="preserve">
+    <value>Configure window behavior when minimizing or closing.</value>
+  </data>
+  <data name="TrayMinimizeToTray" xml:space="preserve">
+    <value>Minimize to Tray</value>
+  </data>
+  <data name="TrayCloseToTray" xml:space="preserve">
+    <value>Close to Tray</value>
+  </data>
+  <data name="MenuShowMainWindow" xml:space="preserve">
+    <value>Show Main Window</value>
+  </data>
+  <data name="MenuHideToTray" xml:space="preserve">
+    <value>Hide to Tray</value>
+  </data>
+  <data name="MenuExit" xml:space="preserve">
+    <value>Exit</value>
+  </data>
+  <data name="MenuPause" xml:space="preserve">
+    <value>⏸ Pause</value>
+  </data>
+  <data name="MenuNext" xml:space="preserve">
+    <value>⏭ Next</value>
+  </data>
+  <data name="MenuPrevious" xml:space="preserve">
+    <value>⏮ Previous</value>
+  </data>
 </root>

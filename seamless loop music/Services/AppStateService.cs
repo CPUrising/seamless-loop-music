@@ -17,6 +17,11 @@ namespace seamless_loop_music.Services
         
         // 记录当前的分类上下文
         CategoryItem CurrentCategory { get; set; }
+
+        // 托盘行为设置
+        bool MinimizeToTray { get; set; }
+        bool CloseToTray { get; set; }
+        bool IsExiting { get; set; }
     }
 
     public class AppStateService : IAppStateService
@@ -28,6 +33,10 @@ namespace seamless_loop_music.Services
         private readonly IPlaylistManager _playlistManager;
         
         public CategoryItem CurrentCategory { get; set; }
+        
+        public bool MinimizeToTray { get; set; }
+        public bool CloseToTray { get; set; }
+        public bool IsExiting { get; set; }
 
         public AppStateService(
             IDatabaseHelper db, 
@@ -81,6 +90,10 @@ namespace seamless_loop_music.Services
 
                     // 6. 保存语言设置
                     _db.SetSetting("App.Language", LocalizationService.Instance.CurrentCulture.Name);
+
+                    // 7. 保存托盘行为设置
+                    _db.SetSetting("App.MinimizeToTray", MinimizeToTray.ToString());
+                    _db.SetSetting("App.CloseToTray", CloseToTray.ToString());
                 }
                 catch (Exception ex)
                 {
@@ -122,6 +135,10 @@ namespace seamless_loop_music.Services
                     }
                     catch { }
                 }
+
+                // 2.3 恢复托盘行为设置
+                MinimizeToTray = _db.GetSetting("App.MinimizeToTray", "False").ToLower() == "true";
+                CloseToTray = _db.GetSetting("App.CloseToTray", "False").ToLower() == "true";
 
                 // 3. 恢复分类上下文
                 string typeStr = _db.GetSetting("Playback.LastCategoryType");

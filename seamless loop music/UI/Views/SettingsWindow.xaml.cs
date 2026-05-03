@@ -24,6 +24,7 @@ namespace seamless_loop_music.UI.Views
 
             LoadFolders();
             InitializeLanguage();
+            InitializeTraySettings();
             _isInitializing = false;
         }
 
@@ -53,6 +54,22 @@ namespace seamless_loop_music.UI.Views
                 // 立即保存设置
                 await _appState.SaveCurrentStateAsync();
             }
+        }
+
+        private void InitializeTraySettings()
+        {
+            tgMinimizeToTray.IsChecked = _appState.MinimizeToTray;
+            tgCloseToTray.IsChecked = _appState.CloseToTray;
+        }
+
+        private async void TraySetting_Changed(object sender, RoutedEventArgs e)
+        {
+            if (_isInitializing) return;
+
+            _appState.MinimizeToTray = tgMinimizeToTray.IsChecked ?? false;
+            _appState.CloseToTray = tgCloseToTray.IsChecked ?? false;
+
+            await _appState.SaveCurrentStateAsync();
         }
 
         private void BtnAddFolder_Click(object sender, RoutedEventArgs e)

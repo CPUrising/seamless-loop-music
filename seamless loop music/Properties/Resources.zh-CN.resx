@@ -349,4 +349,34 @@
   <data name="TipRateCurrent" xml:space="preserve">
     <value>为当前歌曲打分 (0-5)</value>
   </data>
+  <data name="TrayHeader" xml:space="preserve">
+    <value>托盘行为</value>
+  </data>
+  <data name="TraySub" xml:space="preserve">
+    <value>配置窗口在最小化或关闭时的行为。</value>
+  </data>
+  <data name="TrayMinimizeToTray" xml:space="preserve">
+    <value>最小化到托盘</value>
+  </data>
+  <data name="TrayCloseToTray" xml:space="preserve">
+    <value>关闭到托盘</value>
+  </data>
+  <data name="MenuShowMainWindow" xml:space="preserve">
+    <value>显示主窗口</value>
+  </data>
+  <data name="MenuHideToTray" xml:space="preserve">
+    <value>隐藏到托盘</value>
+  </data>
+  <data name="MenuExit" xml:space="preserve">
+    <value>退出应用</value>
+  </data>
+  <data name="MenuPause" xml:space="preserve">
+    <value>⏸  暂停</value>
+  </data>
+  <data name="MenuNext" xml:space="preserve">
+    <value>⏭  下一首</value>
+  </data>
+  <data name="MenuPrevious" xml:space="preserve">
+    <value>⏮  上一首</value>
+  </data>
 </root>

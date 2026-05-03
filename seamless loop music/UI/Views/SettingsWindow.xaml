@@ -58,6 +58,26 @@
                     </StackPanel>
                 </Border>
                 
+                <!-- Tray Behavior Section -->
+                <Border Background="#313244" CornerRadius="8" Padding="15" Margin="0,0,0,15">
+                    <StackPanel>
+                        <TextBlock Text="{Binding [TrayHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="#CBA6F7" Margin="0,0,0,10"/>
+                        <TextBlock Text="{Binding [TraySub], Source={StaticResource Loc}}" Foreground="#7F849C" FontSize="12" Margin="0,0,0,15" TextWrapping="Wrap"/>
+
+                        <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                            <ToggleButton x:Name="tgMinimizeToTray" Style="{StaticResource MaterialDesignSwitchToggleButton}" 
+                                          Click="TraySetting_Changed"/>
+                            <TextBlock Text="{Binding [TrayMinimizeToTray], Source={StaticResource Loc}}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#CDD6F4"/>
+                        </StackPanel>
+
+                        <StackPanel Orientation="Horizontal">
+                            <ToggleButton x:Name="tgCloseToTray" Style="{StaticResource MaterialDesignSwitchToggleButton}" 
+                                          Click="TraySetting_Changed"/>
+                            <TextBlock Text="{Binding [TrayCloseToTray], Source={StaticResource Loc}}" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#CDD6F4"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+
                 <Border Background="#313244" CornerRadius="8" Padding="15" Margin="0,0,0,15">
                     <StackPanel>
                         <TextBlock Text="{Binding [DataManagementHeader], Source={StaticResource Loc}}" FontSize="16" FontWeight="SemiBold" Foreground="#CBA6F7" Margin="0,0,0,10"/>

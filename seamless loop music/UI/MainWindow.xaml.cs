@@ -7,19 +7,39 @@ namespace seamless_loop_music
 {
     public partial class MainWindow : Window
     {
-        public MainWindow(ITaskbarService taskbarService)
+        private readonly IAppStateService _appState;
+        private readonly INotifyIconService _notifyIconService;
+
+        public MainWindow(ITaskbarService taskbarService, IAppStateService appState, INotifyIconService notifyIconService)
         {
             InitializeComponent();
+            _appState = appState;
+            _notifyIconService = notifyIconService;
             taskbarService.Initialize(this.MainTaskbarItemInfo);
 
             this.Closing += MainWindow_Closing;
         }
 
+        protected override void OnStateChanged(System.EventArgs e)
+        {
+            base.OnStateChanged(e);
+            if (this.WindowState == WindowState.Minimized && _appState.MinimizeToTray)
+            {
+                _notifyIconService.HideMainWindow();
+            }
+        }
+
         private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
-            var container = ((Prism.Unity.PrismApplication)Application.Current).Container;
-            var appState = container.Resolve<IAppStateService>();
-            await appState.SaveCurrentStateAsync();
+            if (!_appState.IsExiting && _appState.CloseToTray)
+            {
+                e.Cancel = true;
+                _notifyIconService.HideMainWindow();
+                return;
+            }
+
+            await _appState.SaveCurrentStateAsync();
+            _notifyIconService.Dispose();
         }
 
         private void BtnSettings_Click(object sender, RoutedEventArgs e)
@@ -27,8 +47,7 @@ namespace seamless_loop_music
             var container = ((Prism.Unity.PrismApplication)Application.Current).Container;
             var playerService = container.Resolve<IPlayerService>();
             var eventAggregator = container.Resolve<Prism.Events.IEventAggregator>();
-            var appState = container.Resolve<IAppStateService>();
-            var settingsWindow = new SettingsWindow(playerService, eventAggregator, appState) { Owner = this };
+            var settingsWindow = new SettingsWindow(playerService, eventAggregator, _appState) { Owner = this };
             settingsWindow.ShowDialog();
         }
 

@@ -248,7 +248,7 @@
         <Setter Property="Background" Value="Transparent"/>
         <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
         <Setter Property="Width" Value="46"/>
-        <Setter Property="Height" Value="32"/>
+        <Setter Property="Height" Value="40"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Focusable" Value="False"/>
@@ -263,7 +263,7 @@
                               StrokeThickness="1.5"
                               HorizontalAlignment="Center" 
                               VerticalAlignment="Center"
-                              Width="10" Height="10" 
+                              Width="16" Height="16" 
                               Stretch="Uniform"/>
                     </Border>
                     <ControlTemplate.Triggers>
