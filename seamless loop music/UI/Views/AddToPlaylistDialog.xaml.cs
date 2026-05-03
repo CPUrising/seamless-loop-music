@@ -55,13 +55,6 @@ namespace seamless_loop_music.UI.Views
             };
         }
 
-        private async void TxtNewPlaylistName_KeyDown(object sender, KeyEventArgs e)
-        {
-            if (e.Key == Key.Enter)
-            {
-                await HandleConfirmAction();
-            }
-        }
 
         private async void BtnConfirm_Click(object sender, RoutedEventArgs e)
         {

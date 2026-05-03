@@ -38,8 +38,7 @@
                   BorderThickness="0">
             <StackPanel Margin="0,8,0,0">
                 <TextBox x:Name="TxtNewPlaylistName"
-                         Style="{StaticResource ModernTextBox}"
-                         KeyDown="TxtNewPlaylistName_KeyDown"/>
+                         Style="{StaticResource ModernTextBox}"/>
                 <TextBlock Text="{Binding [PromptEnterNameToCreate], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,6,0,0"/>
             </StackPanel>
         </Expander>
