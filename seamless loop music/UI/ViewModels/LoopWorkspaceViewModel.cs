@@ -441,6 +441,7 @@ namespace seamless_loop_music.UI.ViewModels
                 ? _playbackService.SampleRate
                 : _metadataService.GetSampleRate(_currentTrack?.FilePath);
             
+            System.Diagnostics.Debug.WriteLine($"[GetCurrentRate] svcId={_playbackService.CurrentTrack?.Id}, localId={_currentTrack?.Id}, svcRate={_playbackService.SampleRate}, metaRate={_metadataService.GetSampleRate(_currentTrack?.FilePath)}, result={rate}");
             return rate > 0 ? rate : 44100;
         }
 

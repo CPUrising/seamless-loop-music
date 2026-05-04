@@ -156,13 +156,16 @@ namespace seamless_loop_music.Services
                     string partB = _metadataService.FindPartB(track.FilePath);
                     await Task.Run(() => _audioLooper.LoadAudio(track.FilePath, partB));
 
-                    // 核心逻辑：如果是 A/B 融合模式，且数据库记录的长度与实际拼接后的长度差异显著
-                    if (_audioLooper.IsABFusionLoaded && (track.LoopEnd <= 0 || Math.Abs(track.TotalSamples - _audioLooper.TotalSamples) > 10000))
+                    // 核心逻辑：A/B 融合模式下，始终以 AudioLooper 从物理文件计算的衔接点为准，
+                    // 避免数据库旧值（可能由 TagLib 估算）与实际解码长度不一致
+                    if (_audioLooper.IsABFusionLoaded)
                     {
+                        System.Diagnostics.Debug.WriteLine($"[AB-Load] _abSeam={_audioLooper.LoopStartSample}, _total={_audioLooper.LoopEndSample}, TotalSamples={_audioLooper.TotalSamples}, track.LoopStart(db)={track.LoopStart}, track.LoopEnd(db)={track.LoopEnd}, track.TotalSamples(db)={track.TotalSamples}");
                         track.LoopStart = _audioLooper.LoopStartSample;
                         track.LoopEnd = _audioLooper.LoopEndSample;
                         track.TotalSamples = _audioLooper.TotalSamples;
                         _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
+                        System.Diagnostics.Debug.WriteLine($"[AB-Load] AFTER: track.LoopStart={track.LoopStart}, track.LoopEnd={track.LoopEnd}");
                     }
                     else
                     {
@@ -234,7 +237,9 @@ namespace seamless_loop_music.Services
 
         public void ResetABLoopPoints()
         {
+            System.Diagnostics.Debug.WriteLine($"[AB-Reset] BEFORE: LoopStart={_audioLooper.LoopStartSample}, LoopEnd={_audioLooper.LoopEndSample}");
             _audioLooper.ResetABLoopPoints();
+            System.Diagnostics.Debug.WriteLine($"[AB-Reset] AFTER: LoopStart={_audioLooper.LoopStartSample}, LoopEnd={_audioLooper.LoopEndSample}");
             if (CurrentTrack != null)
             {
                 CurrentTrack.LoopStart = _audioLooper.LoopStartSample;

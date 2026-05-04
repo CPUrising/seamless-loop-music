@@ -6,6 +6,7 @@ using System.Text;
 using Dapper;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using NAudio.Wave;
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
 using Prism.Events;
@@ -151,9 +152,30 @@ namespace seamless_loop_music.Services
             try
             {
                 if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return 44100;
-                using (var reader = new NAudio.Wave.AudioFileReader(filePath))
+                string ext = Path.GetExtension(filePath).ToLower();
+                WaveStream reader = null;
+                try
                 {
+                    switch (ext)
+                    {
+                        case ".ogg":
+                            reader = new NAudio.Vorbis.VorbisWaveReader(filePath);
+                            break;
+                        case ".wav":
+                            reader = new NAudio.Wave.WaveFileReader(filePath);
+                            break;
+                        case ".mp3":
+                            reader = new NAudio.Wave.Mp3FileReader(filePath);
+                            break;
+                        default:
+                            reader = new NAudio.Wave.AudioFileReader(filePath);
+                            break;
+                    }
                     return reader.WaveFormat.SampleRate;
+                }
+                finally
+                {
+                    reader?.Dispose();
                 }
             }
             catch
