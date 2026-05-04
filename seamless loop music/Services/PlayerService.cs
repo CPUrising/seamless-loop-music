@@ -199,9 +199,36 @@ namespace seamless_loop_music.Services
 
                 if (!string.IsNullOrEmpty(partBPath) && System.IO.File.Exists(partBPath))
                 {
-                    using var partBFile = TagLib.File.Create(partBPath);
-                    long samplesB = (long)(partBFile.Properties.AudioSampleRate * partBFile.Properties.Duration.TotalSeconds);
-                    totalSamples += samplesB;
+                    // 核心修复：对 A/B 歌曲，必须使用 NAudio 计算采样数，
+                    // 因为 TagLib 的 Duration（来自文件头）与 NAudio 实际解码长度会有不固定的差异，
+                    // 导致数据库存储的 LoopStart/LoopEnd 与加载时 AudioLooper 计算的衔接点不匹配。
+                    try
+                    {
+                        using (var readerA = CreateNAudioStream(filePath))
+                        using (var readerB = CreateNAudioStream(partBPath))
+                        {
+                            if (readerA != null && readerB != null)
+                            {
+                                samplesA = readerA.Length / readerA.WaveFormat.BlockAlign;
+                                long samplesB = readerB.Length / readerB.WaveFormat.BlockAlign;
+                                totalSamples = samplesA + samplesB;
+                            }
+                            else
+                            {
+                                // NAudio 加载失败时回退到 TagLib 的估算值
+                                using var partBFile = TagLib.File.Create(partBPath);
+                                long samplesB = (long)(partBFile.Properties.AudioSampleRate * partBFile.Properties.Duration.TotalSeconds);
+                                totalSamples += samplesB;
+                            }
+                        }
+                    }
+                    catch
+                    {
+                        // NAudio 异常时回退到 TagLib
+                        using var partBFile = TagLib.File.Create(partBPath);
+                        long samplesB = (long)(partBFile.Properties.AudioSampleRate * partBFile.Properties.Duration.TotalSeconds);
+                        totalSamples = samplesA + samplesB;
+                    }
                     loopStart = samplesA; // 默认循环起点设在衔接处
                 }
 
@@ -241,6 +268,33 @@ namespace seamless_loop_music.Services
             _databaseHelper.RepairMissingCategoryCovers();
             
             return result;
+        }
+
+        /// <summary>
+        /// 使用 NAudio 创建音频流（与 AudioLooper.CreateAudioStream 保持一致）
+        /// 确保扫描时和加载时的采样数计算方式完全相同
+        /// </summary>
+        private WaveStream CreateNAudioStream(string filePath)
+        {
+            try
+            {
+                string ext = Path.GetExtension(filePath).ToLower();
+                switch (ext)
+                {
+                    case ".wav":
+                        return new WaveFileReader(filePath);
+                    case ".ogg":
+                        return new NAudio.Vorbis.VorbisWaveReader(filePath);
+                    case ".mp3":
+                        return new Mp3FileReader(filePath);
+                    default:
+                        return null;
+                }
+            }
+            catch
+            {
+                return null;
+            }
         }
 
         public void Dispose() { }
