@@ -160,12 +160,25 @@ namespace seamless_loop_music.Services
                     // 避免数据库旧值（可能由 TagLib 估算）与实际解码长度不一致
                     if (_audioLooper.IsABFusionLoaded)
                     {
-                        System.Diagnostics.Debug.WriteLine($"[AB-Load] _abSeam={_audioLooper.LoopStartSample}, _total={_audioLooper.LoopEndSample}, TotalSamples={_audioLooper.TotalSamples}, track.LoopStart(db)={track.LoopStart}, track.LoopEnd(db)={track.LoopEnd}, track.TotalSamples(db)={track.TotalSamples}");
-                        track.LoopStart = _audioLooper.LoopStartSample;
-                        track.LoopEnd = _audioLooper.LoopEndSample;
+                        // 始终更新物理总采样数，确保 UI 和边界判定准确
                         track.TotalSamples = _audioLooper.TotalSamples;
-                        _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
-                        System.Diagnostics.Debug.WriteLine($"[AB-Load] AFTER: track.LoopStart={track.LoopStart}, track.LoopEnd={track.LoopEnd}");
+
+                        // 如果数据库里已经有了循环点设置（LoopEnd > 0），则尊重用户的设置，但要确保不越界
+                        if (track.LoopEnd > 0)
+                        {
+                            System.Diagnostics.Debug.WriteLine($"[AB-Load] Using DB values: {track.LoopStart} - {track.LoopEnd} (Total: {track.TotalSamples})");
+                            track.LoopStart = Math.Min(track.LoopStart, track.TotalSamples);
+                            track.LoopEnd = Math.Min(track.LoopEnd, track.TotalSamples);
+                            _audioLooper.SetLoopPoints(track.LoopStart, track.LoopEnd);
+                        }
+                        else
+                        {
+                            // 第一次加载：使用物理衔接点作为默认值
+                            System.Diagnostics.Debug.WriteLine($"[AB-Load] First time, using Seam: {_audioLooper.LoopStartSample} - {_audioLooper.LoopEndSample}");
+                            track.LoopStart = _audioLooper.LoopStartSample;
+                            track.LoopEnd = _audioLooper.LoopEndSample;
+                            _trackRepository.UpdateLoopPoints(track.Id, track.LoopStart, track.LoopEnd);
+                        }
                     }
                     else
                     {
