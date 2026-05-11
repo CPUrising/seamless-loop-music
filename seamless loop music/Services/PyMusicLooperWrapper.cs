@@ -11,7 +11,7 @@ namespace seamless_loop_music.Services
     /// <summary>
     /// 基于 uvx 模式：自动管理并调用 PyMusicLooper 正式版，无需本地源码
     /// </summary>
-    public class PyMusicLooperWrapper
+    public class PyMusicLooperWrapper : ILoopAnalysisBackend
     {
         // 使用 uvx 作为执行器，即使其他用户没装 pymusiclooper 也能自动下载运行
         public string ExecutorPath { get; set; } = "uvx"; 
