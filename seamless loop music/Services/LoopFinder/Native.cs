@@ -9,40 +9,58 @@ using seamless_loop_music.Models;
 
 namespace seamless_loop_music.Services.LoopFinder
 {
-    public class Native : ILoopAnalysisBackend
+    public class Native
     {
         public event Action<string> OnStatusMessage;
 
         private static readonly bool DllPresent;
-        private static readonly string DllError;
+        public static readonly string LastError;
+
+        [DllImport("kernel32.dll", SetLastError = true, CharSet = CharSet.Unicode)]
+        private static extern IntPtr LoadLibrary(string lpFileName);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern bool FreeLibrary(IntPtr hModule);
+
+        [DllImport("kernel32.dll", SetLastError = true)]
+        private static extern IntPtr GetProcAddress(IntPtr hModule, string lpProcName);
 
         static Native()
         {
             try
             {
-                lf_get_last_error();
-                DllPresent = true;
-                DllError = null;
-            }
-            catch (DllNotFoundException)
-            {
-                DllPresent = false;
-                DllError = "loopfinder.dll not found in application directory";
-            }
-            catch (BadImageFormatException ex)
-            {
-                DllPresent = false;
-                DllError = $"Architecture mismatch: {ex.Message}";
-            }
-            catch (EntryPointNotFoundException ex)
-            {
-                DllPresent = false;
-                DllError = $"API mismatch: {ex.Message}";
+                string dllDir = Path.GetDirectoryName(typeof(Native).Assembly.Location) ?? ".";
+                string dllPath = Path.Combine(dllDir, "loopfinder.dll");
+
+                IntPtr hModule = LoadLibrary(dllPath);
+                if (hModule == IntPtr.Zero)
+                {
+                    int err = Marshal.GetLastWin32Error();
+                    DllPresent = false;
+                    LastError = $"DLL not found. Path: {dllPath} (Win32 error {err})";
+                    return;
+                }
+
+                IntPtr pAnalyze = GetProcAddress(hModule, "lf_analyze_file");
+                IntPtr pError   = GetProcAddress(hModule, "lf_get_last_error");
+
+                FreeLibrary(hModule);
+
+                if (pAnalyze == IntPtr.Zero || pError == IntPtr.Zero)
+                {
+                    DllPresent = false;
+                    LastError = "DLL exports not found. Rebuild with `cmake --build build --config Release`";
+                }
+                else
+                {
+                    DllPresent = true;
+                    LastError = null;
+                }
             }
             catch (Exception ex)
             {
                 DllPresent = false;
-                DllError = $"DLL load failed: {ex.Message}";
+                LastError = $"Probe failed: {ex.Message}";
             }
         }
 
@@ -74,9 +92,9 @@ namespace seamless_loop_music.Services.LoopFinder
             {
                 return Task.FromResult(0);
             }
-            if (!string.IsNullOrEmpty(DllError))
+            if (!string.IsNullOrEmpty(LastError))
             {
-                OnStatusMessage?.Invoke($"[loopfinder] {DllError}");
+                OnStatusMessage?.Invoke($"[loopfinder] {LastError}");
             }
             return Task.FromResult(1);
         }
@@ -100,7 +118,6 @@ namespace seamless_loop_music.Services.LoopFinder
         }
 
         [HandleProcessCorruptedStateExceptions]
-        [SecurityCritical]
         private async Task<List<LoopCandidate>> AnalyzeAsync(string filePath, int topN)
         {
             if (!File.Exists(filePath))

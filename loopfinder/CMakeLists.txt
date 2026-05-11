@@ -72,11 +72,17 @@ endif()
 
 add_library(loopfinder SHARED ${LOOPFINDER_SRC})
 
+set_target_properties(loopfinder PROPERTIES
+    WINDOWS_EXPORT_ALL_SYMBOLS ON
+)
+
 target_include_directories(loopfinder PRIVATE
     ${CMAKE_SOURCE_DIR}/include
     ${CMAKE_SOURCE_DIR}/third_party
     ${AUBIO_SRC_DIR}
 )
+
+target_compile_definitions(loopfinder PRIVATE LOOPFINDER_EXPORTS)
 
 target_link_libraries(loopfinder PRIVATE
     dr_libs

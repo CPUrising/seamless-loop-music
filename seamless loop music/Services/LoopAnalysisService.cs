@@ -6,20 +6,26 @@ using System.Threading.Tasks;
 using Prism.Events;
 using seamless_loop_music.Models;
 using seamless_loop_music.Events;
+using seamless_loop_music.Services.LoopFinder;
 
 namespace seamless_loop_music.Services
 {
+    /// <summary>
+    /// 循环分析服务
+    /// 封装原生 loopfinder.dll 调用，负责状态转发、候选结果缓存和 JSON 序列化
+    /// </summary>
     public class LoopAnalysisService : ILoopAnalysisService
     {
         public event Action<string> OnStatusMessage;
-        private readonly ILoopAnalysisBackend _backend;
+        public string LastError => Native.LastError;
+        private readonly Native _native;
         private readonly IEventAggregator _eventAggregator;
 
-        public LoopAnalysisService(ILoopAnalysisBackend backend, IEventAggregator eventAggregator)
+        public LoopAnalysisService(IEventAggregator eventAggregator)
         {
-            _backend = backend;
             _eventAggregator = eventAggregator;
-            _backend.OnStatusMessage += msg =>
+            _native = new Native();
+            _native.OnStatusMessage += msg =>
             {
                 System.Windows.Application.Current?.Dispatcher?.BeginInvoke((Action)(() =>
                 {
@@ -29,21 +35,9 @@ namespace seamless_loop_music.Services
             };
         }
 
-        public void SetCustomCachePath(string path)
-        {
-            if (_backend is PyMusicLooperWrapper py)
-                py.CustomCachePath = path;
-        }
-
-        public void SetPyMusicLooperExecutablePath(string path)
-        {
-            if (_backend is PyMusicLooperWrapper py)
-                py.PyMusicLooperExecutablePath = path;
-        }
-
         public async Task<int> CheckEnvironmentAsync()
         {
-            return await _backend.CheckEnvironmentAsync();
+            return await _native.CheckEnvironmentAsync();
         }
 
         public string SerializeLoopCandidates(List<LoopCandidate> list)
@@ -110,12 +104,12 @@ namespace seamless_loop_music.Services
 
         public async Task<(long Start, long End, double Score)?> FindBestLoopAsync(string filePath)
         {
-            return await _backend.FindBestLoopAsync(filePath);
+            return await _native.FindBestLoopAsync(filePath);
         }
 
         public async Task<List<LoopCandidate>> FetchTopLoopCandidatesAsync(string filePath)
         {
-            return await _backend.FetchTopLoopCandidatesAsync(filePath);
+            return await _native.FetchTopLoopCandidatesAsync(filePath);
         }
     }
 }

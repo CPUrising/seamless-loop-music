@@ -2,6 +2,17 @@
 
 #include <stdint.h>
 
+// ---- Windows DLL export / import ----
+#ifdef _WIN32
+  #ifdef LOOPFINDER_EXPORTS
+    #define LOOPFINDER_API __declspec(dllexport)
+  #else
+    #define LOOPFINDER_API __declspec(dllimport)
+  #endif
+#else
+  #define LOOPFINDER_API
+#endif
+
 #ifdef __cplusplus
 extern "C" {
 #endif
@@ -14,14 +25,14 @@ typedef struct {
     float   score;
 } lf_loop_point_t;
 
-int lf_analyze_file(
+LOOPFINDER_API int lf_analyze_file(
     const char* filepath,
     int topN,
     lf_loop_point_t* outPoints,
     int capacity
 );
 
-const char* lf_get_last_error();
+LOOPFINDER_API const char* lf_get_last_error();
 
 #ifdef __cplusplus
 }
