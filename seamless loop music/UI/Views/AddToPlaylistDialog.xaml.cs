@@ -37,8 +37,8 @@ namespace seamless_loop_music.UI.Views
 
             int count = tracks.Count;
             TxtSubtitle.Text = count == 1
-                ? string.Format(seamless_loop_music.Properties.Resources.MsgAddSingleTrackTo, tracks[0].Title)
-                : string.Format(seamless_loop_music.Properties.Resources.MsgAddMultipleTracksTo, count);
+                ? string.Format(seamless_loop_music.Statics.Resources.MsgAddSingleTrackTo, tracks[0].Title)
+                : string.Format(seamless_loop_music.Statics.Resources.MsgAddMultipleTracksTo, count);
 
             Loaded += async (_, __) =>
             {
@@ -72,8 +72,8 @@ namespace seamless_loop_music.UI.Views
                 var allPlaylists = await _playlistManager.GetAllPlaylistsAsync();
                 if (allPlaylists.Any(p => string.Equals(p.Name, newName, System.StringComparison.OrdinalIgnoreCase)))
                 {
-                    var msg = string.Format(seamless_loop_music.Properties.Resources.MsgPlaylistExists, newName);
-                    MessageBox.Show(msg, seamless_loop_music.Properties.Resources.DialogNewPlaylist, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    var msg = string.Format(seamless_loop_music.Statics.Resources.MsgPlaylistExists, newName);
+                    MessageBox.Show(msg, seamless_loop_music.Statics.Resources.DialogNewPlaylist, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -87,7 +87,7 @@ namespace seamless_loop_music.UI.Views
 
             if (SelectedPlaylist == null)
             {
-                MessageBox.Show(seamless_loop_music.Properties.Resources.MsgNameEmpty, seamless_loop_music.Properties.Resources.DialogSelectPlaylist, MessageBoxButton.OK, MessageBoxImage.Information);
+                MessageBox.Show(seamless_loop_music.Statics.Resources.MsgNameEmpty, seamless_loop_music.Statics.Resources.DialogSelectPlaylist, MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 
@@ -108,8 +108,8 @@ namespace seamless_loop_music.UI.Views
             
             // 发送成功反馈
             var message = _tracks.Count == 1 
-                ? string.Format(seamless_loop_music.Properties.Resources.StatusAddedSingleTo, _tracks[0].Title, SelectedPlaylist.Name)
-                : string.Format(seamless_loop_music.Properties.Resources.StatusAddedMultipleTo, _tracks.Count, SelectedPlaylist.Name);
+                ? string.Format(seamless_loop_music.Statics.Resources.StatusAddedSingleTo, _tracks[0].Title, SelectedPlaylist.Name)
+                : string.Format(seamless_loop_music.Statics.Resources.StatusAddedMultipleTo, _tracks.Count, SelectedPlaylist.Name);
             _eventAggregator.GetEvent<StatusMessageEvent>().Publish(message);
         }
     }

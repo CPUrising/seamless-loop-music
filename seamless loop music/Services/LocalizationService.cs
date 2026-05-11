@@ -7,6 +7,7 @@ using System.Windows;
 using System.Windows.Data;
 using Prism.Events;
 using seamless_loop_music.Events;
+using TagLib;
 
 namespace seamless_loop_music.Services
 {
@@ -17,7 +18,7 @@ namespace seamless_loop_music.Services
 
         public static IEventAggregator EventAggregator { get; set; }
 
-        private readonly ResourceManager _resourceManager = Properties.Resources.ResourceManager;
+        private readonly ResourceManager _resourceManager = Statics.Resources.ResourceManager;
         private CultureInfo _currentCulture = CultureInfo.CurrentUICulture;
 
         public string this[string key]
@@ -37,7 +38,7 @@ namespace seamless_loop_music.Services
                 if (!Equals(_currentCulture, value))
                 {
                     _currentCulture = value;
-                    Properties.Resources.Culture = value;
+                    Statics.Resources.Culture = value;
                     OnPropertyChanged(null); // Notify all properties changed
                     OnPropertyChanged("Item[]"); // Specifically notify indexer for WPF bindings
                     
