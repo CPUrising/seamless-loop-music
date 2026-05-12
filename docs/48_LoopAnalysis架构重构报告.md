@@ -92,3 +92,8 @@ containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>()
 - `PyRankingToolTip` — 按钮提示
 
 建议后续手动修改 `.resx` 中的中文值以移除「Py」前缀（保留键名不变可避免破坏 XAML 绑定）。
+
+使用方法：loopfinder目录下
+cmake --build build --config Release
+cmake -B build -A x64
+将生成的dll移入seamless loop music.exe同级目录下即可
