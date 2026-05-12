@@ -29,14 +29,18 @@ private:
                             std::vector<LoopPoint>& candidates);
 
     void scoreCandidates(const std::vector<std::vector<float>>& chroma,
-                         float bpm, int nFFT, int hopSize,
-                         std::vector<LoopPoint>& candidates);
+                         const float* monoSignal, int signalLen,
+                         float bpm, int nFFT, int hopSize, int sampleRate,
+                         int topN, std::vector<LoopPoint>& candidates);
 
     void prioritizeDuration(std::vector<LoopPoint>& candidates);
 
     static float cosineSimilarity(const float* a, const float* b, int len);
     static float vectorNorm(const float* v, int len);
     static void  geometricWeights(int len, float* weights, float start, float stop);
+    static float waveformContinuity(const float* signal, int signalLen,
+                                     int startSample, int endSample,
+                                     int windowLen);
 };
 
 } // namespace loopfinder

@@ -27,7 +27,7 @@ float LoopFinder::cosineSimilarity(const float* a, const float* b, int len) {
         normB += b[i] * b[i];
     }
     float denom = std::sqrt(normA) * std::sqrt(normB);
-    return (denom > 1e-10f) ? (dot / denom) : 0.0f;
+    return (denom > 1e-10f) ? (dot / denom) : 0.95f;
 }
 
 float LoopFinder::vectorNorm(const float* v, int len) {
@@ -39,10 +39,31 @@ float LoopFinder::vectorNorm(const float* v, int len) {
 
 void LoopFinder::geometricWeights(int len, float* weights, float start, float stop) {
     if (len <= 0) return;
+    if (len == 1) { weights[0] = start; return; }
     float ratio = std::pow(stop / start, 1.0f / (len - 1));
     weights[0] = start;
     for (int i = 1; i < len; ++i)
         weights[i] = weights[i - 1] * ratio;
+}
+
+float LoopFinder::waveformContinuity(const float* signal, int signalLen,
+                                      int startSample, int endSample,
+                                      int windowLen) {
+    if (windowLen <= 0) return 0.0f;
+    if (endSample < windowLen || startSample < 0) return 0.0f;
+    if (startSample + windowLen > signalLen) return 0.0f;
+
+    float mse = 0.0f, ref = 0.0f;
+    for (int i = 0; i < windowLen; ++i) {
+        float a = signal[endSample - windowLen + i];   // tail before loop end
+        float b = signal[startSample + i];             // head after loop start
+        float diff = a - b;
+        mse += diff * diff;
+        ref += a * a + b * b;
+    }
+    mse /= windowLen;
+    ref  /= (2.0f * windowLen);
+    return (ref < 1e-10f) ? 0.95f : (1.0f / (1.0f + mse / ref));
 }
 
 // ---- Candidate pair enumeration ----
@@ -56,14 +77,13 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
     LF_LOG("[findCandidatePairs] beats=%zu minLoop=%d maxLoop=%d", beats.size(), minLoopFrames, maxLoopFrames);
     if (beats.size() < 2) return;
 
-    const float ACCEPTABLE_NOTE_DEVIATION = 0.0875f;
+    const float NOTE_DEVIATION_THRESHOLD = 0.0875f;
     const float ACCEPTABLE_LOUDNESS_DIFF   = 0.5f;
 
     int numBeats = static_cast<int>(beats.size());
     int numChromaFrames = chroma.empty() ? 0 : static_cast<int>(chroma[0].size());
     LF_LOG("[findCandidatePairs] chroma=%zux%d", chroma.size(), numChromaFrames);
 
-    std::vector<float> chromaNormPerBeat(numBeats);
     std::vector<float> maxPowerPerBeat(numBeats);
 
     int numPowerDBFrames = powerDB.empty() ? 0 : static_cast<int>(powerDB[0].size());
@@ -76,34 +96,27 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
             continue;
         }
         maxPowerPerBeat[i] = 0.0f;
-        for (int f = 0; f < 12; ++f) {
-            chromaNormPerBeat[i] += chroma[f][frame] * chroma[f][frame];
-        }
-        chromaNormPerBeat[i] = std::sqrt(chromaNormPerBeat[i]);
 
         if (frame >= 0 && frame < numPowerDBFrames) {
-            for (size_t f = 0; f < powerDB.size(); ++f) {
-                maxPowerPerBeat[i] = std::max(maxPowerPerBeat[i],
-                    std::abs(powerDB[f][frame]));
-            }
+            float sum = 0.0f;
+            for (size_t f = 0; f < powerDB.size(); ++f)
+                sum += powerDB[f][frame];
+            maxPowerPerBeat[i] = sum / powerDB.size();
         }
     }
 
-    float avgNorm = 0.0f;
-    for (float n : chromaNormPerBeat) avgNorm += n;
-    avgNorm /= numBeats;
-
-    float deviationThreshold = ACCEPTABLE_NOTE_DEVIATION * std::max(avgNorm, 1e-6f);
-    LF_LOG("[findCandidatePairs] avgNorm=%.6f threshold=%.6f", avgNorm, deviationThreshold);
+    LF_LOG("[findCandidatePairs] noteThreshold=%.6f", NOTE_DEVIATION_THRESHOLD);
 
     for (int endIdx = 0; endIdx < numBeats; ++endIdx) {
         int loopEnd = beats[endIdx];
-        for (int startIdx = 0; startIdx < endIdx; ++startIdx) {
+        if (loopEnd >= numChromaFrames) continue;
+        for (int startIdx = endIdx - 1; startIdx >= 0; --startIdx) {
             int loopStart = beats[startIdx];
+            if (loopStart >= numChromaFrames) continue;
             int loopLen = loopEnd - loopStart;
 
-            if (loopLen > maxLoopFrames) continue;
-            if (loopLen < minLoopFrames) break;
+            if (loopLen > maxLoopFrames) break;
+            if (loopLen < minLoopFrames) continue;
 
             float noteDist = 0.0f;
             for (int c = 0; c < 12; ++c) {
@@ -112,7 +125,7 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
             }
             noteDist = std::sqrt(noteDist);
 
-            if (noteDist > deviationThreshold) continue;
+            if (noteDist > NOTE_DEVIATION_THRESHOLD) continue;
 
             float loudnessDiff = std::abs(maxPowerPerBeat[endIdx] - maxPowerPerBeat[startIdx]);
             if (loudnessDiff > ACCEPTABLE_LOUDNESS_DIFF) continue;
@@ -132,8 +145,9 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
 // ---- Cosine similarity scoring ----
 
 void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
-                                 float bpm, int nFFT, int hopSize,
-                                 std::vector<LoopPoint>& candidates) {
+                                 const float* monoSignal, int signalLen,
+                                 float bpm, int nFFT, int hopSize, int sampleRate,
+                                 int topN, std::vector<LoopPoint>& candidates) {
     LF_LOG("[scoreCandidates] candidates=%zu bpm=%.1f", candidates.size(), bpm);
     if (candidates.empty()) return;
 
@@ -142,7 +156,8 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
     float beatsPerSec = bpm / 60.0f;
     int numTestBeats = 12;
     float secondsToTest = numTestBeats / beatsPerSec;
-    int testOffsetFrames = static_cast<int>(secondsToTest * nFFT / hopSize);
+    int testOffsetFrames = static_cast<int>(secondsToTest * sampleRate / hopSize);
+    testOffsetFrames = std::min(testOffsetFrames, 256);
     if (testOffsetFrames > numChromaFrames)
         testOffsetFrames = numChromaFrames / 4;
     if (testOffsetFrames < 2) testOffsetFrames = 2;
@@ -153,22 +168,29 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
                   [](const LoopPoint& a, const LoopPoint& b) {
                       return (a.noteDiff + a.loudnessDiff) < (b.noteDiff + b.loudnessDiff);
                   });
-        size_t keep = std::max(size_t(25), candidates.size() / 2);
+        size_t keep = std::max(static_cast<size_t>(topN * 2), size_t(25));
         candidates.resize(std::min(keep, candidates.size()));
         LF_LOG("[scoreCandidates] pruned to %zu", candidates.size());
     }
 
     std::vector<float> weights(testOffsetFrames);
-    geometricWeights(testOffsetFrames, weights.data(), 100.0f, 1.0f);
+    geometricWeights(testOffsetFrames, weights.data(), 4.0f, 1.0f);
 
-    int candIdx = 0;
+    std::vector<float> revWeights(testOffsetFrames);
+    geometricWeights(testOffsetFrames, revWeights.data(), 4.0f, 1.0f);
+    std::reverse(revWeights.begin(), revWeights.end());
+
+    std::vector<float> chromaA(12), chromaB(12);
+    std::vector<float> lookaheadBuf(testOffsetFrames);
+    std::vector<float> lookbehindBuf(testOffsetFrames);
+    std::vector<float> padded(testOffsetFrames);
+
     for (auto& lp : candidates) {
-        int b1 = lp.loopStart;
-        int b2 = lp.loopEnd;
+        int b1 = static_cast<int>(lp.loopStart);
+        int b2 = static_cast<int>(lp.loopEnd);
 
         if (b1 < 0 || b1 >= numChromaFrames || b2 < 0 || b2 >= numChromaFrames) {
-            LF_LOG("[scoreCandidates] WARN cand[%d] b1=%d b2=%d out of [0,%d)", candIdx, b1, b2, numChromaFrames);
-            candIdx++;
+            LF_LOG("[scoreCandidates] WARN b1=%d b2=%d out of [0,%d)", b1, b2, numChromaFrames);
             continue;
         }
 
@@ -176,35 +198,31 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
         int b2End = std::min(b2 + testOffsetFrames, numChromaFrames);
         int maxOffset = std::min(b1End - b1, b2End - b2);
 
-        std::vector<float> cosineSimLookahead(maxOffset);
+        float lookaheadScore = 0.0f;
         for (int i = 0; i < maxOffset; ++i) {
-            float chromaA[12], chromaB[12];
             for (int c = 0; c < 12; ++c) {
                 chromaA[c] = chroma[c][b1 + i];
                 chromaB[c] = chroma[c][b2 + i];
             }
-            cosineSimLookahead[i] = cosineSimilarity(chromaA, chromaB, 12);
+            lookaheadBuf[i] = cosineSimilarity(chromaA.data(), chromaB.data(), 12);
         }
 
-        float lookaheadScore = 0.0f;
         if (maxOffset > 0) {
+            float wSum = 0.0f;
             if (maxOffset < testOffsetFrames) {
-                std::vector<float> padded(testOffsetFrames, 0.0f);
-                for (int i = 0; i < maxOffset; ++i) padded[i] = cosineSimLookahead[i];
-                float wSum = 0.0f;
+                std::fill(padded.begin(), padded.end(), 0.0f);
+                for (int i = 0; i < maxOffset; ++i) padded[i] = lookaheadBuf[i];
                 for (int i = 0; i < testOffsetFrames; ++i) {
                     lookaheadScore += padded[i] * weights[i];
                     wSum += weights[i];
                 }
-                lookaheadScore /= wSum;
             } else {
-                float wSum = 0.0f;
                 for (int i = 0; i < maxOffset; ++i) {
-                    lookaheadScore += cosineSimLookahead[i] * weights[i];
+                    lookaheadScore += lookaheadBuf[i] * weights[i];
                     wSum += weights[i];
                 }
-                lookaheadScore /= wSum;
             }
+            lookaheadScore /= wSum;
         }
 
         int b1Start = std::max(0, b1 - testOffsetFrames);
@@ -212,42 +230,38 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
         int maxNegOffset = std::min(b1 - b1Start, b2 - b2Start);
 
         float lookbehindScore = 0.0f;
-        if (maxNegOffset > 0) {
-            std::vector<float> revWeights(testOffsetFrames);
-            geometricWeights(testOffsetFrames, revWeights.data(), 100.0f, 1.0f);
-            std::reverse(revWeights.begin(), revWeights.end());
-
-            std::vector<float> cosineSimLookbehind(maxNegOffset);
-            for (int i = 0; i < maxNegOffset; ++i) {
-                float chromaA[12], chromaB[12];
-                for (int c = 0; c < 12; ++c) {
-                    chromaA[c] = chroma[c][b1Start + i];
-                    chromaB[c] = chroma[c][b2Start + i];
-                }
-                cosineSimLookbehind[i] = cosineSimilarity(chromaA, chromaB, 12);
+        for (int i = 0; i < maxNegOffset; ++i) {
+            for (int c = 0; c < 12; ++c) {
+                chromaA[c] = chroma[c][b1Start + i];
+                chromaB[c] = chroma[c][b2Start + i];
             }
+            lookbehindBuf[i] = cosineSimilarity(chromaA.data(), chromaB.data(), 12);
+        }
 
+        if (maxNegOffset > 0) {
+            float wSum = 0.0f;
             if (maxNegOffset < testOffsetFrames) {
-                std::vector<float> padded(testOffsetFrames, 0.0f);
-                for (int i = 0; i < maxNegOffset; ++i) padded[i] = cosineSimLookbehind[i];
-                float wSum = 0.0f;
+                std::fill(padded.begin(), padded.end(), 0.0f);
+                for (int i = 0; i < maxNegOffset; ++i) padded[i] = lookbehindBuf[i];
                 for (int i = 0; i < testOffsetFrames; ++i) {
                     lookbehindScore += padded[i] * revWeights[i];
                     wSum += revWeights[i];
                 }
-                lookbehindScore /= wSum;
             } else {
-                float wSum = 0.0f;
                 for (int i = 0; i < maxNegOffset; ++i) {
-                    lookbehindScore += cosineSimLookbehind[i] * revWeights[i];
+                    lookbehindScore += lookbehindBuf[i] * revWeights[i];
                     wSum += revWeights[i];
                 }
-                lookbehindScore /= wSum;
             }
+            lookbehindScore /= wSum;
         }
 
         lp.score = std::max(lookaheadScore, lookbehindScore);
-        candIdx++;
+
+        int wfStart = b1 * hopSize;
+        int wfEnd   = b2 * hopSize;
+        float wfScore = waveformContinuity(monoSignal, signalLen, wfStart, wfEnd, 1024);
+        lp.score *= (0.7f + 0.3f * wfScore);
     }
 
     std::sort(candidates.begin(), candidates.end(),
@@ -267,14 +281,11 @@ void LoopFinder::prioritizeDuration(std::vector<LoopPoint>& candidates) {
     for (auto& lp : candidates)
         loudnessVals.push_back(lp.loudnessDiff);
     std::sort(loudnessVals.begin(), loudnessVals.end());
-    float dbThreshold = loudnessVals[loudnessVals.size() / 2];
+    const float LOUDNESS_CAP = 0.5f;
+    float adaptive = loudnessVals[static_cast<int>(loudnessVals.size() * 0.75f)];
+    float dbThreshold = std::min(LOUDNESS_CAP, adaptive);
 
-    std::vector<float> scores;
-    for (auto& lp : candidates)
-        scores.push_back(lp.score);
-    std::sort(scores.begin(), scores.end());
-    float scoreThreshold = scores[static_cast<int>(scores.size() * 0.9)];
-    scoreThreshold = std::max(scoreThreshold, candidates[0].score - 1e-4f);
+    float scoreThreshold = candidates[0].score * 0.9f;
 
     int bestDurationIdx = 0;
     int64_t bestDuration = 0;
@@ -352,6 +363,11 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
         LF_LOG("[analyze] step 4: median=%.6f", medianRef);
 
         for (int k = 0; k < numFreqBins; ++k) {
+            if (k == 0) {
+                for (int t = 0; t < numFrames; ++t)
+                    powerDB[k][t] = 0.0f;
+                continue;
+            }
             float freq = (k * sampleRate) / static_cast<float>(config.nFFT);
             float f2 = freq * freq;
             float numA = 12194.0f * 12194.0f * f2 * f2;
@@ -376,10 +392,13 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
     if (beatDet.init(config.hopSize, sampleRate)) {
         beatDet.detect(monoSignal, signalLen, beatFrames, bpm);
     } else {
-        fprintf(stderr, "[loopfinder] WARN: aubio init failed, falling back to all frames\n");
-        for (int i = 0; i < numFrames; ++i)
+        fprintf(stderr, "[loopfinder] WARN: aubio init failed, sampling pseudo-beats\n");
+        int step = std::max(1, numFrames / 200);
+        for (int i = 0; i < numFrames; i += step)
             beatFrames.push_back(i);
     }
+    std::sort(beatFrames.begin(), beatFrames.end());
+    beatFrames.erase(std::unique(beatFrames.begin(), beatFrames.end()), beatFrames.end());
     LF_LOG("[analyze] step 5 done: beats=%zu bpm=%.1f", beatFrames.size(), bpm);
 
     // 6. Loop duration constraints
@@ -409,7 +428,7 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
 
     // 8. Score candidates
     LF_LOG("[analyze] step 8: scoreCandidates");
-    scoreCandidates(chromagram, bpm, config.nFFT, config.hopSize, candidates);
+    scoreCandidates(chromagram, monoSignal, signalLen, bpm, config.nFFT, config.hopSize, sampleRate, config.topN, candidates);
 
     // 9. Prioritize longer loops
     LF_LOG("[analyze] step 9: prioritizeDuration");
