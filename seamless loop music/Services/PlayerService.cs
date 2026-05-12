@@ -74,7 +74,7 @@ namespace seamless_loop_music.Services
             return await _loopAnalysisService.FetchTopLoopCandidatesAsync(CurrentTrack.FilePath);
         }
 
-        public async Task<int> CheckPyMusicLooperStatusAsync()
+        public async Task<int> CheckAnalyzerStatusAsync()
         {
             return await _loopAnalysisService.CheckEnvironmentAsync();
         }
