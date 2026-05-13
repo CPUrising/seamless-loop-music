@@ -349,7 +349,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 if (_playbackService.CurrentTrack == null) return;
 
-                if (!await EnsureAnalyzerReadyAsync()) return;
+                if (!await EnsurePyMusicLooperReadyAsync()) return;
 
                 StatusMessage = LocalizationService.Instance["StatusSearching"];
                 
@@ -377,24 +377,30 @@ namespace seamless_loop_music.UI.ViewModels
                 }
 
                 StatusMessage = LocalizationService.Instance["StatusDone"];
-                var win = new LoopListWindow(candidates, _playerService, EnsureAnalyzerReadyAsync);
+                var win = new LoopListWindow(candidates, _playerService, EnsurePyMusicLooperReadyAsync);
                 win.Owner = Application.Current.MainWindow;
                 win.ShowDialog();
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[分析失败] {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[PyRanking失败] {ex.Message}");
             }
         }
 
-        private async Task<bool> EnsureAnalyzerReadyAsync()
+        private async Task<bool> EnsurePyMusicLooperReadyAsync()
         {
-            int status = await _playerService.CheckAnalyzerStatusAsync();
+            int status = await _playerService.CheckPyMusicLooperStatusAsync();
             if (status == 0) return true;
 
-            string detail = _loopAnalysisService.LastError ?? "未知错误";
-            System.Windows.MessageBox.Show($"分析引擎不可用。\n{detail}",
-                "环境检查", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+            if (status == 2)
+            {
+                System.Windows.MessageBox.Show("PyMusicLooper 需要 uv 环境。请先安装 uv：\nhttps://github.com/astral-sh/uv",
+                    "环境检查", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
+                return false;
+            }
+
+            System.Windows.MessageBox.Show("PyMusicLooper 未安装或需要下载。\n请运行: uvx pymusiclooper --version",
+                "环境检查", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             return false;
         }
 

@@ -140,7 +140,7 @@ namespace seamless_loop_music.Models
         public DateTime LastModified { get; set; } = DateTime.Now;
 
         /// <summary>
-        /// 存储循环分析引擎计算的所有候选点 (JSON 格式)
+        /// 存储 PyMusicLooper 计算的所有候选点 (JSON 格式)
         /// </summary>
         public string LoopCandidatesJson { get; set; }
 
