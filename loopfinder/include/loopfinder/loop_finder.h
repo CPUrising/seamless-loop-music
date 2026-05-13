@@ -36,11 +36,13 @@ private:
     void prioritizeDuration(std::vector<LoopPoint>& candidates);
 
     static float cosineSimilarity(const float* a, const float* b, int len);
+    static float dotProduct(const float* a, const float* b, int len);
     static float vectorNorm(const float* v, int len);
     static void  geometricWeights(int len, float* weights, float start, float stop);
     static float waveformContinuity(const float* signal, int signalLen,
                                      int startSample, int endSample,
                                      int windowLen);
+    static void  normalizeChroma(std::vector<std::vector<float>>& chroma);
 };
 
 } // namespace loopfinder

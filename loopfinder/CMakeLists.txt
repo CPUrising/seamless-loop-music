@@ -91,6 +91,11 @@ target_link_libraries(loopfinder PRIVATE
     aubio
 )
 
+find_package(OpenMP)
+if(OpenMP_CXX_FOUND)
+    target_link_libraries(loopfinder PRIVATE OpenMP::OpenMP_CXX)
+endif()
+
 if(BUILD_FOR_ANDROID)
     find_library(log-lib log)
     target_link_libraries(loopfinder PRIVATE ${log-lib})
