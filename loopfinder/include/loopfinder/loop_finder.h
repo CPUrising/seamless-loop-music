@@ -29,9 +29,8 @@ private:
                             std::vector<LoopPoint>& candidates);
 
     void scoreCandidates(const std::vector<std::vector<float>>& chroma,
-                         const float* monoSignal, int signalLen,
-                         float bpm, int nFFT, int hopSize, int sampleRate,
-                         int topN, std::vector<LoopPoint>& candidates);
+                         float bpm, int hopSize, int sampleRate,
+                         std::vector<LoopPoint>& candidates);
 
     void prioritizeDuration(std::vector<LoopPoint>& candidates);
 
