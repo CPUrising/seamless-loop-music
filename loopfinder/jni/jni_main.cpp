@@ -2,9 +2,7 @@
 #include <string>
 #include <vector>
 
-#include "loopfinder/common.h"
-#include "loopfinder/audio_decoder.h"
-#include "loopfinder/loop_finder.h"
+#include "loopfinder/loopfinder_api.h"
 
 extern "C" {
 
@@ -18,50 +16,40 @@ Java_com_cpu_seamlessloopmobile_jni_NativeAudio_analyzeLoopPoints(
     std::string path(pathCStr);
     env->ReleaseStringUTFChars(filePath, pathCStr);
 
-    // 2. Decode audio
-    loopfinder::PCMData pcm;
-    loopfinder::AudioDecoder decoder;
-    if (!decoder.decode(path.c_str(), pcm)) {
+    // 2. Call the C API — handles decode + analyze + trim offset in one call
+    int capacity = std::max(1, static_cast<int>(topN));
+    std::vector<lf_loop_point_t> points(static_cast<size_t>(capacity));
+
+    int count = lf_analyze_file(path.c_str(), topN, points.data(), capacity);
+    if (count <= 0) {
+        // Report error (best effort) and return null
+        const char* err = lf_get_last_error();
+        if (err && err[0]) {
+            jclass exClass = env->FindClass("java/lang/RuntimeException");
+            if (exClass) env->ThrowNew(exClass, err);
+        }
         return nullptr;
     }
 
-    // 3. Configure and run loop finder
-    loopfinder::LoopFinder::Config config;
-    config.minDurationMultiplier = 0.35f;
-    config.topN = std::max(1, static_cast<int>(topN));
-
-    auto loopPoints = loopfinder::LoopFinder().analyze(
-        pcm.samples.data(),
-        static_cast<int>(pcm.samples.size()),
-        pcm.sampleRate,
-        config);
-
-    // 4. Apply trim offset so loop points are relative to original file
-    for (auto& lp : loopPoints) {
-        lp.loopStart += pcm.trimStart;
-        lp.loopEnd   += pcm.trimStart;
-    }
-
-    // 5. Find LoopPoint Java class and constructor
+    // 3. Find LoopPoint Java class and constructor (JJFFF)V
     jclass loopPointClass = env->FindClass("com/cpu/seamlessloopmobile/jni/LoopPoint");
     if (!loopPointClass) return nullptr;
 
     jmethodID constructor = env->GetMethodID(loopPointClass, "<init>", "(JJFFF)V");
     if (!constructor) return nullptr;
 
-    // 6. Create Java array of LoopPoint
-    int count = static_cast<int>(loopPoints.size());
+    // 4. Create Java array of LoopPoint
     jobjectArray result = env->NewObjectArray(count, loopPointClass, nullptr);
     if (!result) return nullptr;
 
     for (int i = 0; i < count; ++i) {
         jobject lpObj = env->NewObject(
             loopPointClass, constructor,
-            static_cast<jlong>(loopPoints[i].loopStart),
-            static_cast<jlong>(loopPoints[i].loopEnd),
-            static_cast<jfloat>(loopPoints[i].noteDiff),
-            static_cast<jfloat>(loopPoints[i].loudnessDiff),
-            static_cast<jfloat>(loopPoints[i].score));
+            static_cast<jlong>(points[i].loopStart),
+            static_cast<jlong>(points[i].loopEnd),
+            static_cast<jfloat>(points[i].noteDiff),
+            static_cast<jfloat>(points[i].loudnessDiff),
+            static_cast<jfloat>(points[i].score));
         env->SetObjectArrayElement(result, i, lpObj);
         env->DeleteLocalRef(lpObj);
     }
