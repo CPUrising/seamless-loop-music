@@ -8,6 +8,7 @@
     <UseWindowsForms>true</UseWindowsForms>
     <LangVersion>latest</LangVersion>
     <ApplicationIcon>Resources\app_icon.ico</ApplicationIcon>
+    <AppDesignerFolder>Statics</AppDesignerFolder>
   </PropertyGroup>
 
   <!-- ================ Native DLL Build & Deploy ================ -->
@@ -98,7 +99,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <Compile Update="Properties\Resources.Designer.cs">
+    <Compile Update="Statics\Resources.Designer.cs">
       <DesignTime>True</DesignTime>
       <AutoGen>True</AutoGen>
       <DependentUpon>Resources.resx</DependentUpon>
@@ -106,7 +107,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <EmbeddedResource Update="Properties\Resources.resx">
+    <EmbeddedResource Update="Statics\Resources.resx">
       <Generator>PublicResXFileCodeGenerator</Generator>
       <LastGenOutput>Resources.Designer.cs</LastGenOutput>
     </EmbeddedResource>
