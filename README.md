@@ -36,7 +36,7 @@
 
 - **寻找起点 (Reverse Match)**：以当前终点前几秒为指纹，在起点附近寻找匹配度最高的位置并自动更新。
 - **寻找终点 (Forward Match)**：以当前起点后几秒为指纹，在终点附近寻找匹配度最高的位置并自动更新。
-- **自动寻环**：集成 `PyMusicLooper` 引擎，支持一键自动化分析并给出候选方案。需要用户自行安装，简要安装方法在使用教程中，或查看项目[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 
+- **自动寻环**：集成对 `PyMusicLooper` 进行C++重写的音频分析引擎，支持一键自动化分析并给出候选方案。
 
 ### 2. A/B 逻辑拼接 (A/B Splicing)
 
@@ -78,24 +78,6 @@
 2. **选择**：在自动寻环的“排行榜”界面双击不同方案进行试听，确认后保存。
    *注意：自动寻环结果受算法限制，可能仍需手动微调。*
 
-### 4. PyMusicLooper 安装教程
-
-可查看[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 项目界面
-
-本项目推荐使用以下两种方式安装环境：
-
-#### 方法 A：使用 uv (推荐，速度快，但是国内网络可能难以下载)
-
-1. 打开 PowerShell，执行安装脚本：
-   `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-2. 重启终端，执行下载：
-   `uv tool install pymusiclooper`
-
-#### 方法 B：使用 pip (传统方式)
-
-在已配置 Python 环境的终端中执行：
-`pipx install pymusiclooper` 或 `pip install pymusiclooper`
-
 ---
 
 ## ⚠️ 注意事项
@@ -108,8 +90,8 @@
 
 ## 🕹️ 致敬与引用
 
-- **灵感来源**：[AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer)
-- **核心依赖**：[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 
+- [AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer)：该项目是本项目的灵感来源，提供了最基本的无缝循环的思路
+- [PyMusicLooper](https://github.com/arkrow/PyMusicLooper)：该项目曾经是自动寻环的核心依赖，后来[**daititii**](https://github.com/daititii)对此用C++重写，大大加快了分析速度，并且无需再安装python库
 
 ---
 
