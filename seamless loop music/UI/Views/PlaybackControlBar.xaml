@@ -70,10 +70,10 @@
             <!-- Left: Current Track Info -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
                 <controls:TrackInfoControl ArtSize="45" IsClickable="True" ShowAlbum="False" CoverImage="{Binding AlbumCoverImage}"/>
-                <Button Command="{Binding RateCommand}"
+                <!--<Button Command="{Binding RateCommand}"
                         CommandParameter="{Binding CurrentTrack}"
                         Style="{StaticResource ControlButtonStyle}"
-                        Margin="10,0,0,0"
+                        Margin="100,0,0,0"
                         ToolTip="{Binding [TipRateCurrent], Source={StaticResource Loc}}">
                     <StackPanel Orientation="Horizontal">
                         <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{StaticResource BrushWarning}"/>
@@ -91,7 +91,7 @@
                             </TextBlock.Style>
                         </TextBlock>
                     </StackPanel>
-                </Button>
+                </Button>-->
             </StackPanel>
 
             <!-- Center: Controls -->
@@ -99,6 +99,29 @@
 
             <!-- Right: Extras & Volume -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Center">
+                <TextBlock Text="{Binding CurrentTrack.Rating}" 
+                                   Foreground="{StaticResource BrushWarning}" 
+                                   VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,0,0">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding CurrentTrack.Rating}" Value="0">
+                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+                <Button Command="{Binding RateCommand}"
+                        CommandParameter="{Binding CurrentTrack}"
+                        Style="{StaticResource ControlButtonStyle}"
+                        Margin="0,0,0,0"
+                        ToolTip="{Binding [TipRateCurrent], Source={StaticResource Loc}}">
+                    <StackPanel Orientation="Horizontal">
+                        <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{StaticResource BrushWarning}"/>
+
+                    </StackPanel>
+                </Button>
                 <Button Command="{Binding ChangePlayModeCommand}"
                         Style="{StaticResource ControlButtonStyle}"
                         Foreground="{StaticResource BrushTextSecondary}"
