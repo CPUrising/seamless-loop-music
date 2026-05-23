@@ -32,7 +32,7 @@ namespace seamless_loop_music.Models
         public string FilePath { get; set; }
         public string FileName { get; set; }
 
-        public string DisplayName 
+        public string DisplayName
         { 
             get => _displayName; 
             set { _displayName = value; OnPropertyChanged(); OnPropertyChanged(nameof(Title)); } 
