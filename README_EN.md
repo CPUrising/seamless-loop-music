@@ -67,20 +67,6 @@ Click the **Loop Icon (∞-shaped)** on the right side of a track in the list:
 2. **Selection**: Double-click candidates in the "Ranking List" to audition and save the best one.
 *Note: Results are algorithm-dependent; manual fine-tuning may still be required for complex tracks.*
 
-### 4. PyMusicLooper Installation
-You can visit the [PyMusicLooper](https://github.com/arkrow/PyMusicLooper) project page or use one of the following methods:
-
-#### Method A: Using uv (Recommended, Faster)
-1. Open PowerShell and run the installation script:
-   `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-2. Restart the terminal and install:
-   `uv tool install pymusiclooper`
-   *(Note: May be slow to download in some regions).*
-
-#### Method B: Using pip (Traditional)
-Run in a terminal with Python/pip configured:
-`pipx install pymusiclooper` or `pip install pymusiclooper`
-
 ---
 
 ## ⚠️ Notes

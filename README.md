@@ -78,23 +78,6 @@
 2. **选择**：在自动寻环的“排行榜”界面双击不同方案进行试听，确认后保存。
    *注意：自动寻环结果受算法限制，可能仍需手动微调。*
 
-### 4. PyMusicLooper 安装教程
-
-可查看[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 项目界面
-
-本项目推荐使用以下两种方式安装环境：
-
-#### 方法 A：使用 uv (推荐，速度快，但是国内网络可能难以下载)
-
-1. 打开 PowerShell，执行安装脚本：
-   `powershell -ExecutionPolicy ByPass -c "irm https://astral.sh/uv/install.ps1 | iex"`
-2. 重启终端，执行下载：
-   `uv tool install pymusiclooper`
-
-#### 方法 B：使用 pip (传统方式)
-
-在已配置 Python 环境的终端中执行：
-`pipx install pymusiclooper` 或 `pip install pymusiclooper`
 
 ---
 
