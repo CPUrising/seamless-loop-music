@@ -8,10 +8,10 @@
 
 ## 2. 删除的文件
 
-| 文件 | 原因 |
-|------|------|
+| 文件                                 | 原因                     |
+| ------------------------------------ | ------------------------ |
 | `Services/PyMusicLooperWrapper.cs` | 移除 Python CLI 调用封装 |
-| `Services/ILoopAnalysisBackend.cs` | 单一后端无需抽象接口 |
+| `Services/ILoopAnalysisBackend.cs` | 单一后端无需抽象接口     |
 
 ## 3. 变更文件清单
 
@@ -69,6 +69,7 @@ loopfinder.dll  (C++, loopfinder 项目)
 ```
 
 DI 注册仅一行：
+
 ```csharp
 containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
 ```
@@ -77,10 +78,10 @@ containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>()
 
 ## 5. CheckAnalyzerStatusAsync 返回值
 
-| 值 | 含义 |
-|----|------|
-| 0 | `loopfinder.dll` 已加载，可直接分析 |
-| 1 | DLL 缺失，提示用户编译原生库 |
+| 值 | 含义                                  |
+| -- | ------------------------------------- |
+| 0  | `loopfinder.dll` 已加载，可直接分析 |
+| 1  | DLL 缺失，提示用户编译原生库          |
 
 不再有「需要下载 uv」的中间状态（原生 DLL 为预编译产物）。
 
@@ -94,7 +95,8 @@ containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>()
 建议后续手动修改 `.resx` 中的中文值以移除「Py」前缀（保留键名不变可避免破坏 XAML 绑定）。
 
 使用方法：loopfinder目录下
-
+```bash
 cmake -B build -A x64
 cmake --build build --config Release
+```
 将生成的dll移入seamless loop music.exe同级目录下即可
