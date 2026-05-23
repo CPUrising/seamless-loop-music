@@ -36,7 +36,7 @@
 
 - **寻找起点 (Reverse Match)**：以当前终点前几秒为指纹，在起点附近寻找匹配度最高的位置并自动更新。
 - **寻找终点 (Forward Match)**：以当前起点后几秒为指纹，在终点附近寻找匹配度最高的位置并自动更新。
-- **自动寻环**：集成 `PyMusicLooper` 引擎，支持一键自动化分析并给出候选方案。需要用户自行安装，简要安装方法在使用教程中，或查看项目[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 
+- **自动寻环**：集成对 `PyMusicLooper` 进行C++重写的音频分析引擎，支持一键自动化分析并给出候选方案。
 
 ### 2. A/B 逻辑拼接 (A/B Splicing)
 
@@ -78,7 +78,6 @@
 2. **选择**：在自动寻环的“排行榜”界面双击不同方案进行试听，确认后保存。
    *注意：自动寻环结果受算法限制，可能仍需手动微调。*
 
-
 ---
 
 ## ⚠️ 注意事项
@@ -91,8 +90,8 @@
 
 ## 🕹️ 致敬与引用
 
-- **灵感来源**：[AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer)
-- **核心依赖**：[PyMusicLooper](https://github.com/arkrow/PyMusicLooper) 
+- [AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer)：该项目是本项目的灵感来源，提供了最基本的无缝循环的思路
+- [PyMusicLooper](https://github.com/arkrow/PyMusicLooper)：该项目曾经是自动寻环的核心依赖，后来[**daititii**](https://github.com/daititii)对此用C++重写，大大加快了分析速度，并且无需再安装python库
 
 ---
 

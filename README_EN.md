@@ -34,7 +34,7 @@ A specialized management and playback tool designed for seamless looping of game
 Provides two phase-alignment modes for tracks with an "Intro + Loop" structure:
 - **Reverse Match**: Uses the last few seconds before the current end as a fingerprint to find the best matching position near the start point.
 - **Forward Match**: Uses the first few seconds after the current start as a fingerprint to find the best matching position near the end point.
-- **Extreme Search**: Integrated with the `PyMusicLooper` engine for automated one-click analysis and candidate generation. (Requires manual installation; see the Usage section for details or visit the [PyMusicLooper](https://github.com/arkrow/PyMusicLooper) project).
+- **Auto Analyze**：Integrates a C++ port of the PyMusicLooper audio analysis engine, enabling one-click automated analysis and generating candidate loop points.
 
 ### 2. A/B Splicing (A/B Splicing)
 Supports logically concatenating two independent tracks (e.g., `Intro.wav` + `Loop.wav`) into a single playable song.
@@ -65,7 +65,7 @@ Click the **Loop Icon (∞-shaped)** on the right side of a track in the list:
 ### 3. Automatic Search (PyMusicLooper)
 1. **Analysis**: Select tracks in batch and choose "Auto Search." The engine will calculate the best loop positions.
 2. **Selection**: Double-click candidates in the "Ranking List" to audition and save the best one.
-*Note: Results are algorithm-dependent; manual fine-tuning may still be required for complex tracks.*
+*Note: Results are algorithm-dependent; manual fine-tuning may still be required for complex tracks.
 
 ---
 
@@ -79,8 +79,8 @@ Click the **Loop Icon (∞-shaped)** on the right side of a track in the list:
 
 ## 🕹️ Credits
 
-- **Inspiration**: [AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer)
-- **Dependency**: [PyMusicLooper](https://github.com/arkrow/PyMusicLooper)
+- **[AokanaMusicPlayer](https://github.com/melodicule/AokanaMusicPlayer):** This project served as the inspiration for this project, providing the most fundamental concept for seamless looping.
+- **[PyMusicLooper](https://github.com/arkrow/PyMusicLooper):** This project was once the core dependency for automatic loop finding. Later, [**daititii**](https://github.com/daititii) rewrote it in C++, significantly speeding up the analysis and eliminating the need to install Python libraries.
 
 ---
 
