@@ -25,6 +25,17 @@ namespace seamless_loop_music
             get { return (Thickness)GetValue(MaximizedPaddingProperty); }
             set { SetValue(MaximizedPaddingProperty, value);}
         }
+        private void CalculateMaximizedPadding()
+        {
+            double screenHeight = SystemParameters.PrimaryScreenHeight;
+
+            // 获取工作区高度（不包含任务栏）
+            double workAreaHeight = SystemParameters.WorkArea.Height;
+
+            // 计算任务栏高度
+            double taskBarHeight = screenHeight - workAreaHeight;
+            this.MaximizedPadding = new Thickness(8, 8, 8, taskBarHeight + 8);
+        }
         public MainWindow(ITaskbarService taskbarService, 
             IAppStateService appState,
             INotifyIconService notifyIconService, 
@@ -113,17 +124,7 @@ namespace seamless_loop_music
         {
             this.WindowState = WindowState.Minimized;
         }
-        private void CalculateMaximizedPadding()
-        {
-            double screenHeight = SystemParameters.PrimaryScreenHeight;
 
-            // 获取工作区高度（不包含任务栏）
-            double workAreaHeight = SystemParameters.WorkArea.Height;
-
-            // 计算任务栏高度
-            double taskBarHeight = screenHeight - workAreaHeight;
-            this.MaximizedPadding = new Thickness(8, 8, 8, taskBarHeight + 8);
-        }
         private void BtnMaximize_Click(object sender, RoutedEventArgs e)
         {
             this.WindowState = this.WindowState == WindowState.Maximized ? WindowState.Normal : WindowState.Maximized;

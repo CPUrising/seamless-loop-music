@@ -4,6 +4,10 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:controls="clr-namespace:seamless_loop_music.UI.Controls"
              xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
+             mc:Ignorable="d"
+             d:DesignHeight="400" d:DesignWidth="800"
              prism:ViewModelLocator.AutoWireViewModel="True">
 
     <UserControl.Resources>
@@ -111,8 +115,12 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <Border Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="Auto"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <Border Grid.Column="0" Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
                     <Grid>
                         <TextBlock Text="{StaticResource IconFolder}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"/>
@@ -120,22 +128,29 @@
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
                     </Grid>
                 </Border>
-                <StackPanel VerticalAlignment="Center">
-                    <Viewbox HorizontalAlignment="Left" MaxHeight="45" StretchDirection="DownOnly" MaxWidth="600">
-                        <TextBlock Text="{Binding CategoryName}" Foreground="{StaticResource BrushTextPrimary}" FontSize="28" FontWeight="Bold"/>
-                    </Viewbox>
-                    <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
+                <Grid Grid.Column="1" VerticalAlignment="Center">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <TextBlock Grid.Row="0" Text="{Binding CategoryName}" 
+                               Foreground="{StaticResource BrushTextPrimary}" 
+                               FontSize="28" FontWeight="Bold"
+                               TextTrimming="CharacterEllipsis"
+                               HorizontalAlignment="Stretch"/>
+                    <TextBlock Grid.Row="1" Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
                                Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
-                               TextTrimming="CharacterEllipsis" MaxWidth="500"
+                               TextTrimming="CharacterEllipsis"
                                ToolTip="{Binding CurrentFolderPath}"/>
-                    <Grid Margin="0,8,0,0">
+                    <Grid Grid.Row="2" Margin="0,8,0,0">
                         <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource BrushAccent}" FontSize="15" FontWeight="Medium"
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityConverter}}"/>
                     </Grid>
-                </StackPanel>
-            </StackPanel>
+                </Grid>
+            </Grid>
         </Border>
 
         <!-- Search Bar -->
