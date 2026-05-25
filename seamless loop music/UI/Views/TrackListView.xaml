@@ -139,14 +139,12 @@
                                    FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Stretch"/>
                     
-                    <ContentControl Grid.Row="1" Style="{StaticResource Marquee}">
                         <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
                                    TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding CurrentFolderPath}"/>
-                    </ContentControl>
-                    
-                    <Grid Grid.Row="2" Margin="0,8,0,0">
+
+                        <Grid Grid.Row="2" Margin="0,8,0,0">
                         <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource BrushAccent}" FontSize="15" FontWeight="Medium"
