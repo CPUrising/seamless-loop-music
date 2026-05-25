@@ -54,11 +54,12 @@ namespace seamless_loop_music
         {
             _debounceTimer.Stop();
             if (_activeCanvas == null || _activePresenter == null) return;
+            _activeCanvas.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                _activeCanvas.UpdateLayout();
+                _activePresenter.UpdateLayout();
 
-            _activeCanvas.UpdateLayout();
-            _activePresenter.UpdateLayout();
-
-            double windowWidth = _activeCanvas.ActualWidth;
+                double windowWidth = _activeCanvas.ActualWidth;
             double textWidth = _activePresenter.ActualWidth;
             // 输出调试信息
             if (textWidth<= 0 || windowWidth <= 0)
@@ -128,7 +129,7 @@ namespace seamless_loop_music
                 Storyboard storyboard = new Storyboard();
                 storyboard.Children.Add(resetAnimation);
                 storyboard.Begin();
-            }
+            }}), DispatcherPriority.Background);
         }
         /// <summary>
         /// 轻量级强控重置：将文字归位
@@ -174,10 +175,7 @@ namespace seamless_loop_music
         private void Marquee_Loaded(object sender, RoutedEventArgs e)
         {
              if (sender is ContentPresenter presenter && presenter.Parent is Canvas canvas)
-                //presenter.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
-                //{
                     CheckAndAnimate(canvas, presenter);
-                //}));
         }
     }
 }
