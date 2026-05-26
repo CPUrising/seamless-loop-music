@@ -107,6 +107,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
             containerRegistry.RegisterSingleton<IAppStateService, AppStateService>();
+            containerRegistry.RegisterSingleton<AudioDeviceMonitorService>();
         }
 
         protected override void OnInitialized()
@@ -130,6 +131,8 @@ namespace seamless_loop_music
 
                 var notifyIconService = Container.Resolve<INotifyIconService>();
                 notifyIconService.Initialize();
+
+                Container.Resolve<AudioDeviceMonitorService>();
 
                 // Perform startup cleanup and restore last app state
                 Task.Run(async () => 

@@ -188,6 +188,36 @@ namespace seamless_loop_music
                  return;
             }
 
+            // 设备丢失后恢复：重建播放器，保留流位置
+            if (_deviceLost)
+            {
+                _deviceLost = false;
+                try
+                {
+                    float currentVolume = _volume;
+                    _wavePlayer.PlaybackStopped -= WavePlayer_PlaybackStopped;
+                    _wavePlayer?.Dispose();
+
+                    _wavePlayer = new WaveOutEvent
+                    {
+                        DesiredLatency = 200,
+                        NumberOfBuffers = 3,
+                        Volume = currentVolume
+                    };
+                    _wavePlayer.Init(_bufferedProvider);
+                    _wavePlayer.PlaybackStopped += WavePlayer_PlaybackStopped;
+
+                    _wavePlayer.Play();
+                    OnPlayStateChanged?.Invoke(PlaybackState.Playing);
+                    OnStatusChanged?.Invoke("Playback recovered.");
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    LogDebug($"Device recovery failed: {ex.Message}");
+                }
+            }
+
             // 如果是暂停状态，直接恢复播放
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Paused)
             {
@@ -301,11 +331,20 @@ namespace seamless_loop_music
         /// <summary>
         /// 暂停播放
         /// </summary>
+        private volatile bool _deviceLost = false;
+
         public void Pause()
         {
             if (_wavePlayer != null && _wavePlayer.PlaybackState == PlaybackState.Playing)
             {
-                _wavePlayer.Pause();
+                try
+                {
+                    _wavePlayer.Pause();
+                }
+                catch (NAudio.MmException)
+                {
+                    _deviceLost = true;
+                }
                 OnPlayStateChanged?.Invoke(PlaybackState.Paused);
                 OnStatusChanged?.Invoke("Paused");
             }
