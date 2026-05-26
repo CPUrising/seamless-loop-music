@@ -27,20 +27,29 @@
         </Border>
 
         <!-- Info -->
-        <StackPanel Grid.Column="1" VerticalAlignment="Center">
-            <TextBlock Text="{Binding CurrentTrack.Title, FallbackValue='Not Playing'}" 
-                       FontSize="{Binding TitleFontSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=14}" 
-                       FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" 
-                       TextTrimming="CharacterEllipsis"/>
-            <TextBlock Text="{Binding CurrentTrack.Artist, FallbackValue='Unknown Artist'}" 
+        <Grid Grid.Column="1" VerticalAlignment="Center" HorizontalAlignment="Stretch">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="Auto"/>
+            </Grid.RowDefinitions>
+            <ContentControl Grid.Row="0" 
+                            Content="{Binding CurrentTrack.Title, FallbackValue='Not Playing'}" 
+                            FontSize="{Binding TitleFontSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=14}" 
+                            FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" 
+                            Style="{StaticResource Marquee}"
+                            />
+            <TextBlock Grid.Row="1" 
+                       Text="{Binding CurrentTrack.Artist, FallbackValue='Unknown Artist'}" 
                        FontSize="{Binding SubtitleFontSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=12}" 
                        Foreground="{StaticResource BrushTextPrimary}" Opacity="0.7"
                        Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
-            <TextBlock x:Name="AlbumText" Text="{Binding CurrentTrack.Album}" 
+            <TextBlock Grid.Row="2" 
+                       x:Name="AlbumText" Text="{Binding CurrentTrack.Album}" 
                        FontSize="11" Foreground="{StaticResource BrushTextPrimary}" Opacity="0.5"
                        Visibility="{Binding ShowAlbum, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"
                        Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
-        </StackPanel>
+        </Grid>
         
         <!-- Click Overlay if needed -->
         <Button Grid.ColumnSpan="2" Background="Transparent" BorderThickness="0" 

@@ -3,17 +3,25 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:seamless_loop_music.UI.Views"
         xmlns:prism="http://prismlibrary.com/"
-        Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="800" Width="1200"
+        Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="700" Width="1024"
         Icon="/Resources/app_icon.png"
         Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None">
     
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="40" GlassFrameThickness="0" CornerRadius="0" />
+        <WindowChrome CaptionHeight="30" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <Style x:Key="MainWindowStyle" TargetType="Window">
+            <Setter Property="Padding" Value="0"/>
+            <Style.Triggers>
+                <Trigger Property="WindowState" Value="Maximized">
+                    <Setter Property="Padding" Value="{Binding MaximizedPadding, UpdateSourceTrigger=PropertyChanged}"/>
+                </Trigger>
+            </Style.Triggers>
+        </Style>
         <!-- Style for Maximize/Restore button to switch icons based on WindowState -->
         <Style x:Key="MaximizeButtonStyle" TargetType="Button" BasedOn="{StaticResource TitleBarButtonStyle}">
             <Setter Property="Content" Value="{StaticResource PathMaximize}"/>
@@ -24,6 +32,10 @@
             </Style.Triggers>
         </Style>
     </Window.Resources>
+
+    <Window.Style>
+        <StaticResource ResourceKey="MainWindowStyle"/>
+    </Window.Style>
 
     <Window.TaskbarItemInfo>
         <TaskbarItemInfo x:Name="MainTaskbarItemInfo">
@@ -41,7 +53,7 @@
         </TaskbarItemInfo>
     </Window.TaskbarItemInfo>
 
-    <Grid>
+    <Grid Margin="{Binding Padding, RelativeSource={RelativeSource AncestorType=Window}}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title Bar -->
             <RowDefinition Height="*"/>    <!-- Main Content -->
@@ -49,9 +61,9 @@
         </Grid.RowDefinitions>
 
         <!-- Custom Title Bar -->
-        <Grid Grid.Row="0" Height="40" Background="{StaticResource BrushSurfaceDark}">
+        <Grid Grid.Row="0" Height="30" Background="{StaticResource BrushSurfaceDark}">
             <!-- Left Side: Icon and Title -->
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" VerticalAlignment="Center" Margin="12,0">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="12,0">
                 <Image Source="/Resources/app_icon.png" Width="18" Height="18" Margin="0,0,10,0"/>
                 <TextBlock Text="{Binding [AppTitle], Source={StaticResource Loc}}" 
                            Foreground="{StaticResource BrushTextSecondary}" 
@@ -60,22 +72,26 @@
                            FontWeight="Medium"/>
             </StackPanel>
 
-            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" VerticalAlignment="Top">
+            <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
                 <!-- Settings Button (Now in Title Bar) -->
                 <Button Click="BtnSettings_Click" 
+                        Height="NaN"
                         Style="{StaticResource TitleBarButtonStyle}" 
                         Content="{StaticResource PathSettings}"
                         ToolTip="{Binding [Settings], Source={StaticResource Loc}}"/>
                 
                 <!-- System Controls -->
                 <Button Click="BtnMinimize_Click" 
-                        Style="{StaticResource TitleBarButtonStyle}" 
+                        Height="NaN"
+                        Style="{StaticResource TitleBarButtonStyle}"                         
                         Content="{StaticResource PathMinimize}"/>
                 
                 <Button Click="BtnMaximize_Click" 
+                        Height="NaN"
                         Style="{StaticResource MaximizeButtonStyle}"/>
-                
+
                 <Button Click="BtnClose_Click" 
+                        Height="NaN"
                         Style="{StaticResource TitleBarCloseButtonStyle}" 
                         Content="{StaticResource PathClose}"/>
             </StackPanel>
