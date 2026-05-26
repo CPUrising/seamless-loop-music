@@ -6,7 +6,6 @@ using seamless_loop_music.Events;
 using seamless_loop_music.Services;
 using seamless_loop_music.UI.Views;
 using seamless_loop_music.Models;
-using System.ComponentModel;
 
 namespace seamless_loop_music
 {
@@ -17,25 +16,6 @@ namespace seamless_loop_music
         private readonly IPlayerService _playerService;
         private readonly IEventAggregator _eventAggregator;
 
-        public static readonly DependencyProperty MaximizedPaddingProperty =
-            DependencyProperty.Register("MaximizedPadding", typeof(Thickness), typeof(MainWindow), new PropertyMetadata(new Thickness(0)));
-
-        public Thickness MaximizedPadding
-        {
-            get { return (Thickness)GetValue(MaximizedPaddingProperty); }
-            set { SetValue(MaximizedPaddingProperty, value);}
-        }
-        private void CalculateMaximizedPadding()
-        {
-            double screenHeight = SystemParameters.PrimaryScreenHeight;
-
-            // 获取工作区高度（不包含任务栏）
-            double workAreaHeight = SystemParameters.WorkArea.Height;
-
-            // 计算任务栏高度
-            double taskBarHeight = screenHeight - workAreaHeight;
-            this.MaximizedPadding = new Thickness(8, 8, 8, taskBarHeight + 8);
-        }
         public MainWindow(ITaskbarService taskbarService, 
             IAppStateService appState,
             INotifyIconService notifyIconService, 
@@ -43,7 +23,6 @@ namespace seamless_loop_music
             IEventAggregator eventAggregator)
         {
             InitializeComponent();
-            DataContext = this;
             _appState = appState;
             _notifyIconService = notifyIconService;
             _playerService = playerService;
@@ -88,10 +67,6 @@ namespace seamless_loop_music
         protected override void OnStateChanged(System.EventArgs e)
         {
             base.OnStateChanged(e);
-            if (this.WindowState == WindowState.Maximized)
-            {
-                CalculateMaximizedPadding();
-            }
             if (this.WindowState == WindowState.Minimized && _appState.MinimizeToTray)
             {
                 _notifyIconService.HideMainWindow();

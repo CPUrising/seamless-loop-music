@@ -4,10 +4,6 @@
              xmlns:prism="http://prismlibrary.com/"
              xmlns:controls="clr-namespace:seamless_loop_music.UI.Controls"
              xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
-             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
-             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" xmlns:models="clr-namespace:seamless_loop_music.Models" d:DataContext="{d:DesignInstance Type=models:MusicTrack}"
-             mc:Ignorable="d"
-             d:DesignHeight="400" d:DesignWidth="800"
              prism:ViewModelLocator.AutoWireViewModel="True">
 
     <UserControl.Resources>
@@ -19,7 +15,7 @@
             <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
             <Setter Property="FontSize" Value="18"/>
         </Style>
-        
+
         <!-- 精简版模板：仅保留播放按钮和标题/文件名 -->
         <DataTemplate x:Key="CompactTrackTemplate">
             <Grid Height="55" Margin="10,0">
@@ -115,12 +111,8 @@
                     </Style.Triggers>
                 </Style>
             </Border.Style>
-            <Grid>
-                <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="Auto"/>
-                    <ColumnDefinition Width="*"/>
-                </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
+            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                <Border Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
                     <Grid>
                         <TextBlock Text="{StaticResource IconFolder}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"/>
@@ -128,30 +120,22 @@
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
                     </Grid>
                 </Border>
-                <Grid Grid.Column="1" VerticalAlignment="Center">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                        <RowDefinition Height="Auto"/>
-                    </Grid.RowDefinitions>
-                    <ContentControl Grid.Row="0" Style="{StaticResource Marquee}" Content="{Binding CategoryName}"
-                                   Foreground="{StaticResource BrushTextPrimary}"
-                                   FontSize="28" FontWeight="Bold"
-                                   HorizontalAlignment="Stretch"/>
-                    
-                        <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
-                                   Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
-                                   TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding CurrentFolderPath}"/>
-
-                        <Grid Grid.Row="2" Margin="0,8,0,0">
+                <StackPanel VerticalAlignment="Center">
+                    <Viewbox HorizontalAlignment="Left" MaxHeight="45" StretchDirection="DownOnly" MaxWidth="600">
+                        <TextBlock Text="{Binding CategoryName}" Foreground="{StaticResource BrushTextPrimary}" FontSize="28" FontWeight="Bold"/>
+                    </Viewbox>
+                    <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
+                               Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
+                               TextTrimming="CharacterEllipsis" MaxWidth="500"
+                               ToolTip="{Binding CurrentFolderPath}"/>
+                    <Grid Margin="0,8,0,0">
                         <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
                         <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource BrushAccent}" FontSize="15" FontWeight="Medium"
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityConverter}}"/>
                     </Grid>
-                </Grid>
-            </Grid>
+                </StackPanel>
+            </StackPanel>
         </Border>
 
         <!-- Search Bar -->
