@@ -62,30 +62,21 @@ namespace seamless_loop_music.UI
         {
             if (lstCandidates.SelectedItem is LoopCandidateViewModel vm)
             {
-                PreviewCandidate(vm);
+                // 应用循环点以便试听衔接效果
+                _playerService.ApplyLoopCandidate(vm.Candidate);
+                
+                // 跳转到结束前3秒
+                int rate = _playerService.SampleRate;
+                if (rate <= 0) rate = 44100;
+                long previewOffset = rate * 3;
+                long target = vm.Candidate.LoopEnd - previewOffset;
+                if (target < 0) target = 0;
+
+                _playerService.SeekToSample(target);
+                _playerService.Play();
+                
+                // 不再自动退出
             }
-        }
-
-        private void BtnPreview_Click(object sender, RoutedEventArgs e)
-        {
-            if (sender is System.Windows.Controls.Button btn && btn.Tag is LoopCandidateViewModel vm)
-            {
-                PreviewCandidate(vm);
-            }
-        }
-
-        private void PreviewCandidate(LoopCandidateViewModel vm)
-        {
-            _playerService.ApplyLoopCandidate(vm.Candidate);
-
-            int rate = _playerService.SampleRate;
-            if (rate <= 0) rate = 44100;
-            long previewOffset = rate * 3;
-            long target = vm.Candidate.LoopEnd - previewOffset;
-            if (target < 0) target = 0;
-
-            _playerService.SeekToSample(target);
-            _playerService.Play();
         }
 
         private void BtnApply_Click(object sender, RoutedEventArgs e)
