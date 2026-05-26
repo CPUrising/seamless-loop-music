@@ -10,6 +10,7 @@
              d:DesignHeight="450" d:DesignWidth="800">
     <UserControl.Resources>
         <converters:BindingProxy x:Key="VmProxy" Data="{Binding}"/>
+        <converters:InverseBoolConverter x:Key="InverseBool"/>
         <!-- 使用全局设计系统样式 -->
     </UserControl.Resources>
 
@@ -30,7 +31,19 @@
 
             <Border Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="15">
                 <StackPanel>
-                    <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource BrushAccent}" FontWeight="Bold" FontSize="15"/>
+                    <TextBlock Text="{Binding StatusMessage}" FontWeight="Bold" FontSize="15">
+                        <TextBlock.Style>
+                            <Style TargetType="TextBlock">
+                                <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding IsAnalyzing}" Value="True">
+                                        <Setter Property="Foreground" Value="#FF4500"/>
+                                        <Setter Property="FontSize" Value="16"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </TextBlock.Style>
+                    </TextBlock>
                     <TextBlock Text="{Binding AudioInfo}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,0"/>
                 </StackPanel>
             </Border>
@@ -142,6 +155,7 @@
                                 ToolTip="{Binding [ResetABToolTip], Source={StaticResource Loc}}"/>
                         <Button Content="{Binding [PyRanking], Source={StaticResource Loc}}" Command="{Binding PyRankingCommand}" Width="100" Height="42"
                                 Style="{StaticResource PrimaryButton}" Margin="0,0,10,0" Background="{StaticResource BrushRosewater}" Foreground="{StaticResource BrushTitleBar}"
+                                IsEnabled="{Binding IsAnalyzing, Converter={StaticResource InverseBool}}"
                                 ToolTip="{Binding [PyRankingToolTip], Source={StaticResource Loc}}"/>
                         <Button Content="{Binding [ApplyAndTest], Source={StaticResource Loc}}" Command="{Binding ApplyLoopCommand}" Width="130" Height="42"
                                 Style="{StaticResource PrimaryButton}" FontWeight="Bold" Background="{StaticResource BrushAccent}"/>

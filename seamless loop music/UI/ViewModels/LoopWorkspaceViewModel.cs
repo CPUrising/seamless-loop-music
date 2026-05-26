@@ -44,7 +44,11 @@ namespace seamless_loop_music.UI.ViewModels
             
             _eventAggregator.GetEvent<StatusMessageEvent>().Subscribe(msg => 
             {
-                Application.Current.Dispatcher.Invoke(() => StatusMessage = msg);
+                Application.Current.Dispatcher.Invoke(() =>
+                {
+                    if (_isAnalyzing) return;
+                    StatusMessage = msg;
+                });
             });
 
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(c => 
@@ -192,6 +196,13 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         public bool IsABMode => _playbackService.IsABFusionLoaded;
+
+        private bool _isAnalyzing;
+        public bool IsAnalyzing
+        {
+            get => _isAnalyzing;
+            set => SetProperty(ref _isAnalyzing, value);
+        }
 
         private double _matchWindowSize = 1.0;
         public double MatchWindowSize
@@ -351,8 +362,9 @@ namespace seamless_loop_music.UI.ViewModels
 
                 if (!await EnsureAnalyzerReadyAsync()) return;
 
+                IsAnalyzing = true;
                 StatusMessage = LocalizationService.Instance["StatusSearching"];
-                
+
                 List<LoopCandidate> candidates = null;
 
                 if (!string.IsNullOrEmpty(_playbackService.CurrentTrack.LoopCandidatesJson))
@@ -363,7 +375,7 @@ namespace seamless_loop_music.UI.ViewModels
                 if (candidates == null || candidates.Count == 0)
                 {
                     candidates = await _playerService.GetLoopCandidatesAsync();
-                    
+
                     if (candidates != null && candidates.Count > 0)
                     {
                         await _playerService.UpdateTrackLoopCandidatesAsync(_currentTrack, candidates);
@@ -377,6 +389,7 @@ namespace seamless_loop_music.UI.ViewModels
                 }
 
                 StatusMessage = LocalizationService.Instance["StatusDone"];
+                IsAnalyzing = false;
                 var win = new LoopListWindow(candidates, _playerService, EnsureAnalyzerReadyAsync);
                 win.Owner = Application.Current.MainWindow;
                 win.ShowDialog();
@@ -384,6 +397,10 @@ namespace seamless_loop_music.UI.ViewModels
             catch (Exception ex)
             {
                 System.Diagnostics.Debug.WriteLine($"[分析失败] {ex.Message}");
+            }
+            finally
+            {
+                IsAnalyzing = false;
             }
         }
 
