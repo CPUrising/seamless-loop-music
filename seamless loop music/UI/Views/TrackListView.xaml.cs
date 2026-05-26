@@ -57,8 +57,17 @@ namespace seamless_loop_music.UI.Views
         {
             if (TrackList.SelectedItem is MusicTrack track)
             {
+                // 1. 通过列表找到当前被双击的那个物理行容器（ListBoxItem）
+                var listBoxItem = TrackList.ItemContainerGenerator.ContainerFromItem(track) as ListBoxItem;
+
+                if (listBoxItem != null)
+                {
+                    // 在播放前，强行将它的选中状态抹去
+                    listBoxItem.IsSelected = false;
+                }
                 var vm = DataContext as TrackListViewModel;
                 vm?.PlayCommand.Execute(track);
+                e.Handled = true;
             }
         }
 
