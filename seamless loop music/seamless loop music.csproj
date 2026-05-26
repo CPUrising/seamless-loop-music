@@ -14,15 +14,16 @@
   <!-- ================ Native DLL Build & Deploy ================ -->
   <PropertyGroup>
     <SolutionDir Condition="'$(SolutionDir)' == ''">$(MSBuildProjectDirectory)\..\</SolutionDir>
-    <LoopFinderSrc>$(SolutionDir)loopfinder\</LoopFinderSrc>
-    <LoopFinderBuildDir>$(LoopFinderSrc)build\</LoopFinderBuildDir>
-    <LoopFinderDllPath>$(LoopFinderBuildDir)loopfinder.dll</LoopFinderDllPath>
-    <LoopFinderDllPathVS>$(LoopFinderBuildDir)$(Configuration)\loopfinder.dll</LoopFinderDllPathVS>
+    <LoopFinderSrc>$(SolutionDir)loopfinder</LoopFinderSrc>
+    <LoopFinderBuildDir>$(LoopFinderSrc)\build</LoopFinderBuildDir>
+    <LoopFinderDllPath>$(LoopFinderBuildDir)\loopfinder.dll</LoopFinderDllPath>
+    <LoopFinderDllPathVS>$(LoopFinderBuildDir)\Release\loopfinder.dll</LoopFinderDllPathVS>
     <SkipNativeBuild Condition="'$(SkipNativeBuild)' == ''">false</SkipNativeBuild>
   </PropertyGroup>
 
   <!-- Detect whether CMake is available and DLL needs building -->
-  <Target Name="CheckNativeBuild" 
+  <Target Name="CheckNativeBuild"
+          BeforeTargets="Build"
           Condition="'$(SkipNativeBuild)' != 'true'">
     <PropertyGroup>
       <_NativeDllExists Condition="Exists('$(LoopFinderDllPath)') Or Exists('$(LoopFinderDllPathVS)')">true</_NativeDllExists>
@@ -52,16 +53,16 @@
     
     <MakeDir Directories="$(LoopFinderBuildDir)" />
     
-    <Exec Command="cmake -S &quot;$(LoopFinderSrc)&quot; -B &quot;$(LoopFinderBuildDir)&quot; -A x64 -DCMAKE_BUILD_TYPE=$(Configuration)"
+    <Exec Command="cmake -S &quot;$(LoopFinderSrc)&quot; -B &quot;$(LoopFinderBuildDir)&quot; -A x64 -DCMAKE_BUILD_TYPE=Release"
           WorkingDirectory="$(LoopFinderSrc)" />
-    
-    <Exec Command="cmake --build &quot;$(LoopFinderBuildDir)&quot; --config $(Configuration)"
+
+    <Exec Command="cmake --build &quot;$(LoopFinderBuildDir)&quot; --config Release"
           WorkingDirectory="$(LoopFinderSrc)" />
     
     <Message Importance="high" Text="loopfinder.dll built successfully." />
   </Target>
 
-  <!-- Deploy DLL to output directory -->
+  <!-- Deploy DLL to output directory (static items for incremental builds) -->
   <ItemGroup>
     <Content Include="$(LoopFinderDllPath)"
              Condition="Exists('$(LoopFinderDllPath)')">
@@ -76,6 +77,19 @@
       <Link>loopfinder.dll</Link>
     </Content>
   </ItemGroup>
+
+  <!-- Copy DLL to output after first-time build (static ItemGroup won't catch it) -->
+  <Target Name="CopyLoopFinderDll"
+          AfterTargets="BuildLoopFinder">
+    <Copy SourceFiles="$(LoopFinderDllPath)"
+          DestinationFolder="$(OutputPath)"
+          Condition="Exists('$(LoopFinderDllPath)')"
+          SkipUnchangedFiles="true" />
+    <Copy SourceFiles="$(LoopFinderDllPathVS)"
+          DestinationFolder="$(OutputPath)"
+          Condition="Exists('$(LoopFinderDllPathVS)')"
+          SkipUnchangedFiles="true" />
+  </Target>
 
   <!-- ================ Standard Items ================ -->
 
