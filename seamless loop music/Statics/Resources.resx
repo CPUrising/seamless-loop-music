@@ -409,4 +409,16 @@
   <data name="BtnNow" xml:space="preserve">
     <value>Now</value>
   </data>
+  <data name="StatusSearching" xml:space="preserve">
+    <value>Analyzing loop points, please wait...</value>
+  </data>
+  <data name="StatusDone" xml:space="preserve">
+    <value>Done.</value>
+  </data>
+  <data name="StatusNoCandidates" xml:space="preserve">
+    <value>No loop candidates found.</value>
+  </data>
+  <data name="PyRankingPreviewTip" xml:space="preserve">
+    <value>Preview this loop point</value>
+  </data>
 </root>

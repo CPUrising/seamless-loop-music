@@ -409,4 +409,16 @@
   <data name="BtnNow" xml:space="preserve">
     <value>现在</value>
   </data>
+  <data name="StatusSearching" xml:space="preserve">
+    <value>正在分析循环点，请稍候...</value>
+  </data>
+  <data name="StatusDone" xml:space="preserve">
+    <value>完成。</value>
+  </data>
+  <data name="StatusNoCandidates" xml:space="preserve">
+    <value>未找到合适的循环方案。</value>
+  </data>
+  <data name="PyRankingPreviewTip" xml:space="preserve">
+    <value>试听此循环方案</value>
+  </data>
 </root>
