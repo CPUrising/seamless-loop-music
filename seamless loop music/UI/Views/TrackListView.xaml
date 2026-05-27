@@ -139,10 +139,10 @@
                                    FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Stretch"/>
                     
-                        <TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
+                        <!--<TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
                                    TextTrimming="CharacterEllipsis"
-                                   ToolTip="{Binding CurrentFolderPath}"/>
+                                   ToolTip="{Binding CurrentFolderPath}"/>-->
 
                         <Grid Grid.Row="2" Margin="0,8,0,0">
                         <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
