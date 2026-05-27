@@ -43,7 +43,7 @@ namespace seamless_loop_music.UI.Controls
         private void ProgressBar_ValueChanged(object sender, RoutedPropertyChangedEventArgs<double> e)
         {
             if (_isDragging) return;
-
+            if (!ProgressBar.IsMouseCaptureWithin) return;
             if (DataContext is ViewModels.PlaybackControlBarViewModel vm)
             {
                 if (!vm.IsUpdating)

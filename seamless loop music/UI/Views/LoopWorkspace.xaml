@@ -28,9 +28,9 @@
                 <RowDefinition Height="Auto"/>
                 <RowDefinition Height="Auto"/>
             </Grid.RowDefinitions>
-            <TextBlock Grid.Row="0" Text="{Binding [FilePathTitle], Source={StaticResource Loc}}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
+            <Label Grid.Row="0" Content="{Binding [FilePathTitle], Source={StaticResource Loc}}" FontSize="12" Foreground="{StaticResource BrushTextSecondary}"/>
             <ContentControl Grid.Row="1" Content="{Binding FilePath, Mode=OneWay}" Style="{StaticResource Marquee}"
-                      FontSize="14" FontWeight="Bold" Margin="-2,2,0,10" 
+                      FontSize="14" FontWeight="Bold" Margin="5,0,5,10" 
                       Background="Transparent" Foreground="{StaticResource BrushTextPrimary}" BorderThickness="0" Padding="0"
                        Cursor="IBeam"/>
 
