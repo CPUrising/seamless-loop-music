@@ -37,6 +37,22 @@
         <StaticResource ResourceKey="MainWindowStyle"/>
     </Window.Style>
 
+    <Window.TaskbarItemInfo>
+        <TaskbarItemInfo x:Name="MainTaskbarItemInfo">
+            <TaskbarItemInfo.ThumbButtonInfos>
+                <ThumbButtonInfo x:Name="ThumbPrev"
+                                 Description="Previous"
+                                 ImageSource="{StaticResource DrawingIconPrev}"/>
+                <ThumbButtonInfo x:Name="ThumbPlayPause"
+                                 Description="Play/Pause"
+                                 ImageSource="{StaticResource DrawingIconPlay}"/>
+                <ThumbButtonInfo x:Name="ThumbNext"
+                                 Description="Next"
+                                 ImageSource="{StaticResource DrawingIconNext}"/>
+            </TaskbarItemInfo.ThumbButtonInfos>
+        </TaskbarItemInfo>
+    </Window.TaskbarItemInfo>
+
 
 
     <Grid Margin="{Binding Padding, RelativeSource={RelativeSource AncestorType=Window}}">

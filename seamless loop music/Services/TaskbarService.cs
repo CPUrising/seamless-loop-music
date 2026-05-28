@@ -14,16 +14,13 @@ namespace seamless_loop_music.Services
     {
         private readonly IEventAggregator _eventAggregator;
         private readonly IPlaybackService _playbackService;
+        
         private TaskbarItemInfo _taskbarItemInfo;
-        private readonly DispatcherTimer _progressTimer;
-
-        private Window _proxyWindow;
-        private IntPtr _proxyHwnd = IntPtr.Zero;
+        private Window _ownerWindow;
         private IntPtr _mainHwnd = IntPtr.Zero;
         private ITaskbarList3 _taskbarList;
-        private bool _buttonsAdded = false;
-
-        private static readonly Guid CLSID_TaskbarList = new Guid("56FDF344-FD6D-11d0-958A-006097C9A090");
+        
+        private readonly DispatcherTimer _progressTimer;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -37,19 +34,7 @@ namespace seamless_loop_music.Services
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr hObject);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
-        private static extern IntPtr SendMessage(IntPtr hWnd, int msg, IntPtr wParam, IntPtr lParam);
-
-        [DllImport("user32.dll")]
-        private static extern bool DestroyIcon(IntPtr hIcon);
-
-        private const uint ID_PREV = 101;
-        private const uint ID_PLAYPAUSE = 102;
-        private const uint ID_NEXT = 103;
-
-        private IntPtr _hIconPrev = IntPtr.Zero;
-        private IntPtr _hIconPlayPause = IntPtr.Zero;
-        private IntPtr _hIconNext = IntPtr.Zero;
+        private const int WM_DWMSENDICONICTHUMBNAIL = 0x0323;
 
         public TaskbarService(IEventAggregator eventAggregator, IPlaybackService playbackService)
         {
@@ -69,263 +54,167 @@ namespace seamless_loop_music.Services
         public void Initialize(TaskbarItemInfo taskbarItemInfo, Window ownerWindow)
         {
             _taskbarItemInfo = taskbarItemInfo;
-
-            if (_taskbarItemInfo != null)
+            _ownerWindow = ownerWindow;
+            
+            if (_taskbarItemInfo != null && _taskbarItemInfo.ThumbButtonInfos.Count >= 3)
             {
-                _taskbarItemInfo.ThumbButtonInfos.Clear();
-                _taskbarItemInfo.ProgressState = TaskbarItemProgressState.None;
-            }
-
-            if (ownerWindow != null)
-            {
-                if (ownerWindow.IsLoaded)
-                {
-                    SetupProxyWindow(ownerWindow);
-                }
-                else
-                {
-                    ownerWindow.Loaded += (s, e) => SetupProxyWindow(ownerWindow);
-                }
-            }
-        }
-        private void SetupProxyWindow(Window ownerWindow)
-        {
-            try
-            {
-                System.IO.File.WriteAllText("proxy_debug.txt", $"[{DateTime.Now}] SetupProxyWindow starting.\n");
-                _mainHwnd = new WindowInteropHelper(ownerWindow).Handle;
-                if (_mainHwnd == IntPtr.Zero) return;
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] _mainHwnd={_mainHwnd}\n");
-
-                _proxyWindow = new Window
-                {
-                    Title = "Seamless Loop Proxy",
-                    Width = 120,
-                    Height = 150,
-                    WindowStyle = WindowStyle.SingleBorderWindow, // 使用标准窗口样式以符合 DWM 规范
-                    ShowInTaskbar = false,
-                    Left = -10000,
-                    Top = -10000,
-                    Visibility = Visibility.Hidden // 隐藏窗口，由 RegisterTab 接管自绘
-                };
-
-                _proxyHwnd = new WindowInteropHelper(_proxyWindow).EnsureHandle();
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] EnsureHandle completed. _proxyHwnd={_proxyHwnd}\n");
-                InitializeTaskbarIntegration();
-            }
-            catch (Exception ex)
-            {
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] SetupProxyWindow EXCEPTION: {ex}\n");
-            }
-        }
-
-        private void InitializeTaskbarIntegration()
-        {
-            try
-            {
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] InitializeTaskbarIntegration starting. _proxyHwnd={_proxyHwnd}, _mainHwnd={_mainHwnd}\n");
-                if (_proxyHwnd == IntPtr.Zero || _mainHwnd == IntPtr.Zero) return;
-
-                var taskbarListType = Type.GetTypeFromCLSID(CLSID_TaskbarList);
-                _taskbarList = (ITaskbarList3)Activator.CreateInstance(taskbarListType);
-                _taskbarList.HrInit();
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] ITaskbarList3 created and initialized successfully.\n");
-
-                // 在代理窗口 _proxyHwnd 上启用 Iconic 属性！
-                int forceIconic = 1;
-                int hasIconicBitmap = 1;
-                int res1 = DwmSetWindowAttribute(_proxyHwnd, 7, ref forceIconic, sizeof(int));
-                int res2 = DwmSetWindowAttribute(_proxyHwnd, 10, ref hasIconicBitmap, sizeof(int));
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] _proxyHwnd DwmSetWindowAttribute completed. res1={res1}, res2={res2}\n");
-
-                _taskbarList.RegisterTab(_proxyHwnd, _mainHwnd);
-                _taskbarList.SetTabOrder(_proxyHwnd, _mainHwnd);
-                _taskbarList.SetTabActive(_proxyHwnd, _mainHwnd, 0);
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] RegisterTab, SetTabOrder and SetTabActive completed.\n");
-
-                // 把 Hook 挂载在代理窗口 _proxyHwnd 上！
-                var hwndSource = HwndSource.FromHwnd(_proxyHwnd);
-                hwndSource?.AddHook(ProxyWndProc);
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] _proxyHwnd HwndSource Hook added.\n");
-
-                // 发送首个重绘消息给代理窗口 _proxyHwnd
-                SendMessage(_proxyHwnd, 0x0323, IntPtr.Zero, (IntPtr)((120 << 16) | 150));
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] SendMessage WM_DWMSENDICONICTHUMBNAIL sent to _proxyHwnd.\n");
-
-                UpdateTaskbarState(_playbackService.PlaybackState);
-            }
-            catch (Exception ex)
-            {
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] InitializeTaskbarIntegration EXCEPTION: {ex}\n");
-            }
-        }
-
-        private void AddThumbButtons()
-        {
-            try
-            {
-                if (_taskbarList == null || _proxyHwnd == IntPtr.Zero || _buttonsAdded) return;
-
-                ReleaseButtonIcons();
-
-                _hIconPrev = CreateArrowIcon(true);
-                _hIconPlayPause = CreatePlayPauseIcon(_playbackService.PlaybackState == PlaybackState.Playing);
-                _hIconNext = CreateArrowIcon(false);
-
-                var buttons = new THUMBBUTTON[3];
-
-                // 使用 THB_ICON | THB_TOOLTIP (0x2 | 0x4 = 6)，排除错误的 THB_BITMAP (0x1) 干扰
-                buttons[0].dwMask = 0x2 | 0x4;
-                buttons[0].iId = ID_PREV;
-                buttons[0].hIcon = _hIconPrev;
-                buttons[0].szTip = "Previous Track";
-                buttons[0].dwFlags = 0x0;
-
-                buttons[1].dwMask = 0x2 | 0x4;
-                buttons[1].iId = ID_PLAYPAUSE;
-                buttons[1].hIcon = _hIconPlayPause;
-                buttons[1].szTip = _playbackService.PlaybackState == PlaybackState.Playing ? "Pause" : "Play";
-                buttons[1].dwFlags = 0x0;
-
-                buttons[2].dwMask = 0x2 | 0x4;
-                buttons[2].iId = ID_NEXT;
-                buttons[2].hIcon = _hIconNext;
-                buttons[2].szTip = "Next Track";
-                buttons[2].dwFlags = 0x0;
-
-                _taskbarList.ThumbBarAddButtons(_proxyHwnd, 3, buttons);
-                _buttonsAdded = true;
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] ThumbBarAddButtons on _proxyHwnd completed successfully.\n");
-            }
-            catch (Exception ex)
-            {
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] AddThumbButtons EXCEPTION: {ex}\n");
-            }
-        }
-
-        private void UpdateThumbButtons()
-        {
-            try
-            {
-                if (_taskbarList == null || _proxyHwnd == IntPtr.Zero || !_buttonsAdded) return;
-
-                if (_hIconPlayPause != IntPtr.Zero)
-                {
-                    DestroyIcon(_hIconPlayPause);
-                }
-                _hIconPlayPause = CreatePlayPauseIcon(_playbackService.PlaybackState == PlaybackState.Playing);
-
-                var buttons = new THUMBBUTTON[3];
-
-                // 使用 THB_ICON | THB_TOOLTIP (0x2 | 0x4 = 6) 确保更新正确的状态
-                buttons[0].dwMask = 0x2 | 0x4;
-                buttons[0].iId = ID_PREV;
-                buttons[0].hIcon = _hIconPrev;
-                buttons[0].szTip = "Previous Track";
-
-                buttons[1].dwMask = 0x2 | 0x4;
-                buttons[1].iId = ID_PLAYPAUSE;
-                buttons[1].hIcon = _hIconPlayPause;
-                buttons[1].szTip = _playbackService.PlaybackState == PlaybackState.Playing ? "Pause" : "Play";
-
-                buttons[2].dwMask = 0x2 | 0x4;
-                buttons[2].iId = ID_NEXT;
-                buttons[2].hIcon = _hIconNext;
-                buttons[2].szTip = "Next Track";
-
-                _taskbarList.ThumbBarUpdateButtons(_proxyHwnd, 3, buttons);
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] ThumbBarUpdateButtons on _proxyHwnd completed successfully.\n");
-            }
-            catch (Exception ex)
-            {
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] UpdateThumbButtons EXCEPTION: {ex}\n");
-            }
-        }
-
-        private IntPtr ProxyWndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
-        {
-            if (msg == 0x0323) // WM_DWMSENDICONICTHUMBNAIL
-            {
-                int width = (int)(((long)lParam >> 16) & 0xFFFF);
-                int height = (int)((long)lParam & 0xFFFF);
-
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] ProxyWndProc received WM_DWMSENDICONICTHUMBNAIL. width={width}, height={height}\n");
-
-                if (!_buttonsAdded)
-                {
-                    AddThumbButtons();
-                }
-
-                SendThumbnailToTaskbar(hwnd); // 固定宽高自绘给 _proxyHwnd
-                handled = true;
-            }
-            else if (msg == 0x0111) // WM_COMMAND
-            {
-                uint buttonId = (uint)LOWORD(wParam);
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] ProxyWndProc received WM_COMMAND. buttonId={buttonId}\n");
-                if (buttonId == ID_PREV)
-                {
-                    _playbackService.Previous();
-                    handled = true;
-                }
-                else if (buttonId == ID_PLAYPAUSE)
-                {
+                _taskbarItemInfo.ThumbButtonInfos[0].Click += (s, e) => _playbackService.Previous();
+                _taskbarItemInfo.ThumbButtonInfos[1].Click += (s, e) => {
                     if (_playbackService.PlaybackState == PlaybackState.Playing)
                         _playbackService.Pause();
                     else
                         _playbackService.Play();
-                    handled = true;
-                }
-                else if (buttonId == ID_NEXT)
+                };
+                _taskbarItemInfo.ThumbButtonInfos[2].Click += (s, e) => _playbackService.Next();
+            }
+
+            if (_ownerWindow != null)
+            {
+                if (_ownerWindow.IsLoaded)
                 {
-                    _playbackService.Next();
-                    handled = true;
+                    SetupTaskbarDwmIntegration();
                 }
+                else
+                {
+                    _ownerWindow.Loaded += (s, e) => SetupTaskbarDwmIntegration();
+                }
+            }
+
+            UpdateTaskbarState(_playbackService.PlaybackState);
+        }
+
+        private void SetupTaskbarDwmIntegration()
+        {
+            try
+            {
+                _mainHwnd = new WindowInteropHelper(_ownerWindow).Handle;
+                if (_mainHwnd == IntPtr.Zero) return;
+
+                // Initialize ITaskbarList3 COM interface
+                var CLSID_TaskbarList = new Guid("56FDF344-FD6D-11d0-958A-006097C9A090");
+                var taskbarListType = Type.GetTypeFromCLSID(CLSID_TaskbarList);
+                _taskbarList = (ITaskbarList3)Activator.CreateInstance(taskbarListType);
+                _taskbarList.HrInit();
+
+                // Enable DWM Iconic representation on the main window directly!
+                int forceIconic = 1;
+                int hasIconicBitmap = 1;
+                DwmSetWindowAttribute(_mainHwnd, 7, ref forceIconic, sizeof(int));   // DWMWA_FORCE_ICONIC_REPRESENTATION
+                DwmSetWindowAttribute(_mainHwnd, 10, ref hasIconicBitmap, sizeof(int)); // DWMWA_HAS_ICONIC_BITMAP
+
+                // Add WndProc hook to the main window
+                var hwndSource = HwndSource.FromHwnd(_mainHwnd);
+                hwndSource?.AddHook(MainWndProc);
+
+                // Initial invalidation to trigger drawing
+                DwmInvalidateIconicBitmaps(_mainHwnd);
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Failed to setup DWM iconic taskbar integration: {ex.Message}");
+            }
+        }
+
+        private IntPtr MainWndProc(IntPtr hwnd, int msg, IntPtr wParam, IntPtr lParam, ref bool handled)
+        {
+            if (msg == WM_DWMSENDICONICTHUMBNAIL)
+            {
+                int maxWidth = (int)(((long)lParam >> 16) & 0xFFFF);
+                int maxHeight = (int)((long)lParam & 0xFFFF);
+
+                SendThumbnailToTaskbar(hwnd, maxWidth, maxHeight);
+                handled = true;
             }
             return IntPtr.Zero;
         }
 
-        private void SendThumbnailToTaskbar(IntPtr hwnd)
+        private void SendThumbnailToTaskbar(IntPtr hwnd, int maxWidth, int maxHeight)
         {
             string coverPath = _playbackService.CurrentTrack?.EffectiveCoverPath;
             System.Drawing.Bitmap bitmap = null;
 
-            // 固定尺寸绘制，逼迫 DWM 在缩放时展示黄金竖屏卡片比例 120 x 150
-            int width = 120;
-            int height = 150;
-
             try
             {
-                bitmap = new System.Drawing.Bitmap(width, height);
+                // Create a bitmap that matches EXACTLY the dimensions DWM expects.
+                // This completely bypasses DWM's aspect ratio scaling bug, eliminating any first-hover stretching!
+                bitmap = new System.Drawing.Bitmap(maxWidth, maxHeight);
+                
                 using (var g = System.Drawing.Graphics.FromImage(bitmap))
                 {
                     g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
                     g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                     g.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
-                    g.TextRenderingHint = System.Drawing.Text.TextRenderingHint.ClearTypeGridFit;
 
-                    // 高逼格深色渐变背景
-                    using (var cardBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                        new System.Drawing.Point(0, 0),
-                        new System.Drawing.Point(0, height),
-                        System.Drawing.Color.FromArgb(32, 32, 42),
-                        System.Drawing.Color.FromArgb(16, 16, 22)))
+                    // Fill background with a fallback deep dark theme color (#1E1E2E equivalent)
+                    using (var bgBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(30, 30, 46)))
                     {
-                        g.FillRectangle(cardBrush, 0, 0, width, height);
+                        g.FillRectangle(bgBrush, 0, 0, maxWidth, maxHeight);
                     }
 
-                    // 正方形专辑封面 120x120，完美展现
-                    int coverSize = 120;
-                    var coverRect = new System.Drawing.Rectangle(0, 0, coverSize, coverSize);
+                    int coverSize = Math.Min(maxWidth, maxHeight);
+                    if (coverSize <= 0) coverSize = 120; // Safe fallback
+
+                    // Calculate centered square bounds for the crisp cover art (leaving a slight 6px margin for premium look)
+                    int innerMargin = 6;
+                    int innerSize = Math.Max(30, coverSize - innerMargin * 2);
+                    int x = (maxWidth - innerSize) / 2;
+                    int y = (maxHeight - innerSize) / 2;
+                    var coverRect = new System.Drawing.Rectangle(x, y, innerSize, innerSize);
 
                     bool hasLoadedCover = false;
+
                     if (!string.IsNullOrEmpty(coverPath) && System.IO.File.Exists(coverPath))
                     {
                         try
                         {
                             using (var original = new System.Drawing.Bitmap(coverPath))
                             {
+                                // --- GENIUS AMBIENT BLUR BACKGROUND (PROPORTIONAL CROP) ---
+                                // 1. Create a tiny bitmap matching the aspect ratio of the taskbar thumbnail preview (e.g. 24x16)
+                                int tinyW = 24;
+                                int tinyH = 16;
+                                using (var tinyBmp = new System.Drawing.Bitmap(tinyW, tinyH))
+                                {
+                                    using (var gTiny = System.Drawing.Graphics.FromImage(tinyBmp))
+                                    {
+                                        gTiny.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.HighQuality;
+                                        gTiny.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                        gTiny.PixelOffsetMode = System.Drawing.Drawing2D.PixelOffsetMode.HighQuality;
+
+                                        // Apply UniformToFill to scale the square cover to fill the tiny rectangular canvas proportionally
+                                        double tinyScaleX = (double)tinyW / original.Width;
+                                        double tinyScaleY = (double)tinyH / original.Height;
+                                        double tinyScale = Math.Max(tinyScaleX, tinyScaleY);
+
+                                        int tinyDrawW = (int)Math.Round(original.Width * tinyScale);
+                                        int tinyDrawH = (int)Math.Round(original.Height * tinyScale);
+                                        int tinyX = (tinyW - tinyDrawW) / 2;
+                                        int tinyY = (tinyH - tinyDrawH) / 2;
+
+                                        gTiny.DrawImage(original, new System.Drawing.Rectangle(tinyX, tinyY, tinyDrawW, tinyDrawH));
+                                    }
+
+                                    // 2. Scale the tiny cropped image back up to full size to create a perfect, unstretched blur!
+                                    g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
+                                    g.DrawImage(tinyBmp, new System.Drawing.Rectangle(0, 0, maxWidth, maxHeight));
+                                }
+
+                                // 3. Draw a semi-transparent dark overlay over the blurred background to darken it and add depth
+                                using (var darkenBrush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(170, 20, 20, 20)))
+                                {
+                                    g.FillRectangle(darkenBrush, 0, 0, maxWidth, maxHeight);
+                                }
+
+                                // --- DRAW CRISP CENTERED COVER ---
+                                g.InterpolationMode = System.Drawing.Drawing2D.InterpolationMode.HighQualityBicubic;
                                 g.DrawImage(original, coverRect);
+
+                                // 4. Draw a subtle thin light border around the centered square for a polished look
+                                using (var borderPen = new System.Drawing.Pen(System.Drawing.Color.FromArgb(60, 255, 255, 255), 1))
+                                {
+                                    g.DrawRectangle(borderPen, coverRect);
+                                }
+
                                 hasLoadedCover = true;
                             }
                         }
@@ -336,6 +225,7 @@ namespace seamless_loop_music.Services
 
                     if (!hasLoadedCover)
                     {
+                        // Fallback: draw beautiful note icon centered in the square
                         using (var musicNoteBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
                             new System.Drawing.Point(coverRect.Left, coverRect.Top),
                             new System.Drawing.Point(coverRect.Left, coverRect.Bottom),
@@ -345,7 +235,7 @@ namespace seamless_loop_music.Services
                             g.FillRectangle(musicNoteBrush, coverRect);
                         }
 
-                        using (var fontNote = new System.Drawing.Font("Segoe UI Symbol", 28f, System.Drawing.FontStyle.Regular))
+                        using (var fontNote = new System.Drawing.Font("Segoe UI Symbol", (float)(innerSize * 0.4), System.Drawing.FontStyle.Regular))
                         using (var brushNote = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(120, 140, 160, 200)))
                         {
                             var sf = new System.Drawing.StringFormat
@@ -356,66 +246,22 @@ namespace seamless_loop_music.Services
                             g.DrawString("♫", fontNote, brushNote, coverRect, sf);
                         }
                     }
-
-                    int infoHeight = height - coverSize; // 30 像素
-                    string artist = _playbackService.CurrentTrack?.Artist ?? "Unknown Artist";
-                    string trackTitle = _playbackService.CurrentTrack?.Title ?? "No Track Playing";
-
-                    using (var fontTitle = new System.Drawing.Font("Segoe UI", 7.2f, System.Drawing.FontStyle.Bold))
-                    using (var fontArtist = new System.Drawing.Font("Segoe UI", 6.2f, System.Drawing.FontStyle.Regular))
-                    using (var brushText = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(240, 240, 240)))
-                    using (var brushSubText = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(160, 170, 185)))
-                    {
-                        var sf = new System.Drawing.StringFormat
-                        {
-                            Alignment = System.Drawing.StringAlignment.Center,
-                            LineAlignment = System.Drawing.StringAlignment.Center,
-                            Trimming = System.Drawing.StringTrimming.EllipsisCharacter,
-                            FormatFlags = System.Drawing.StringFormatFlags.NoWrap
-                        };
-
-                        float textPadding = 1f;
-                        float titleHeight = infoHeight * 0.52f;
-                        float artistHeight = infoHeight * 0.44f;
-
-                        var titleRect = new System.Drawing.RectangleF(4, coverSize + textPadding, width - 8, titleHeight);
-                        var artistRect = new System.Drawing.RectangleF(4, coverSize + titleHeight, width - 8, artistHeight);
-
-                        g.DrawString(trackTitle, fontTitle, brushText, titleRect, sf);
-                        g.DrawString(artist, fontArtist, brushSubText, artistRect, sf);
-                    }
-
-                    // 底部微光蓝色横线条
-                    using (var lineBrush = new System.Drawing.Drawing2D.LinearGradientBrush(
-                        new System.Drawing.Point(0, 0),
-                        new System.Drawing.Point(width, 0),
-                        System.Drawing.Color.FromArgb(80, 122, 180, 255),
-                        System.Drawing.Color.FromArgb(20, 122, 180, 255)))
-                    {
-                        using (var pen = new System.Drawing.Pen(lineBrush, 1.5f))
-                        {
-                            g.DrawLine(pen, 0, height - 1, width, height - 1);
-                        }
-                    }
                 }
 
-                if (bitmap != null)
+                IntPtr hBitmap = bitmap.GetHbitmap();
+                try
                 {
-                    IntPtr hBitmap = bitmap.GetHbitmap();
-                    try
-                    {
-                        DwmSetIconicThumbnail(hwnd, hBitmap, 0);
-                        System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] DwmSetIconicThumbnail called on hwnd={hwnd} successfully.\n");
-                    }
-                    finally
-                    {
-                        DeleteObject(hBitmap);
-                    }
+                    // Submit the fully-dimensioned bitmap to DWM (no scaling or stretching will occur!)
+                    DwmSetIconicThumbnail(hwnd, hBitmap, 0);
+                }
+                finally
+                {
+                    DeleteObject(hBitmap);
                 }
             }
             catch (Exception ex)
             {
-                System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] SendThumbnailToTaskbar EXCEPTION: {ex}\n");
+                System.Diagnostics.Debug.WriteLine($"Error sending iconic thumbnail: {ex.Message}");
             }
             finally
             {
@@ -425,66 +271,69 @@ namespace seamless_loop_music.Services
 
         private void OnTrackLoaded(Models.MusicTrack track)
         {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
-            {
-                UpdateTaskbarState(_playbackService.PlaybackState);
-                if (_proxyHwnd != IntPtr.Zero && _mainHwnd != IntPtr.Zero)
-                {
-                    try
-                    {
-                        _taskbarList.SetTabActive(_proxyHwnd, _mainHwnd, 0);
-                        DwmInvalidateIconicBitmaps(_proxyHwnd);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] OnTrackLoaded SetTabActive/Invalidate EXCEPTION: {ex}\n");
-                    }
-                }
-            });
+            UpdateTaskbarState(_playbackService.PlaybackState);
+            InvalidateThumbnail();
         }
 
         private void OnPlaybackStateChanged(PlaybackState state)
         {
-            System.Windows.Application.Current.Dispatcher.Invoke(() =>
+            UpdateTaskbarState(state);
+            InvalidateThumbnail();
+        }
+
+        private void InvalidateThumbnail()
+        {
+            if (_mainHwnd != IntPtr.Zero)
             {
-                UpdateTaskbarState(state);
-                UpdateThumbButtons();
-                if (_proxyHwnd != IntPtr.Zero && _mainHwnd != IntPtr.Zero)
+                try
                 {
-                    try
-                    {
-                        _taskbarList.SetTabActive(_proxyHwnd, _mainHwnd, 0);
-                        DwmInvalidateIconicBitmaps(_proxyHwnd);
-                    }
-                    catch (Exception ex)
-                    {
-                        System.IO.File.AppendAllText("proxy_debug.txt", $"[{DateTime.Now}] OnPlaybackStateChanged SetTabActive/Invalidate EXCEPTION: {ex}\n");
-                    }
+                    DwmInvalidateIconicBitmaps(_mainHwnd);
                 }
-            });
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Failed to invalidate iconic bitmaps: {ex.Message}");
+                }
+            }
         }
 
         private void UpdateTaskbarState(PlaybackState state)
         {
-            if (_taskbarList == null || _mainHwnd == IntPtr.Zero) return;
+            if (_taskbarItemInfo == null) return;
 
             System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
+                // Toggle native Play/Pause icons
+                if (_taskbarItemInfo.ThumbButtonInfos.Count >= 2)
+                {
+                    var playPauseBtn = _taskbarItemInfo.ThumbButtonInfos[1];
+                    if (state == PlaybackState.Playing)
+                    {
+                        playPauseBtn.ImageSource = (System.Windows.Media.ImageSource)System.Windows.Application.Current.FindResource("DrawingIconPause");
+                        playPauseBtn.Description = "Pause";
+                    }
+                    else
+                    {
+                        playPauseBtn.ImageSource = (System.Windows.Media.ImageSource)System.Windows.Application.Current.FindResource("DrawingIconPlay");
+                        playPauseBtn.Description = "Play";
+                    }
+                }
+
                 switch (state)
                 {
                     case PlaybackState.Playing:
-                        _taskbarList.SetProgressState(_mainHwnd, 0x01);
+                        _taskbarItemInfo.ProgressState = TaskbarItemProgressState.Normal;
                         if (!_progressTimer.IsEnabled) _progressTimer.Start();
                         break;
                     case PlaybackState.Paused:
-                        _taskbarList.SetProgressState(_mainHwnd, 0x02);
+                        _taskbarItemInfo.ProgressState = TaskbarItemProgressState.Paused;
                         if (_progressTimer.IsEnabled) _progressTimer.Stop();
                         UpdateProgress();
                         break;
                     case PlaybackState.Stopped:
                     default:
-                        _taskbarList.SetProgressState(_mainHwnd, 0x00);
+                        _taskbarItemInfo.ProgressState = TaskbarItemProgressState.None;
                         if (_progressTimer.IsEnabled) _progressTimer.Stop();
+                        _taskbarItemInfo.ProgressValue = 0;
                         break;
                 }
             });
@@ -497,118 +346,21 @@ namespace seamless_loop_music.Services
 
         private void UpdateProgress()
         {
-            if (_taskbarList == null || _mainHwnd == IntPtr.Zero) return;
+            if (_taskbarItemInfo == null) return;
 
-            var total = _playbackService.TotalTime;
-            if (total.TotalSeconds > 0)
+            System.Windows.Application.Current.Dispatcher.Invoke(() =>
             {
-                var progress = _playbackService.CurrentTime.TotalSeconds / total.TotalSeconds;
-                ulong current = (ulong)(progress * 1000);
-                _taskbarList.SetProgressValue(_mainHwnd, current, 1000);
-            }
-            else
-            {
-                _taskbarList.SetProgressValue(_mainHwnd, 0, 1000);
-            }
-        }
-
-        // Hicon 生成辅助方法
-        private IntPtr CreateArrowIcon(bool isLeft)
-        {
-            using (var bmp = new System.Drawing.Bitmap(32, 32))
-            {
-                using (var g = System.Drawing.Graphics.FromImage(bmp))
+                var total = _playbackService.TotalTime;
+                if (total.TotalSeconds > 0)
                 {
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.Clear(System.Drawing.Color.Transparent);
-
-                    using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 220, 220)))
-                    {
-                        var path = new System.Drawing.Drawing2D.GraphicsPath();
-                        if (isLeft)
-                        {
-                            // 左箭头
-                            path.AddPolygon(new[] {
-                                new System.Drawing.PointF(14, 16),
-                                new System.Drawing.PointF(24, 7),
-                                new System.Drawing.PointF(24, 25)
-                            });
-                            path.AddPolygon(new[] {
-                                new System.Drawing.PointF(4, 16),
-                                new System.Drawing.PointF(14, 7),
-                                new System.Drawing.PointF(14, 25)
-                            });
-                        }
-                        else
-                        {
-                            // 右箭头
-                            path.AddPolygon(new[] {
-                                new System.Drawing.PointF(18, 16),
-                                new System.Drawing.PointF(8, 7),
-                                new System.Drawing.PointF(8, 25)
-                            });
-                            path.AddPolygon(new[] {
-                                new System.Drawing.PointF(28, 16),
-                                new System.Drawing.PointF(18, 7),
-                                new System.Drawing.PointF(18, 25)
-                            });
-                        }
-                        g.FillPath(brush, path);
-                    }
+                    var progress = _playbackService.CurrentTime.TotalSeconds / total.TotalSeconds;
+                    _taskbarItemInfo.ProgressValue = Math.Max(0, Math.Min(1, progress));
                 }
-                return bmp.GetHicon();
-            }
-        }
-
-        private IntPtr CreatePlayPauseIcon(bool isPlaying)
-        {
-            using (var bmp = new System.Drawing.Bitmap(32, 32))
-            {
-                using (var g = System.Drawing.Graphics.FromImage(bmp))
+                else
                 {
-                    g.SmoothingMode = System.Drawing.Drawing2D.SmoothingMode.AntiAlias;
-                    g.Clear(System.Drawing.Color.Transparent);
-
-                    using (var brush = new System.Drawing.SolidBrush(System.Drawing.Color.FromArgb(220, 220, 220)))
-                    {
-                        if (isPlaying)
-                        {
-                            // 暂停符 ‖
-                            g.FillRectangle(brush, 8, 6, 5, 20);
-                            g.FillRectangle(brush, 19, 6, 5, 20);
-                        }
-                        else
-                        {
-                            // 播放符 ▶
-                            var path = new System.Drawing.Drawing2D.GraphicsPath();
-                            path.AddPolygon(new[] {
-                                new System.Drawing.PointF(8, 6),
-                                new System.Drawing.PointF(26, 16),
-                                new System.Drawing.PointF(8, 26)
-                            });
-                            g.FillPath(brush, path);
-                        }
-                    }
+                    _taskbarItemInfo.ProgressValue = 0;
                 }
-                return bmp.GetHicon();
-            }
-        }
-
-        private void ReleaseButtonIcons()
-        {
-            if (_hIconPrev != IntPtr.Zero) { DestroyIcon(_hIconPrev); _hIconPrev = IntPtr.Zero; }
-            if (_hIconPlayPause != IntPtr.Zero) { DestroyIcon(_hIconPlayPause); _hIconPlayPause = IntPtr.Zero; }
-            if (_hIconNext != IntPtr.Zero) { DestroyIcon(_hIconNext); _hIconNext = IntPtr.Zero; }
-        }
-
-        private static int LOWORD(IntPtr value)
-        {
-            return (int)((long)value & 0xFFFF);
-        }
-
-        ~TaskbarService()
-        {
-            ReleaseButtonIcons();
+            });
         }
     }
 }

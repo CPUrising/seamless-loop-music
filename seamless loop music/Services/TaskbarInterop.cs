@@ -30,7 +30,7 @@ namespace seamless_loop_music.Services
         void ThumbBarSetImageList(IntPtr hwnd, IntPtr himl);
         void SetOverlayIcon(IntPtr hwnd, IntPtr hIcon, [MarshalAs(UnmanagedType.LPWStr)] string pszDescription);
         void SetThumbnailTooltip(IntPtr hwnd, [MarshalAs(UnmanagedType.LPWStr)] string pszTip);
-        void SetThumbnailClip(IntPtr hwnd, ref RECT prcClip);
+        void SetThumbnailClip(IntPtr hwnd, IntPtr prcClip);
     }
 
     [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Unicode)]
