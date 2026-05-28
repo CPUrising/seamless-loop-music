@@ -74,7 +74,7 @@
             </Grid.ColumnDefinitions>
             <!-- Left: Current Track Info -->
             <Grid Grid.Column="0" HorizontalAlignment="Stretch">
-                <controls:TrackInfoControl ArtSize="45" IsClickable="True" ShowAlbum="False" CoverImage="{Binding AlbumCoverImage}"/>
+                <controls:TrackInfoControl x:Name="TrackInfo" ArtSize="45" IsClickable="True" ShowAlbum="False" CoverImage="{Binding AlbumCoverImage}"/>
                 <!--<Button Command="{Binding RateCommand}"
                         CommandParameter="{Binding CurrentTrack}"
                         Style="{StaticResource ControlButtonStyle}"

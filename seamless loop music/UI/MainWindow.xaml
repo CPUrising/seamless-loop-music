@@ -37,21 +37,7 @@
         <StaticResource ResourceKey="MainWindowStyle"/>
     </Window.Style>
 
-    <Window.TaskbarItemInfo>
-        <TaskbarItemInfo x:Name="MainTaskbarItemInfo">
-            <TaskbarItemInfo.ThumbButtonInfos>
-                <ThumbButtonInfo x:Name="ThumbPrev"
-                                 Description="Previous"
-                                 ImageSource="{StaticResource DrawingIconPrev}"/>
-                <ThumbButtonInfo x:Name="ThumbPlayPause"
-                                 Description="Play/Pause"
-                                 ImageSource="{StaticResource DrawingIconPlay}"/>
-                <ThumbButtonInfo x:Name="ThumbNext"
-                                 Description="Next"
-                                 ImageSource="{StaticResource DrawingIconNext}"/>
-            </TaskbarItemInfo.ThumbButtonInfos>
-        </TaskbarItemInfo>
-    </Window.TaskbarItemInfo>
+
 
     <Grid Margin="{Binding Padding, RelativeSource={RelativeSource AncestorType=Window}}">
         <Grid.RowDefinitions>
@@ -106,7 +92,7 @@
 
         <!-- Bottom Bar: Playback Controls (Always visible) -->
         <Border Grid.Row="2" Background="{StaticResource BrushTitleBar}" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BrushBorder}">
-            <views:PlaybackControlBar />
+            <views:PlaybackControlBar x:Name="BottomPlaybackControlBar" />
         </Border>
     </Grid>
 </Window>

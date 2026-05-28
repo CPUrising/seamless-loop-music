@@ -49,7 +49,7 @@ namespace seamless_loop_music
             _playerService = playerService;
             _eventAggregator = eventAggregator;
 
-            taskbarService.Initialize(this.MainTaskbarItemInfo);
+            taskbarService.Initialize(null, this);
 
             // 订阅事件以动态更新标题
             _eventAggregator.GetEvent<TrackLoadedEvent>().Subscribe(OnTrackLoaded, ThreadOption.UIThread);
@@ -59,6 +59,8 @@ namespace seamless_loop_music
 
             this.Closing += MainWindow_Closing;
         }
+
+
 
         private void OnTrackLoaded(MusicTrack track)
         {
