@@ -33,7 +33,7 @@
             </Grid.RowDefinitions>
 
             <!-- Track Info -->
-            <controls:TrackInfoControl Grid.Row="0" ArtSize="80" TitleFontSize="16" SubtitleFontSize="13" ShowAlbum="True" Margin="0,0,0,15" CoverImage="{Binding CurrentTrack.ImagePath}"/>
+            <controls:TrackInfoControl Grid.Row="0" ArtSize="80" TitleFontSize="16" SubtitleFontSize="13" ShowAlbum="True" Margin="0,0,0,15" CoverImage="{Binding CurrentTrack.EffectiveCoverPath}"/>
 
             <!-- Progress -->
             <controls:ProgressControls Grid.Row="1" VerticalAlignment="Center" Margin="0,5"/>

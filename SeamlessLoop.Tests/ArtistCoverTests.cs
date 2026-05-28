@@ -223,13 +223,13 @@ namespace SeamlessLoop.Tests
         }
 
         [Test]
-        public void RepairMissingCategoryCovers_ShouldBackfill()
+        public void RepairMissingCategoryCovers_ShouldBackfillOnlyParentCategories()
         {
             // 创建一个真实的临时文件以绕过物理校验
             string realPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "repair_test.jpg");
             File.WriteAllText(realPath, "fake image content");
 
-            // 准备数据：有曲目封面，但分类表封面为空
+            // 准备数据：有曲目自身封面，但分类表（专辑、歌手）封面为空
             using (var db = _dbHelper.GetConnection())
             {
                 db.Execute("INSERT INTO Artists (Name, CoverPath) VALUES ('Repair Artist', '')");
@@ -248,9 +248,30 @@ namespace SeamlessLoop.Tests
                 var artistCover = db.ExecuteScalar<string>("SELECT CoverPath FROM Artists WHERE Name = 'Repair Artist'");
                 var albumCover = db.ExecuteScalar<string>("SELECT CoverPath FROM Albums WHERE Name = 'Repair Album'");
                 
+                // 向上补全必须成功
                 Assert.That(artistCover, Is.EqualTo(realPath), "Repair should backfill artist cover.");
                 Assert.That(albumCover, Is.EqualTo(realPath), "Repair should backfill album cover.");
             }
+
+            // 🌟 准备第二首歌曲：没有自身封面
+            using (var db = _dbHelper.GetConnection())
+            {
+                var artistId = db.ExecuteScalar<int>("SELECT Id FROM Artists WHERE Name='Repair Artist'");
+                var albumId = db.ExecuteScalar<int>("SELECT Id FROM Albums WHERE Name='Repair Album'");
+                db.Execute("INSERT INTO Tracks (FileName, FilePath, AlbumId, ArtistId, CoverPath, TotalSamples) VALUES ('s2.mp3', 'p2', @Aid, @Rid, NULL, 200)", new { Aid = albumId, Rid = artistId });
+            }
+
+            // 再次执行修复
+            _dbHelper.RepairMissingCategoryCovers();
+
+            // 验证新规则：s2 曲目本身的 CoverPath 在数据库中必须依然保持 null，绝不被向下传染！
+            var tracks = _trackRepo.GetAll().ToList();
+            var song2 = tracks.FirstOrDefault(t => t.FileName == "s2.mp3");
+            Assert.That(song2, Is.Not.Null);
+            Assert.That(song2.CoverPath, Is.Null, "Song 2 CoverPath in DB must remain null, preventing contamination.");
+            
+            // 但它的 EffectiveCoverPath 计算属性必须能动态回退并成功获取到专辑的封面路径！
+            Assert.That(song2.EffectiveCoverPath, Is.EqualTo(realPath), "EffectiveCoverPath must dynamically fallback to Album cover path.");
 
             if (File.Exists(realPath)) File.Delete(realPath);
         }
