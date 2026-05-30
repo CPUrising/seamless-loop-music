@@ -14,6 +14,11 @@ public:
         int   topN                  = 5;
         int   nFFT                  = 2048;
         int   hopSize               = 512;
+        // Dense grid fallback for PyMusicLooper-like PLP beat coverage.
+        // Lower values allow more off-beat candidates; 4 is steadier for Top5 alignment.
+        int   candidateFrameStep    = 4;
+        bool  useHPSS               = true;
+        bool  prioritizeDuration    = false;
     };
 
     LoopFinder() = default;

@@ -166,10 +166,10 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
         maxPowerPerBeat[i] = 0.0f;
 
         if (frame >= 0 && frame < numPowerDBFrames) {
-            float sum = 0.0f;
+            float maxVal = powerDB.empty() ? 0.0f : powerDB[0][frame];
             for (size_t f = 0; f < powerDB.size(); ++f)
-                sum += powerDB[f][frame];
-            maxPowerPerBeat[i] = sum / powerDB.size();
+                maxVal = std::max(maxVal, powerDB[f][frame]);
+            maxPowerPerBeat[i] = maxVal;
         }
     }
 
@@ -183,13 +183,12 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
         }
     }
 
-    LF_LOG("[findCandidatePairs] noteThreshold=%.6f", NOTE_DEVIATION_THRESHOLD);
-
     for (int endIdx = 0; endIdx < numBeats; ++endIdx) {
         int loopEnd = beats[endIdx];
         if (loopEnd >= numChromaFrames) continue;
         float loudEnd = maxPowerPerBeat[endIdx];
         const float* chromaEnd = &beatChroma[endIdx * 12];
+        float noteThreshold = vectorNorm(chromaEnd, 12) * NOTE_DEVIATION_THRESHOLD;
 
         for (int startIdx = endIdx - 1; startIdx >= 0; --startIdx) {
             int loopStart = beats[startIdx];
@@ -210,11 +209,13 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
             }
             noteDist = std::sqrt(noteDist);
 
-            if (noteDist > NOTE_DEVIATION_THRESHOLD) continue;
+            if (noteDist > noteThreshold) continue;
 
             LoopPoint lp;
             lp.loopStart    = loopStart;
             lp.loopEnd      = loopEnd;
+            lp.loopStartFrame = loopStart;
+            lp.loopEndFrame   = loopEnd;
             lp.noteDiff     = noteDist;
             lp.loudnessDiff = loudnessDiff;
             lp.score        = 0.0f;
@@ -233,6 +234,16 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
     if (candidates.empty()) return;
 
     int numChromaFrames = static_cast<int>(chroma[0].size());
+    std::vector<float> normChroma(static_cast<size_t>(numChromaFrames) * 12, 0.0f);
+    for (int t = 0; t < numChromaFrames; ++t) {
+        float norm2 = 0.0f;
+        for (int c = 0; c < 12; ++c)
+            norm2 += chroma[c][t] * chroma[c][t];
+        if (norm2 <= 1e-10f) continue;
+        float invNorm = 1.0f / std::sqrt(norm2);
+        for (int c = 0; c < 12; ++c)
+            normChroma[static_cast<size_t>(t) * 12 + c] = chroma[c][t] * invNorm;
+    }
 
     float beatsPerSec = bpm / 60.0f;
     int numTestBeats = 12;
@@ -281,7 +292,6 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
     geometricWeights(testOffsetFrames, revWeights.data(), weightStart, 1.0f);
     std::reverse(revWeights.begin(), revWeights.end());
 
-    std::vector<float> chromaA(12), chromaB(12);
     std::vector<float> lookaheadBuf(testOffsetFrames);
     std::vector<float> lookbehindBuf(testOffsetFrames);
     std::vector<float> padded(testOffsetFrames);
@@ -301,11 +311,9 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
 
         float lookaheadScore = 0.0f;
         for (int i = 0; i < maxOffset; ++i) {
-            for (int c = 0; c < 12; ++c) {
-                chromaA[c] = chroma[c][b1 + i];
-                chromaB[c] = chroma[c][b2 + i];
-            }
-            lookaheadBuf[i] = dotProduct(chromaA.data(), chromaB.data(), 12);
+            const float* chromaA = &normChroma[static_cast<size_t>(b1 + i) * 12];
+            const float* chromaB = &normChroma[static_cast<size_t>(b2 + i) * 12];
+            lookaheadBuf[i] = dotProduct(chromaA, chromaB, 12);
         }
 
         if (maxOffset > 0) {
@@ -326,17 +334,15 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
             lookaheadScore /= wSum;
         }
 
-        int b1Start = std::max(0, b1 - testOffsetFrames);
-        int b2Start = std::max(0, b2 - testOffsetFrames);
-        int maxNegOffset = std::min(b1 - b1Start, b2 - b2Start);
+        int maxNegOffset = std::min(testOffsetFrames, std::min(b1, b2));
+        int b1Start = b1 - maxNegOffset;
+        int b2Start = b2 - maxNegOffset;
 
         float lookbehindScore = 0.0f;
         for (int i = 0; i < maxNegOffset; ++i) {
-            for (int c = 0; c < 12; ++c) {
-                chromaA[c] = chroma[c][b1Start + i];
-                chromaB[c] = chroma[c][b2Start + i];
-            }
-            lookbehindBuf[i] = dotProduct(chromaA.data(), chromaB.data(), 12);
+            const float* chromaA = &normChroma[static_cast<size_t>(b1Start + i) * 12];
+            const float* chromaB = &normChroma[static_cast<size_t>(b2Start + i) * 12];
+            lookbehindBuf[i] = dotProduct(chromaA, chromaB, 12);
         }
 
         if (maxNegOffset > 0) {
@@ -439,22 +445,26 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
     LF_PERF("STFT", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
     t0 = t1;
 
-    // 2. HPSS
-    LF_LOG("[analyze] step 2: HPSS");
-    HPSS hpss;
+    // 2. Optional HPSS
+    LF_LOG("[analyze] step 2: HPSS use=%d", config.useHPSS ? 1 : 0);
     std::vector<std::vector<float>> harmonicSpec;
-    hpss.harmonicOnly(powerSpec, harmonicSpec);
-    LF_LOG("[analyze] step 2 done: harmonic %zux%zu", harmonicSpec.size(),
-           harmonicSpec.empty() ? 0 : harmonicSpec[0].size());
+    const std::vector<std::vector<float>>* chromaSource = &powerSpec;
+    if (config.useHPSS) {
+        HPSS hpss;
+        hpss.harmonicOnly(powerSpec, harmonicSpec);
+        chromaSource = &harmonicSpec;
+        LF_LOG("[analyze] step 2 done: harmonic %zux%zu", harmonicSpec.size(),
+               harmonicSpec.empty() ? 0 : harmonicSpec[0].size());
+    }
     t1 = std::chrono::high_resolution_clock::now();
-    LF_PERF("HPSS", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
+    LF_PERF(config.useHPSS ? "HPSS" : "HPSS skipped", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
     t0 = t1;
 
     // 3. Chroma
     LF_LOG("[analyze] step 3: Chroma");
     ChromaExtractor chromaExtractor;
     std::vector<std::vector<float>> chromagram;
-    chromaExtractor.extract(harmonicSpec, sampleRate, config.nFFT, chromagram);
+    chromaExtractor.extract(*chromaSource, sampleRate, config.nFFT, chromagram);
     LF_LOG("[analyze] step 3 done: chroma %zux%zu", chromagram.size(),
            chromagram.empty() ? 0 : chromagram[0].size());
     t1 = std::chrono::high_resolution_clock::now();
@@ -467,24 +477,9 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
     {
         std::vector<float> allVals;
         allVals.reserve(static_cast<size_t>(numFreqBins) * numFrames);
-        for (int f = 0; f < numFreqBins; ++f)
-            for (int t = 0; t < numFrames; ++t)
-                if (powerSpec[f][t] > 1e-10f)
-                    allVals.push_back(powerSpec[f][t]);
-        LF_LOG("[analyze] step 4: median over %zu vals", allVals.size());
-
-        float medianRef = 1.0f;
-        if (!allVals.empty()) {
-            auto mid = allVals.begin() + allVals.size() / 2;
-            std::nth_element(allVals.begin(), mid, allVals.end());
-            medianRef = *mid;
-        }
-        LF_LOG("[analyze] step 4: median=%.6f", medianRef);
 
         const float logScale = 10.0f / std::log(10.0f);
-        const float logRef   = std::log(std::max(medianRef, 1e-10f));
-
-        std::vector<float> aWeights(numFreqBins, 0.0f);
+        std::vector<float> aWeightsDb(numFreqBins, -80.0f);
         for (int k = 1; k < numFreqBins; ++k) {
             float freq = (k * sampleRate) / static_cast<float>(config.nFFT);
             float f2 = freq * freq;
@@ -492,21 +487,55 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
             float denA = (f2 + 20.6f * 20.6f) *
                          std::sqrt((f2 + 107.7f * 107.7f) * (f2 + 737.9f * 737.9f)) *
                          (f2 + 12194.0f * 12194.0f);
-            aWeights[k] = (denA > 0) ? (numA / denA) : 0.0f;
+            float linearA = (denA > 0) ? (numA / denA) : 0.0f;
+            aWeightsDb[k] = (linearA > 1e-20f)
+                ? std::max(-80.0f, 2.0f + 20.0f * std::log10(linearA))
+                : -80.0f;
         }
 
+        std::vector<std::vector<float>> firstPowerDb(numFreqBins, std::vector<float>(numFrames, 0.0f));
+        float maxPowerDb = -1e30f;
         for (int k = 0; k < numFreqBins; ++k) {
-            if (k == 0) {
-                for (int t = 0; t < numFrames; ++t)
-                    powerDB[k][t] = 0.0f;
-                continue;
-            }
-            float aw = aWeights[k];
             for (int t = 0; t < numFrames; ++t) {
-                float val = powerSpec[k][t] * aw;
-                powerDB[k][t] = logScale * (std::log(std::max(val, 1e-10f)) - logRef);
+                float powerDb = logScale * std::log(std::max(powerSpec[k][t], 1e-10f));
+                firstPowerDb[k][t] = powerDb;
+                maxPowerDb = std::max(maxPowerDb, powerDb);
             }
         }
+
+        float minPowerDb = maxPowerDb - 80.0f;
+        std::vector<std::vector<float>> weightedDb(numFreqBins, std::vector<float>(numFrames, 0.0f));
+        for (int k = 0; k < numFreqBins; ++k) {
+            for (int t = 0; t < numFrames; ++t) {
+                float value = std::max(firstPowerDb[k][t], minPowerDb) + aWeightsDb[k];
+                weightedDb[k][t] = value;
+                allVals.push_back(value);
+            }
+        }
+
+        float medianRef = 1.0f;
+        if (!allVals.empty()) {
+            auto mid = allVals.begin() + allVals.size() / 2;
+            std::nth_element(allVals.begin(), mid, allVals.end());
+            medianRef = std::abs(*mid);
+        }
+        medianRef = std::max(medianRef, 1e-10f);
+        LF_LOG("[analyze] step 4: weighted median abs=%.6f", medianRef);
+
+        float maxDb = -1e30f;
+        for (int k = 0; k < numFreqBins; ++k) {
+            for (int t = 0; t < numFrames; ++t) {
+                float value = logScale * (
+                    std::log(std::max(weightedDb[k][t], 1e-10f)) -
+                    std::log(medianRef));
+                powerDB[k][t] = value;
+                maxDb = std::max(maxDb, value);
+            }
+        }
+        float minDb = maxDb - 80.0f;
+        for (int k = 0; k < numFreqBins; ++k)
+            for (int t = 0; t < numFrames; ++t)
+                powerDB[k][t] = std::max(powerDB[k][t], minDb);
     }
     LF_LOG("[analyze] step 4 done");
     t1 = std::chrono::high_resolution_clock::now();
@@ -540,7 +569,7 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
         }
     }
 
-    int frameStep = std::max(4, config.hopSize / 32);
+    int frameStep = std::max(1, config.candidateFrameStep);
     for (int i = 0; i < numFrames; i += frameStep)
         beatFrames.push_back(i);
 
@@ -588,12 +617,6 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
     }
 
     // 8. Score candidates
-    LF_LOG("[analyze] step 7.5: normalizeChroma");
-    normalizeChroma(chromagram);
-    t1 = std::chrono::high_resolution_clock::now();
-    LF_PERF("normalizeChroma", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
-    t0 = t1;
-
     LF_LOG("[analyze] step 8: scoreCandidates");
     scoreCandidates(chromagram, bpm, config.hopSize, sampleRate, candidates);
     t1 = std::chrono::high_resolution_clock::now();
@@ -601,10 +624,12 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
     t0 = t1;
 
     // 9. Prioritize longer loops
-    LF_LOG("[analyze] step 9: prioritizeDuration");
-    prioritizeDuration(candidates);
-    t1 = std::chrono::high_resolution_clock::now();
-    LF_PERF("prioritizeDuration", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
+    if (config.prioritizeDuration) {
+        LF_LOG("[analyze] step 9: prioritizeDuration");
+        prioritizeDuration(candidates);
+        t1 = std::chrono::high_resolution_clock::now();
+        LF_PERF("prioritizeDuration", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
+    }
 
     // 10. Convert frame indices to sample indices
     for (auto& lp : candidates) {

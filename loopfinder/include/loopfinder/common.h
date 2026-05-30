@@ -16,6 +16,8 @@ struct PCMData {
 struct LoopPoint {
     int64_t loopStart     = 0;    // in samples (relative to original, not trimmed)
     int64_t loopEnd       = 0;    // in samples (relative to original, not trimmed)
+    int     loopStartFrame = 0;   // analysis frame before sample conversion
+    int     loopEndFrame   = 0;   // analysis frame before sample conversion
     float   noteDiff      = 0.0f;
     float   loudnessDiff  = 0.0f;
     float   score         = 0.0f;

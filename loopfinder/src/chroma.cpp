@@ -13,32 +13,53 @@ void ChromaExtractor::extract(const std::vector<std::vector<float>>& powerSpec,
 
     chromagram.assign(NUM_CHROMA, std::vector<float>(numFrames_, 0.0f));
 
-    // Map FFT bins to chroma bins (C1 ~ 32.7 Hz to C8 ~ 4186 Hz)
-    const float C1 = 32.7032f;
-    const float C8 = 4186.01f;
+    std::vector<float> frqBins(nFFT, 0.0f);
+    const float a440 = 440.0f;
+    const float a0 = a440 / 16.0f;
+    for (int k = 1; k < nFFT; ++k) {
+        float freq = (k * sampleRate) / static_cast<float>(nFFT);
+        frqBins[k] = NUM_CHROMA * std::log2(freq / a0);
+    }
+    frqBins[0] = frqBins[1] - 1.5f * NUM_CHROMA;
+
+    std::vector<float> binWidths(nFFT, 1.0f);
+    for (int k = 0; k < nFFT - 1; ++k)
+        binWidths[k] = std::max(frqBins[k + 1] - frqBins[k], 1.0f);
 
     for (int k = 0; k < numFreqBins_; ++k) {
-        float freq = (k * sampleRate) / static_cast<float>(nFFT);
-        if (freq < C1 || freq > C8) continue;
+        float weights[NUM_CHROMA];
+        float norm2 = 0.0f;
+        for (int c = 0; c < NUM_CHROMA; ++c) {
+            float d = frqBins[k] - static_cast<float>(c);
+            d = std::fmod(d + 6.0f + 10.0f * NUM_CHROMA, static_cast<float>(NUM_CHROMA)) - 6.0f;
+            float ratio = 2.0f * d / binWidths[k];
+            float w = std::exp(-0.5f * ratio * ratio);
+            weights[c] = w;
+            norm2 += w * w;
+        }
 
-        float midi = 12.0f * std::log2(freq / 440.0f) + 69.0f;
-        int chromaBin = static_cast<int>(std::round(midi)) % 12;
-        if (chromaBin < 0) chromaBin += 12;
+        float invNorm = (norm2 > 1e-20f) ? 1.0f / std::sqrt(norm2) : 0.0f;
+        float octave = frqBins[k] / NUM_CHROMA;
+        float octaveWeight = std::exp(-0.5f * std::pow((octave - 5.0f) / 2.0f, 2.0f));
 
-        for (int t = 0; t < numFrames_; ++t) {
-            chromagram[chromaBin][t] += powerSpec[k][t];
+        for (int c = 0; c < NUM_CHROMA; ++c) {
+            int target = (c + NUM_CHROMA - 3) % NUM_CHROMA;
+            float weight = weights[c] * invNorm * octaveWeight;
+            if (weight <= 1e-20f) continue;
+            for (int t = 0; t < numFrames_; ++t)
+                chromagram[target][t] += weight * powerSpec[k][t];
         }
     }
 
-    // Normalize each frame
+    // librosa.feature.chroma_stft defaults to infinity-norm normalization.
     for (int t = 0; t < numFrames_; ++t) {
-        float sum = 0.0f;
+        float maxVal = 0.0f;
         for (int c = 0; c < NUM_CHROMA; ++c)
-            sum += chromagram[c][t];
-        if (sum > 1e-10f) {
-            float invSum = 1.0f / sum;
+            maxVal = std::max(maxVal, chromagram[c][t]);
+        if (maxVal > 1e-10f) {
+            float invMax = 1.0f / maxVal;
             for (int c = 0; c < NUM_CHROMA; ++c)
-                chromagram[c][t] *= invSum;
+                chromagram[c][t] *= invMax;
         }
     }
 }
