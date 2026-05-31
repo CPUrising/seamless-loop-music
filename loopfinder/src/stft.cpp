@@ -24,14 +24,14 @@ bool STFT::init(int nfft, int hop) {
 
     hannWindow_ = new float[nFFT];
     for (int i = 0; i < nFFT; ++i) {
-        hannWindow_[i] = 0.5f * (1.0f - std::cos(2.0f * 3.14159265358979f * i / (nFFT - 1)));
+        hannWindow_[i] = 0.5f * (1.0f - std::cos(2.0f * 3.14159265358979f * i / nFFT));
     }
     return true;
 }
 
 int STFT::getNumFrames(int signalLen) const {
-    if (signalLen < nFFT) return 0;
-    return (signalLen - nFFT) / hopSize + 1;
+    if (signalLen <= 0) return 0;
+    return signalLen / hopSize + 1;
 }
 
 void STFT::compute(const float* signal, int signalLen,
@@ -46,12 +46,14 @@ void STFT::compute(const float* signal, int signalLen,
     kiss_fft_cpx*    out = new kiss_fft_cpx[nBins];
 
     for (int frame = 0; frame < nFrames; ++frame) {
-        int start = frame * hopSize;
+        int start = frame * hopSize - nFFT / 2;
         std::memset(in, 0, nFFT * sizeof(kiss_fft_scalar));
 
-        int copyLen = std::min(nFFT, signalLen - start);
-        for (int i = 0; i < copyLen; ++i)
-            in[i] = signal[start + i] * hannWindow_[i];
+        for (int i = 0; i < nFFT; ++i) {
+            int sampleIdx = start + i;
+            if (sampleIdx >= 0 && sampleIdx < signalLen)
+                in[i] = signal[sampleIdx] * hannWindow_[i];
+        }
 
         kiss_fftr(static_cast<kiss_fftr_cfg>(fftCfg_), in, out);
 

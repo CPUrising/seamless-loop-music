@@ -1,6 +1,8 @@
 # loopfinder — C++ 音频循环点检测库
 
-PyMusicLooper 的 C++ 重写版本，编译为 `libloopfinder.so`，通过 JNI 供 Android 调用。
+PyMusicLooper 对齐版的 C++ 循环点检测库，编译为 `libloopfinder.so` / `loopfinder.dll`，通过 C API 或 JNI 供 Android 调用。
+
+当前目标是让返回的 Top 候选循环段与 PyMusicLooper 基本一致，同时保留移动端可接受的运行时和少量可调参数。
 
 ## 目录结构
 
@@ -57,6 +59,22 @@ cmake -B build -DBUILD_FOR_ANDROID=OFF -DBUILD_TEST=ON
 cmake --build build
 ```
 
+测试可执行文件:
+
+```bash
+build/Release/loopfinder_test.exe path/to/audio.flac
+```
+
+常用测试参数:
+
+```bash
+# 关闭 HPSS，观察非谐波分离路径
+build/Release/loopfinder_test.exe path/to/audio.flac --no-hpss
+
+# 调整候选网格密度。数值越小，越允许 off-beat 候选
+build/Release/loopfinder_test.exe path/to/audio.flac --grid=1
+```
+
 ### Android NDK (交叉编译)
 
 ```bash
@@ -101,41 +119,70 @@ Java_com_cpu_seamlessloopmobile_jni_NativeAudio_analyzeLoopPoints(
 音频文件
     ↓ dr_libs 解码
 PCM float32 单声道
-    ↓ Trim 静音 + 归一化
-    ↓ STFT (KissFFT, Hann 窗, n_fft=2048, hop=512)
+    ↓ 归一化 + librosa-like trim (top_db=40, frame=2048, hop=512)
+    ↓ centered STFT (KissFFT, periodic Hann, n_fft=2048, hop=512)
 功率谱 (|S|²)
-    ↓ HPSS 谐波分离 (2D 中值滤波, 软掩膜)
-谐波谱 → Chroma 提取 (12 半音, C1-C8)
-功率谱 → A-Weighting → dB 转换
+    ↓ 可选 HPSS 谐波分离 (默认开启)
+谐波谱/原始功率谱 → librosa-like Chroma filterbank
+功率谱 → perceptual_weighting-like dB → power_to_db(ref=median)
 原始信号 → aubio 节拍检测 (Ooura FFT, 无外部依赖)
+    ↓ beat + 稀疏 fallback grid (默认 4 帧)
+候选对枚举
+    ↓ 动态音符阈值 + 响度差阈值
+余弦相似度打分
     ↓
-候选对枚举 (按节拍, 音符距离 ≤ 0.0875, 响度差 ≤ 0.5)
-    ↓
-余弦相似度打分 (向前/向后 12 个节拍, 几何衰减权重)
-    ↓
-时长优先 (相似度接近时优先长循环)
-    ↓
-帧索引 → 采样点 → +trim偏移
+帧索引 → 采样点 → nearest zero crossing → +trim 偏移
     ↓
 Top N 返回
 ```
 
-## 与 Python 版本的差异
+## PyMusicLooper 对齐策略
 
-### 已实现
-- 音频解码 (WAV/FLAC/MP3/OGG)
-- STFT + Chroma + 响度提取
-- HPSS 谐波/打击乐分离 (Python 版本未使用，此为增强)
-- aubio 节拍检测 (逐文件编译，零外部依赖)
-- 候选对枚举 + 余弦相似度打分 + 时长优先
-- 帧→采样点转换 + trim 偏移补偿
-- 高度对齐python打分
-### 未实现 (不需要)
-- 实时播放 (Oboe 已处理)
+已对齐或近似对齐:
+
+- trim 使用 librosa.effects.trim 的默认尺度。
+- STFT 使用 centered frame 坐标，frame 到 sample 的映射与 librosa 接近。
+- Chroma 使用接近 `librosa.filters.chroma` 的高斯 filterbank、octave weighting 和 frame-wise infinity norm。
+- 响度门限使用接近 `librosa.perceptual_weighting` + `power_to_db(ref=median)` 的流程。
+- 候选 note threshold 使用 PyMusicLooper 的动态阈值: `0.0875 * norm(chroma[:, loop_end])`。
+- score 使用前后窗口的 chroma cosine similarity 和几何权重。
+
+有意保留的差异:
+
+- PyMusicLooper 使用 librosa beat/PLP；loopfinder 使用 aubio beat，再叠加 fallback grid。默认 `candidateFrameStep=4`，用于让 Top5 候选段更稳定地接近 PyMusicLooper。`--grid=1`/`2` 会允许更多 off-beat 候选。
+- HPSS 默认开启。批量测试中 HPSS on/off 的分数都接近，但 HPSS on 的 Top5 更稳；可通过 `LoopFinder::Config::useHPSS=false` 或测试参数 `--no-hpss` 关闭。
+- PyMusicLooper 当前的 duration priority 基本不会实际重排；loopfinder 为兼容默认关闭 `prioritizeDuration`。
+
+## 批量对比
+
+仓库根目录提供对比脚本:
+
+```bash
+python tools/compare_loopfinder.py music --top 20
+```
+
+脚本会同时运行 PyMusicLooper、loopfinder 默认 HPSS、loopfinder `--no-hpss`，并打印候选 sample/frame、C++ Top1 与 PyMusicLooper Top 候选中最近点的距离和 score 差异。
+
+PyMusicLooper 结果会缓存在仓库根目录的 `.loop_compare_cache/`。缓存键包含音频路径、文件大小、mtime 和 `--top`，音频不变时不会重复跑 Python 分析。
+
+刷新缓存:
+
+```bash
+python tools/compare_loopfinder.py music --top 20 --refresh-cache
+```
+
+可传递 C++ 测试参数:
+
+```bash
+python tools/compare_loopfinder.py music/5.flac --top 20 --cpp-arg=--grid=1
+```
+
+## 未实现 / 不承担
+
+- 实时播放 (由 App/Oboe 处理)
 - 音频导出 (split-audio/extend)
-- 元数据标签写入 (Room DB 已处理)
-- 网络流 (yt-dlp)
-- 交互模式 (Android UI 处理)
+- 元数据标签写入
+- 网络流下载
+- 交互式 CLI
 - M4A/AAC 解码 (dr_libs 不支持)
-- FFmpeg (Android 上过重)
-- 过零检测微调 (可选优化，当前使用直接帧→采样映射)
+- FFmpeg 集成

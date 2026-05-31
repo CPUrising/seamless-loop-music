@@ -171,46 +171,46 @@ void AudioDecoder::normalize(std::vector<float>& samples) {
 
 void AudioDecoder::trimSilence(std::vector<float>& samples, int sampleRate, int& trimStart) {
     trimStart = 0;
-    // Use 40 dB threshold like librosa.effects.trim
-    float dB = 40.0f;
-    float ref = 1.0f;
-    float threshold = ref * std::pow(10.0f, -dB / 20.0f);
+    constexpr int frameLen = 2048;
+    constexpr int hopLen = 512;
+    constexpr float topDb = 40.0f;
 
-    // Frame-based RMS for smoother trimming
-    int frameLen = sampleRate / 20; // 50ms frames
-    if (frameLen < 256) frameLen = 256;
+    if (samples.empty()) return;
 
-    int64_t numFrames = samples.size() / frameLen;
-    if (numFrames < 2) return;
+    int64_t numFrames = static_cast<int64_t>(samples.size()) / hopLen + 1;
+    std::vector<float> rmsPerFrame(static_cast<size_t>(numFrames), 0.0f);
+    float refRms = 0.0f;
 
-    std::vector<float> rmsPerFrame(numFrames);
     for (int64_t f = 0; f < numFrames; ++f) {
         float sumSq = 0.0f;
-        int64_t start = f * frameLen;
-        int64_t end = std::min(static_cast<int64_t>(start + frameLen),
-                                static_cast<int64_t>(samples.size()));
-        for (int64_t i = start; i < end; ++i)
-            sumSq += samples[i] * samples[i];
-        rmsPerFrame[f] = std::sqrt(sumSq / (end - start));
+        int64_t start = f * hopLen - frameLen / 2;
+        for (int i = 0; i < frameLen; ++i) {
+            int64_t idx = start + i;
+            if (idx >= 0 && idx < static_cast<int64_t>(samples.size()))
+                sumSq += samples[static_cast<size_t>(idx)] * samples[static_cast<size_t>(idx)];
+        }
+        float rms = std::sqrt(sumSq / frameLen);
+        rmsPerFrame[static_cast<size_t>(f)] = rms;
+        refRms = std::max(refRms, rms);
     }
 
-    // Find first frame above threshold
-    int startFrame = 0;
-    while (startFrame < numFrames && rmsPerFrame[startFrame] <= threshold)
+    if (refRms <= 1e-10f) return;
+
+    float threshold = refRms * std::pow(10.0f, -topDb / 20.0f);
+
+    int64_t startFrame = 0;
+    while (startFrame < numFrames && rmsPerFrame[static_cast<size_t>(startFrame)] <= threshold)
         ++startFrame;
 
-    // Find last frame above threshold
-    int endFrame = static_cast<int>(numFrames) - 1;
-    while (endFrame >= 0 && rmsPerFrame[endFrame] <= threshold)
+    int64_t endFrame = numFrames - 1;
+    while (endFrame >= 0 && rmsPerFrame[static_cast<size_t>(endFrame)] <= threshold)
         --endFrame;
 
     if (startFrame >= endFrame) return;
 
-    int64_t cutStart = static_cast<int64_t>(startFrame) * frameLen;
-
+    int64_t cutStart = startFrame * hopLen;
     int64_t samplesSize = static_cast<int64_t>(samples.size());
-    int64_t endFramePos = static_cast<int64_t>(endFrame + 1) * frameLen;
-    int64_t cutEnd = std::min(endFramePos, samplesSize);
+    int64_t cutEnd = std::min((endFrame + 1) * hopLen, samplesSize);
 
     trimStart = static_cast<int>(cutStart);
     std::vector<float> trimmed(samples.begin() + cutStart, samples.begin() + cutEnd);
