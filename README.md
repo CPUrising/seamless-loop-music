@@ -9,7 +9,7 @@
 一款专为游戏 BGM（如 Galgame、RPG）及环境音效（如白噪音）打造的无缝循环播放与管理工具。通过自研算法与开源引擎双重驱动，实现采样级的精准循环对齐。
 
 **运行环境**：Windows 10 及以上
-**支持格式**：MP3, OGG, WAV
+**支持格式**：MP3, OGG, WAV, FLAC
 
 ![image-20260504014156975](./image/README/image-20260504014156975.png)
 
@@ -21,7 +21,7 @@
 
 ## 🛠️ 技术栈
 
-- **音频引擎**：NAudio (基于环形缓冲区的无缝流处理技术)
+- **音频引擎**：NAudio + BunLabs.NAudio.Flac (基于环形缓冲区的无缝流处理技术)
 - **开发框架**：WPF + Prism (MVVM) + Unity (依赖注入)
 - **数据管理**：SQLite + Dapper (开启 WAL 并发模式)
 - **核心算法**：时域互相关 (自研) + PyMusicLooper (集成)

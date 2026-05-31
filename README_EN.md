@@ -9,7 +9,7 @@
 A specialized management and playback tool designed for seamless looping of game BGM (e.g., Visual Novals, RPGs) and ambient sounds (e.g., white noise). Powered by both proprietary algorithms and open-source engines, it achieves precise sample-level loop alignment.
 
 **Environment**: Windows 10 or above  
-**Supported Formats**: MP3, OGG, WAV
+**Supported Formats**: MP3, OGG, WAV, FLAC
 
 ![image-20260504013716177](./image/README_EN/image-20260504013716177.png)
 
@@ -21,7 +21,7 @@ A specialized management and playback tool designed for seamless looping of game
 
 ## 🛠️ Tech Stack
 
-- **Audio Engine**: NAudio (Seamless streaming based on circular buffering)
+- **Audio Engine**: NAudio + BunLabs.NAudio.Flac (Seamless streaming based on circular buffering)
 - **Framework**: WPF + Prism (MVVM) + Unity (Dependency Injection)
 - **Data Management**: SQLite + Dapper (WAL mode enabled)
 - **Core Algorithms**: Time-domain Cross-correlation (Proprietary) + PyMusicLooper (Integrated)

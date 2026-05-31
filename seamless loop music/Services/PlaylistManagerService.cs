@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using NAudio.Flac;
 using NAudio.Wave;
 using NAudio.Vorbis;
 using seamless_loop_music.Data;
@@ -163,6 +164,9 @@ namespace seamless_loop_music.Services
                 case ".wav": return new WaveFileReader(filePath);
                 case ".ogg": return new VorbisWaveReader(filePath);
                 case ".mp3": return new Mp3FileReader(filePath);
+                case ".flac":
+                    // FLAC 使用 bundled reader，避免依赖 Windows 系统解码器。
+                    return new FlacReader(filePath);
                 default: 
                     try { return new AudioFileReader(filePath); } catch { return null; }
             }

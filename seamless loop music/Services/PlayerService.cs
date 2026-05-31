@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Threading.Tasks;
+using NAudio.Flac;
 using NAudio.Wave;
 using TagLib;
 using seamless_loop_music.Models;
@@ -336,6 +337,9 @@ namespace seamless_loop_music.Services
                         return new NAudio.Vorbis.VorbisWaveReader(filePath);
                     case ".mp3":
                         return new Mp3FileReader(filePath);
+                    case ".flac":
+                        // 与播放端保持一致：FLAC 使用 bundled reader，确保采样数计算和实际加载一致。
+                        return new FlacReader(filePath);
                     default:
                         return null;
                 }
