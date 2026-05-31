@@ -368,7 +368,7 @@ namespace seamless_loop_music.Data
                                 {(hasLoopPoints ? "lp.LoopEnd" : "0")} AS LoopEnd, 
                                 {(hasLoopPoints ? "lp.LoopCandidatesJson" : "NULL")} AS LoopCandidatesJson,
                                 {(hasUserRatings ? "ur.Rating" : "0")} AS Rating, 
-                                {(hasCover ? "t.CoverPath" : "NULL AS CoverPath")}
+                                NULL AS CoverPath
                             FROM ExternalDB.Tracks t
                             {(hasAlbums ? "LEFT JOIN ExternalDB.Albums al ON t.AlbumId = al.Id" : "")}
                             {(hasArtists ? (artistOnTrack ? "LEFT JOIN ExternalDB.Artists ar ON t.ArtistId = ar.Id" : (artistOnAlbum ? "LEFT JOIN ExternalDB.Artists ar ON al.ArtistId = ar.Id" : "")) : "")}
@@ -402,7 +402,7 @@ namespace seamless_loop_music.Data
                                 LoopStart, LoopEnd, 
                                 {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")}, 
                                 {(hasRating ? "Rating" : "0 AS Rating")}, 
-                                {(hasCover ? "CoverPath" : "NULL AS CoverPath")} 
+                                NULL AS CoverPath 
                             FROM ExternalDB.LoopPoints";
                         externalTracks = db.Query<MusicTrack>(syncSqlFlat).ToList();
                     }
@@ -411,24 +411,89 @@ namespace seamless_loop_music.Data
                         externalTracks = new List<MusicTrack>();
                     }
 
-                    // --- 2. 曲目同步（模糊匹配） ---
+                    // --- 2. 曲目同步（模糊匹配与安全边界控制） ---
                     foreach (var ext in externalTracks)
                     {
                         var localTrack = db.QueryFirstOrDefault<MusicTrack>(@"
-                            SELECT Id FROM Tracks 
-                            WHERE LOWER(TRIM(FileName)) = LOWER(TRIM(@FileName)) 
-                              AND ABS(TotalSamples - @TotalSamples) < 10000", 
+                            SELECT 
+                                t.Id, t.FileName, t.TotalSamples, t.DisplayName, t.CoverPath,
+                                al.Name AS Album, ar.Name AS Artist,
+                                COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
+                                COALESCE(ur.Rating, 0) AS Rating
+                            FROM Tracks t
+                            LEFT JOIN Albums al ON t.AlbumId = al.Id
+                            LEFT JOIN Artists ar ON t.ArtistId = ar.Id
+                            LEFT JOIN LoopPoints lp ON t.Id = lp.TrackId
+                            LEFT JOIN UserRatings ur ON t.Id = ur.TrackId
+                            WHERE LOWER(TRIM(t.FileName)) = LOWER(TRIM(@FileName)) 
+                              AND ABS(t.TotalSamples - @TotalSamples) < 10000", 
                             new { ext.FileName, ext.TotalSamples });
                         
                         if (localTrack != null)
                         {
                             using (var trans = db.BeginTransaction())
                             {
-                                var (albumId, artistId) = UpsertArtistAlbum(db, ext.Artist, ext.AlbumArtist, ext.Album, ext.CoverPath, trans);
-                                db.Execute(@"UPDATE Tracks SET DisplayName=@DisplayName, AlbumId=@AlbumId, ArtistId=@ArtistId, CoverPath=COALESCE(@CoverPath, CoverPath) WHERE Id=@Id", 
-                                    new { ext.DisplayName, AlbumId = albumId, ArtistId = artistId, ext.CoverPath, Id = localTrack.Id }, transaction: trans);
-                                db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@Id, @LoopStart, @LoopEnd, @Json) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", new { Id = localTrack.Id, ext.LoopStart, ext.LoopEnd, Json = ext.LoopCandidatesJson }, transaction: trans);
-                                db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, LastModified) VALUES (@Id, @Rating, @Now) ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating", new { Id = localTrack.Id, ext.Rating, Now = DateTime.Now }, transaction: trans);
+                                // 1. 元数据补充决策 (没有就补充，有了就不修改)
+                                bool needMetadataUpdate = false;
+                                string updatedArtist = localTrack.Artist;
+                                string updatedAlbum = localTrack.Album;
+                                string updatedDisplayName = localTrack.DisplayName;
+
+                                // 歌手补充：本地为空或Unknown，且外部有具体有效歌手时
+                                if ((string.IsNullOrWhiteSpace(localTrack.Artist) || localTrack.Artist == "Unknown Artist") &&
+                                    (!string.IsNullOrWhiteSpace(ext.Artist) && ext.Artist != "Unknown Artist"))
+                                {
+                                    updatedArtist = ext.Artist;
+                                    needMetadataUpdate = true;
+                                }
+
+                                // 专辑补充：本地为空或Unknown，且外部有具体有效专辑时
+                                if ((string.IsNullOrWhiteSpace(localTrack.Album) || localTrack.Album == "Unknown Album") &&
+                                    (!string.IsNullOrWhiteSpace(ext.Album) && ext.Album != "Unknown Album"))
+                                {
+                                    updatedAlbum = ext.Album;
+                                    needMetadataUpdate = true;
+                                }
+
+                                // 显示名称补充：本地为空或仅仅是默认文件名，且外部有名且不是文件名时
+                                if (string.IsNullOrWhiteSpace(localTrack.DisplayName) || 
+                                    localTrack.DisplayName.Equals(localTrack.FileName, StringComparison.OrdinalIgnoreCase))
+                                {
+                                    if (!string.IsNullOrWhiteSpace(ext.DisplayName) && 
+                                        !ext.DisplayName.Equals(ext.FileName, StringComparison.OrdinalIgnoreCase))
+                                    {
+                                        updatedDisplayName = ext.DisplayName;
+                                        needMetadataUpdate = true;
+                                    }
+                                }
+
+                                if (needMetadataUpdate)
+                                {
+                                    // 仅在需要补充时重新关联歌手专辑，且 CoverPath 传 null (彻底防封面污染)
+                                    var (newAlbumId, newArtistId) = UpsertArtistAlbum(db, updatedArtist, updatedArtist, updatedAlbum, null, trans);
+                                    db.Execute(@"UPDATE Tracks SET DisplayName=@DisplayName, AlbumId=@AlbumId, ArtistId=@ArtistId WHERE Id=@Id", 
+                                        new { DisplayName = updatedDisplayName, AlbumId = newAlbumId, ArtistId = newArtistId, Id = localTrack.Id }, transaction: trans);
+                                }
+
+                                // 2. 循环点同步：强行覆盖更新 (仅在外部有计算成果时覆盖)
+                                bool extHasLoopPoints = ext.LoopStart > 0 || ext.LoopEnd > 0 || !string.IsNullOrEmpty(ext.LoopCandidatesJson);
+                                if (extHasLoopPoints)
+                                {
+                                    db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) 
+                                                 VALUES (@Id, @LoopStart, @LoopEnd, @Json) 
+                                                 ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", 
+                                        new { Id = localTrack.Id, ext.LoopStart, ext.LoopEnd, Json = ext.LoopCandidatesJson }, transaction: trans);
+                                }
+
+                                // 3. 用户评分同步：没有就补充，有了就不修改 (本地为0，外部不为0则写入)
+                                if (localTrack.Rating == 0 && ext.Rating > 0)
+                                {
+                                    db.Execute(@"INSERT INTO UserRatings (TrackId, Rating, LastModified) 
+                                                 VALUES (@Id, @Rating, @Now) 
+                                                 ON CONFLICT(TrackId) DO UPDATE SET Rating=excluded.Rating, LastModified=excluded.LastModified", 
+                                        new { Id = localTrack.Id, ext.Rating, Now = DateTime.Now }, transaction: trans);
+                                }
+
                                 trans.Commit();
                                 tracksSynced++;
                             }
@@ -621,24 +686,6 @@ namespace seamless_loop_music.Data
                                 break;
                             }
                         }
-                    }
-                }
-
-                // 3. 向下补全 (Album -> Track)
-                // 只有当曲目本身没封面（或坏了），且它不是 Unknown 专辑时，才从专辑拉取封面
-                db.Execute(@"
-                    UPDATE Tracks 
-                    SET CoverPath = (SELECT al.CoverPath FROM Albums al WHERE al.Id = Tracks.AlbumId)
-                    WHERE (CoverPath IS NULL OR CoverPath = '')
-                      AND AlbumId IN (SELECT Id FROM Albums WHERE Name != 'Unknown Album' AND CoverPath IS NOT NULL AND CoverPath != '')");
-                
-                // 物理校验：如果 Track 现有的 CoverPath 坏了，也尝试补全
-                var brokenTracks = db.Query("SELECT t.Id, t.CoverPath, al.CoverPath as AlbumPath FROM Tracks t JOIN Albums al ON al.Id = t.AlbumId WHERE t.CoverPath IS NOT NULL AND t.CoverPath != '' AND al.Name != 'Unknown Album' AND al.CoverPath IS NOT NULL AND al.CoverPath != ''").ToList();
-                foreach (var t in brokenTracks)
-                {
-                    if (!File.Exists((string)t.CoverPath))
-                    {
-                        db.Execute("UPDATE Tracks SET CoverPath = @Path WHERE Id = @Id", new { Path = (string)t.AlbumPath, Id = (long)t.Id });
                     }
                 }
             }

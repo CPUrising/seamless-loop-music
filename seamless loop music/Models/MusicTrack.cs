@@ -114,11 +114,13 @@ namespace seamless_loop_music.Models
         {
             get
             {
-                // 优先级：AlbumCoverPath > CoverPath，且必须物理存在
-                if (!string.IsNullOrEmpty(AlbumCoverPath) && System.IO.File.Exists(AlbumCoverPath))
-                    return AlbumCoverPath;
+                // 优先级：歌曲自身封面优先 > 专辑封面保底 > 歌手封面保底，且物理文件必须存在
                 if (!string.IsNullOrEmpty(CoverPath) && System.IO.File.Exists(CoverPath))
                     return CoverPath;
+                if (!string.IsNullOrEmpty(AlbumCoverPath) && System.IO.File.Exists(AlbumCoverPath))
+                    return AlbumCoverPath;
+                if (!string.IsNullOrEmpty(ArtistCoverPath) && System.IO.File.Exists(ArtistCoverPath))
+                    return ArtistCoverPath;
                 return null;
             }
         }

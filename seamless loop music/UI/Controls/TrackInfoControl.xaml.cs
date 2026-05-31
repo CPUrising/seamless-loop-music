@@ -30,6 +30,8 @@ namespace seamless_loop_music.UI.Controls
         public bool ShowAlbum { get => (bool)GetValue(ShowAlbumProperty); set => SetValue(ShowAlbumProperty, value); }
         public System.Windows.Media.ImageSource CoverImage { get => (System.Windows.Media.ImageSource)GetValue(CoverImageProperty); set => SetValue(CoverImageProperty, value); }
 
+        public FrameworkElement ArtElement => ArtBorder;
+
         public TrackInfoControl()
         {
             InitializeComponent();

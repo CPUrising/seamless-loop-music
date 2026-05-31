@@ -53,6 +53,8 @@
         </TaskbarItemInfo>
     </Window.TaskbarItemInfo>
 
+
+
     <Grid Margin="{Binding Padding, RelativeSource={RelativeSource AncestorType=Window}}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/> <!-- Title Bar -->
@@ -106,7 +108,7 @@
 
         <!-- Bottom Bar: Playback Controls (Always visible) -->
         <Border Grid.Row="2" Background="{StaticResource BrushTitleBar}" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BrushBorder}">
-            <views:PlaybackControlBar />
+            <views:PlaybackControlBar x:Name="BottomPlaybackControlBar" />
         </Border>
     </Grid>
 </Window>

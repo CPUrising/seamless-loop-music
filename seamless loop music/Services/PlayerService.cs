@@ -7,6 +7,8 @@ using NAudio.Wave;
 using TagLib;
 using seamless_loop_music.Models;
 using seamless_loop_music.Data;
+using Prism.Events;
+using seamless_loop_music.Events;
 
 namespace seamless_loop_music.Services
 {
@@ -17,6 +19,9 @@ namespace seamless_loop_music.Services
         private readonly ILoopAnalysisService _loopAnalysisService;
         private readonly TrackMetadataService _metadataService;
         private readonly IPlaylistManagerService _playlistManager;
+        private readonly Lazy<IFolderWatcherService> _folderWatcherService; // 注入监视器服务
+        private readonly IEventAggregator _eventAggregator; // 🌟 注入事件聚合器
+        private readonly System.Threading.SemaphoreSlim _scanLock = new System.Threading.SemaphoreSlim(1, 1); // 并发扫描锁
 
         public List<MusicTrack> Playlist { get; set; } = new List<MusicTrack>();
         public int CurrentIndex { get; set; } = -1;
@@ -33,13 +38,22 @@ namespace seamless_loop_music.Services
         public double MatchWindowSize { get; set; } = 1.0;
         public double MatchSearchRadius { get; set; } = 5.0;
 
-        public PlayerService(IDatabaseHelper databaseHelper, IPlaybackService playbackService, ILoopAnalysisService loopAnalysisService, TrackMetadataService metadataService, IPlaylistManagerService playlistManager)
+        public PlayerService(
+            IDatabaseHelper databaseHelper, 
+            IPlaybackService playbackService, 
+            ILoopAnalysisService loopAnalysisService, 
+            TrackMetadataService metadataService, 
+            IPlaylistManagerService playlistManager, 
+            Lazy<IFolderWatcherService> folderWatcherService,
+            IEventAggregator eventAggregator)
         {
             _databaseHelper = databaseHelper;
             _playbackService = playbackService;
             _loopAnalysisService = loopAnalysisService;
             _metadataService = metadataService;
             _playlistManager = playlistManager;
+            _folderWatcherService = folderWatcherService;
+            _eventAggregator = eventAggregator;
         }
 
         public void Play() => _playbackService.Play();
@@ -132,59 +146,94 @@ namespace seamless_loop_music.Services
         private static readonly string[] SupportedExtensions = { ".mp3", ".flac", ".wav", ".m4a", ".ogg", ".wma", ".aiff", ".opus" };
 
         public List<string> GetMusicFolders() => _databaseHelper.GetMusicFolders();
-        public void AddMusicFolder(string folderPath) => _databaseHelper.AddMusicFolder(folderPath);
-        public void RemoveMusicFolder(string folderPath) => _databaseHelper.RemoveMusicFolder(folderPath);
+        public void AddMusicFolder(string folderPath)
+        {
+            _databaseHelper.AddMusicFolder(folderPath);
+            _folderWatcherService.Value.RefreshWatchers(); // 同步刷新监视器
+        }
+        public void RemoveMusicFolder(string folderPath)
+        {
+            _databaseHelper.RemoveMusicFolder(folderPath);
+            _folderWatcherService.Value.RefreshWatchers(); // 同步刷新监视器
+        }
 
         public async Task ScanMusicFoldersAsync()
         {
-            var folders = GetMusicFolders();
-            var existingTracks = _databaseHelper.GetAllTracks().ToDictionary(t => t.FilePath, t => t);
-            
-            var allFiles = folders.Where(System.IO.Directory.Exists)
-                .SelectMany(folder => System.IO.Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
-                .Where(f => SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
-                .Distinct()
-                .ToList();
+            // 🌟 互斥并发锁：如果当前已在扫描，则直接拒绝本次触发
+            if (!_scanLock.Wait(0)) return;
 
-            // --- A/B 融合探测与过滤 ---
-            var filesToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            var abPairs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // A -> B
-
-            foreach (var f in allFiles)
+            try
             {
-                string partB = _metadataService.FindPartB(f);
-                if (!string.IsNullOrEmpty(partB) && allFiles.Contains(partB, StringComparer.OrdinalIgnoreCase))
+                var folders = GetMusicFolders();
+                var existingTracks = _databaseHelper.GetAllTracks().ToDictionary(t => t.FilePath, t => t);
+                
+                var allFiles = folders.Where(System.IO.Directory.Exists)
+                    .SelectMany(folder => System.IO.Directory.GetFiles(folder, "*.*", SearchOption.AllDirectories))
+                    .Where(f => SupportedExtensions.Contains(Path.GetExtension(f).ToLowerInvariant()))
+                    .Distinct()
+                    .ToList();
+
+                // --- A/B 融合探测与过滤 ---
+                var filesToIgnore = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+                var abPairs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase); // A -> B
+
+                foreach (var f in allFiles)
                 {
-                    filesToIgnore.Add(partB);
-                    abPairs[f] = partB;
+                    string partB = _metadataService.FindPartB(f);
+                    if (!string.IsNullOrEmpty(partB) && allFiles.Contains(partB, StringComparer.OrdinalIgnoreCase))
+                    {
+                        filesToIgnore.Add(partB);
+                        abPairs[f] = partB;
+                    }
+                }
+
+                var filteredFiles = allFiles.Where(f => !filesToIgnore.Contains(f)).ToList();
+
+                var filesToScan = filteredFiles.Where(f => 
+                    !existingTracks.TryGetValue(f, out var existing) || 
+                    System.IO.File.GetLastWriteTime(f) > existing.LastModified ||
+                    (abPairs.ContainsKey(f) && existing.LoopStart == 0) // 如果是 A/B 但之前没设置过循环点，也重新扫一次
+                ).ToList();
+
+                bool dbChanged = false;
+
+                // 1. 清理物理上已经不存在的文件记录
+                int deletedCount = await Task.Run(() => _databaseHelper.CleanupMissingFiles());
+                if (deletedCount > 0)
+                {
+                    dbChanged = true;
+                }
+
+                // 2. 扫描新增或更新的文件记录
+                if (filesToScan.Count > 0)
+                {
+                    var newOrUpdatedTracks = await Task.Run(() => 
+                        filesToScan.AsParallel()
+                        .WithDegreeOfParallelism(Environment.ProcessorCount)
+                        .Select(f => CreateTrackFromFile(f, abPairs.ContainsKey(f) ? abPairs[f] : null))
+                        .Where(t => t != null)
+                        .ToList()
+                    );
+
+                    if (newOrUpdatedTracks.Count > 0)
+                    {
+                        _databaseHelper.BulkInsert(newOrUpdatedTracks);
+                        
+                        // 扫描完成后，触发一次全局封面修复逻辑
+                        _databaseHelper.RepairMissingCategoryCovers();
+                        dbChanged = true;
+                    }
+                }
+
+                // 🌟 如果数据库有了新增、更新或删除变动，发布全局库刷新事件，通知 UI 重新加载
+                if (dbChanged)
+                {
+                    _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
                 }
             }
-
-            var filteredFiles = allFiles.Where(f => !filesToIgnore.Contains(f)).ToList();
-
-            var filesToScan = filteredFiles.Where(f => 
-                !existingTracks.TryGetValue(f, out var existing) || 
-                System.IO.File.GetLastWriteTime(f) > existing.LastModified ||
-                (abPairs.ContainsKey(f) && existing.LoopStart == 0) // 如果是 A/B 但之前没设置过循环点，也重新扫一次
-            ).ToList();
-
-            if (filesToScan.Count == 0) return;
-
-            var newOrUpdatedTracks = await Task.Run(() => 
-                filesToScan.AsParallel()
-                .WithDegreeOfParallelism(Environment.ProcessorCount)
-                .Select(f => CreateTrackFromFile(f, abPairs.ContainsKey(f) ? abPairs[f] : null))
-                .Where(t => t != null)
-                .ToList()
-            );
-
-            if (newOrUpdatedTracks.Count > 0)
+            finally
             {
-                _databaseHelper.BulkInsert(newOrUpdatedTracks);
-                
-                // 扫描完成后，触发一次全局封面修复逻辑
-                // 这样如果扫描过程中后期才发现专辑封面，也能同步给之前扫描过的同专辑歌曲
-                _databaseHelper.RepairMissingCategoryCovers();
+                _scanLock.Release(); // 释放锁
             }
         }
 

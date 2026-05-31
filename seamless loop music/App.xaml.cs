@@ -108,6 +108,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
             containerRegistry.RegisterSingleton<IAppStateService, AppStateService>();
             containerRegistry.RegisterSingleton<AudioDeviceMonitorService>();
+            containerRegistry.RegisterSingleton<IFolderWatcherService, FolderWatcherService>();
         }
 
         protected override void OnInitialized()
@@ -134,6 +135,10 @@ namespace seamless_loop_music
 
                 Container.Resolve<AudioDeviceMonitorService>();
 
+                // Initialize real-time folder watchers
+                var folderWatcher = Container.Resolve<IFolderWatcherService>();
+                folderWatcher.Initialize();
+
                 // Perform startup cleanup and restore last app state
                 Task.Run(async () => 
                 {
@@ -142,11 +147,11 @@ namespace seamless_loop_music
                     
                     try 
                     {
-                        // 1. Cleanup missing files (optional but good for health)
-                        var playlistManager = Container.Resolve<IPlaylistManagerService>();
-                        await playlistManager.CleanupMissingTracksAsync();
+                        // 1. Scan music folders for any offline additions/deletions and perform cleanup
+                        var playerService = Container.Resolve<IPlayerService>();
+                        await playerService.ScanMusicFoldersAsync();
                     }
-                    catch (Exception ex) { Debug.WriteLine($"Cleanup error: {ex.Message}"); }
+                    catch (Exception ex) { Debug.WriteLine($"Startup scan error: {ex.Message}"); }
 
                     // 2. Restore state
                     var appState = Container.Resolve<IAppStateService>();

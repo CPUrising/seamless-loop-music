@@ -11,6 +11,8 @@ namespace seamless_loop_music.UI.Views
     /// </summary>
     public partial class PlaybackControlBar : UserControl
     {
+        public Controls.TrackInfoControl TrackInfoControl => TrackInfo;
+
         public PlaybackControlBar()
         {
             InitializeComponent();

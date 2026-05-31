@@ -201,30 +201,6 @@ namespace seamless_loop_music.Services
                     return track.CoverPath;
                 }
 
-                // 2. 尝试寻找同专辑的其他曲目是否已经缓存了封面
-                if (string.IsNullOrEmpty(track.Album)) goto skip_album_sharing;
-
-                using (var db = _dbHelper.GetConnection())
-                {
-                    // 严格按照 CPU 大人要求：匹配 专辑名 + 艺术家名，实现精准的一辑一封
-                    string existingPath = db.QueryFirstOrDefault<string>(@"
-                        SELECT CoverPath 
-                        FROM Albums 
-                        WHERE Name = @Album 
-                          AND CoverPath IS NOT NULL 
-                          AND CoverPath != '' 
-                        LIMIT 1",
-                        new { Album = track.Album });
-
-                    if (IsFileValid(existingPath))
-                    {
-                        track.CoverPath = existingPath;
-                        track.AlbumCoverPath = existingPath; // 同步内存中的专辑封面路径
-                        return existingPath;
-                    }
-                }
-
-                skip_album_sharing:
                 // 3. 准备缓存目录
                 string cacheDir = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Cache", "Covers");
                 if (!System.IO.Directory.Exists(cacheDir)) System.IO.Directory.CreateDirectory(cacheDir);
@@ -236,19 +212,15 @@ namespace seamless_loop_music.Services
                     {
                         var pic = file.Tag.Pictures[0];
                         
-                        // 生成基于专辑信息的确定性 GUID，确保同专辑共享同一个物理文件
-                        // 逻辑：严格按照 CPU 大人要求，仅使用专辑名（无专辑名则用文件夹名）作为指纹
-                        string folderName = Path.GetFileName(Path.GetDirectoryName(track.FilePath) ?? "UnknownFolder");
-                        string albumKey = track.Album ?? folderName;
-                        
-                        string guidKey;
+                        // 🌟 【方案一核心】对图片自身的二进制字节数据计算极速 MD5 唯一指纹
+                        string md5Key;
                         using (var md5 = MD5.Create())
                         {
-                            byte[] hash = md5.ComputeHash(Encoding.UTF8.GetBytes(albumKey));
-                            guidKey = new Guid(hash).ToString();
+                            byte[] hash = md5.ComputeHash(pic.Data.Data);
+                            md5Key = BitConverter.ToString(hash).Replace("-", "").ToLower();
                         }
                         
-                        string cachePath = Path.Combine(cacheDir, $"{guidKey}.jpg");
+                        string cachePath = Path.Combine(cacheDir, $"cover-{md5Key}.jpg");
                         
                         // 如果物理文件不存在或已损坏（0字节），则写入新提取的数据
                         if (!IsFileValid(cachePath))

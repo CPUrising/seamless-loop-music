@@ -469,24 +469,6 @@ namespace seamless_loop_music.Data.Repositories
                         }
                     }
                 }
-
-                // 3. 向下补全 (Album -> Track)
-                // 只有当曲目本身没封面（或坏了），且它不是 Unknown 专辑时，才从专辑拉取封面
-                db.Execute(@"
-                    UPDATE Tracks 
-                    SET CoverPath = (SELECT al.CoverPath FROM Albums al WHERE al.Id = Tracks.AlbumId)
-                    WHERE (CoverPath IS NULL OR CoverPath = '')
-                      AND AlbumId IN (SELECT Id FROM Albums WHERE Name != 'Unknown Album' AND CoverPath IS NOT NULL AND CoverPath != '')");
-                
-                // 物理校验：如果 Track 现有的 CoverPath 坏了，也尝试补全
-                var brokenTracks = db.Query("SELECT t.Id, t.CoverPath, al.CoverPath as AlbumPath FROM Tracks t JOIN Albums al ON al.Id = t.AlbumId WHERE t.CoverPath IS NOT NULL AND t.CoverPath != '' AND al.Name != 'Unknown Album' AND al.CoverPath IS NOT NULL AND al.CoverPath != ''").ToList();
-                foreach (var t in brokenTracks)
-                {
-                    if (!File.Exists((string)t.CoverPath))
-                    {
-                        db.Execute("UPDATE Tracks SET CoverPath = @Path WHERE Id = @Id", new { Path = (string)t.AlbumPath, Id = (long)t.Id });
-                    }
-                }
             }
         }
     }
