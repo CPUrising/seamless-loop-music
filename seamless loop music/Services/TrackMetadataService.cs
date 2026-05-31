@@ -6,6 +6,7 @@ using System.Text;
 using Dapper;
 using System.Windows.Media;
 using System.Windows.Media.Imaging;
+using NAudio.Flac;
 using NAudio.Wave;
 using seamless_loop_music.Data;
 using seamless_loop_music.Models;
@@ -166,6 +167,10 @@ namespace seamless_loop_music.Services
                             break;
                         case ".mp3":
                             reader = new NAudio.Wave.Mp3FileReader(filePath);
+                            break;
+                        case ".flac":
+                            // FLAC 使用 bundled reader，避免依赖 Windows 系统解码器。
+                            reader = new FlacReader(filePath);
                             break;
                         default:
                             reader = new NAudio.Wave.AudioFileReader(filePath);

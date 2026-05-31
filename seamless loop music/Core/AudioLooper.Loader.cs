@@ -1,5 +1,6 @@
 using NAudio.Wave;
 using NAudio.Vorbis;
+using NAudio.Flac;
 using System;
 using System.IO;
 
@@ -110,6 +111,9 @@ namespace seamless_loop_music
                     return new VorbisWaveReader(filePath);
                 case ".mp3":
                     return new Mp3FileReader(filePath);
+                case ".flac":
+                    // 使用 bundled NAudio FLAC reader，避免依赖 Windows 系统解码器。
+                    return new FlacReader(filePath);
                 default:
                     return null;
             }
