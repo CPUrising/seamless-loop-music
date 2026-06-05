@@ -34,7 +34,11 @@ namespace seamless_loop_music.Services
         [DllImport("gdi32.dll")]
         private static extern bool DeleteObject(IntPtr hObject);
 
+        [DllImport("dwmapi.dll")]
+        private static extern int DwmSetIconicLivePreviewBitmap(IntPtr hwnd, IntPtr hBitmap, ref System.Drawing.Point pptClient, uint dwSITFlags);
+
         private const int WM_DWMSENDICONICTHUMBNAIL = 0x0323;
+        private const int WM_DWMSENDICONICLIVEPREVIEWBITMAP = 0x0326;
 
         public TaskbarService(IEventAggregator eventAggregator, IPlaybackService playbackService)
         {
@@ -123,6 +127,11 @@ namespace seamless_loop_music.Services
                 int maxHeight = (int)((long)lParam & 0xFFFF);
 
                 SendThumbnailToTaskbar(hwnd, maxWidth, maxHeight);
+                handled = true;
+            }
+            else if (msg == WM_DWMSENDICONICLIVEPREVIEWBITMAP)
+            {
+                SendLivePreviewToTaskbar(hwnd);
                 handled = true;
             }
             return IntPtr.Zero;
@@ -361,6 +370,84 @@ namespace seamless_loop_music.Services
                     _taskbarItemInfo.ProgressValue = 0;
                 }
             });
+        }
+
+        private void SendLivePreviewToTaskbar(IntPtr hwnd)
+        {
+            if (_ownerWindow == null) return;
+
+            try
+            {
+                _ownerWindow.Dispatcher.Invoke(() =>
+                {
+                    double width = _ownerWindow.ActualWidth;
+                    double height = _ownerWindow.ActualHeight;
+
+                    if (_ownerWindow.WindowState == WindowState.Minimized)
+                    {
+                        var bounds = _ownerWindow.RestoreBounds;
+                        if (bounds.Width > 0 && bounds.Height > 0)
+                        {
+                            width = bounds.Width;
+                            height = bounds.Height;
+                        }
+                    }
+
+                    if (double.IsNaN(width) || width <= 0) width = 1024;
+                    if (double.IsNaN(height) || height <= 0) height = 700;
+
+                    // Get system DPI scaling for this window to prevent shrink effect on high DPI screens
+                    var dpiScale = System.Windows.Media.VisualTreeHelper.GetDpi(_ownerWindow);
+                    double dpiX = dpiScale.PixelsPerInchX;
+                    double dpiY = dpiScale.PixelsPerInchY;
+
+                    int bmpW = (int)Math.Round(width * dpiScale.DpiScaleX);
+                    int bmpH = (int)Math.Round(height * dpiScale.DpiScaleY);
+
+                    var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        bmpW, bmpH, dpiX, dpiY, System.Windows.Media.PixelFormats.Pbgra32);
+                    
+                    renderTarget.Render(_ownerWindow);
+
+                    using (var bitmap = BitmapSourceToBitmap(renderTarget))
+                    {
+                        IntPtr hBitmap = bitmap.GetHbitmap();
+                        try
+                        {
+                            var point = new System.Drawing.Point(0, 0);
+                            DwmSetIconicLivePreviewBitmap(hwnd, hBitmap, ref point, 0);
+                        }
+                        finally
+                        {
+                            DeleteObject(hBitmap);
+                        }
+                    }
+                });
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"Error sending iconic live preview bitmap: {ex.Message}");
+            }
+        }
+
+        private System.Drawing.Bitmap BitmapSourceToBitmap(System.Windows.Media.Imaging.BitmapSource source)
+        {
+            var bmp = new System.Drawing.Bitmap(source.PixelWidth, source.PixelHeight, System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            var data = bmp.LockBits(
+                new System.Drawing.Rectangle(System.Drawing.Point.Empty, bmp.Size),
+                System.Drawing.Imaging.ImageLockMode.WriteOnly,
+                System.Drawing.Imaging.PixelFormat.Format32bppPArgb);
+            
+            try
+            {
+                source.CopyPixels(System.Windows.Int32Rect.Empty, data.Scan0, data.Height * data.Stride, data.Stride);
+            }
+            finally
+            {
+                bmp.UnlockBits(data);
+            }
+            
+            return bmp;
         }
     }
 }
