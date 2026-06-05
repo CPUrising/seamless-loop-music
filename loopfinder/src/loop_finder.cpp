@@ -229,7 +229,8 @@ void LoopFinder::findCandidatePairs(const std::vector<std::vector<float>>& chrom
 
 void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
                                  float bpm, int hopSize, int sampleRate,
-                                 std::vector<LoopPoint>& candidates) {
+                                 std::vector<LoopPoint>& candidates,
+                                 int endpointRefineRadius) {
     LF_LOG("[scoreCandidates] candidates=%zu bpm=%.1f", candidates.size(), bpm);
     if (candidates.empty()) return;
 
@@ -295,6 +296,45 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
     std::vector<float> lookaheadBuf(testOffsetFrames);
     std::vector<float> lookbehindBuf(testOffsetFrames);
     std::vector<float> padded(testOffsetFrames);
+
+    // Local scoring lambda – re-uses the same lookahead/lookbehind chroma similarity logic.
+    auto computeScore = [&](int b1, int b2) -> float {
+        if (b1 < 0 || b2 < 0 || b1 >= numChromaFrames || b2 >= numChromaFrames || b2 <= b1)
+            return -1.0f;
+        int b1End = std::min(b1 + testOffsetFrames, numChromaFrames);
+        int b2End = std::min(b2 + testOffsetFrames, numChromaFrames);
+        int maxOffset = std::min(b1End - b1, b2End - b2);
+        float laScore = 0.0f;
+        if (maxOffset > 0) {
+            float wSum = 0.0f;
+            for (int i = 0; i < maxOffset; ++i) {
+                const float* ca = &normChroma[static_cast<size_t>(b1 + i) * 12];
+                const float* cb = &normChroma[static_cast<size_t>(b2 + i) * 12];
+                float d = dotProduct(ca, cb, 12);
+                float w = (i < testOffsetFrames) ? weights[i] : 0.0f;
+                laScore += d * w;
+                wSum += w;
+            }
+            if (wSum > 0.0f) laScore /= wSum;
+        }
+        int maxNeg = std::min(testOffsetFrames, std::min(b1, b2));
+        int b1s = b1 - maxNeg;
+        int b2s = b2 - maxNeg;
+        float lbScore = 0.0f;
+        if (maxNeg > 0) {
+            float wSum = 0.0f;
+            for (int i = 0; i < maxNeg; ++i) {
+                const float* ca = &normChroma[static_cast<size_t>(b1s + i) * 12];
+                const float* cb = &normChroma[static_cast<size_t>(b2s + i) * 12];
+                float d = dotProduct(ca, cb, 12);
+                float w = (i < testOffsetFrames) ? revWeights[i] : 0.0f;
+                lbScore += d * w;
+                wSum += w;
+            }
+            if (wSum > 0.0f) lbScore /= wSum;
+        }
+        return std::max(laScore, lbScore);
+    };
 
     for (auto& lp : candidates) {
         int b1 = static_cast<int>(lp.loopStart);
@@ -370,6 +410,83 @@ void LoopFinder::scoreCandidates(const std::vector<std::vector<float>>& chroma,
               [](const LoopPoint& a, const LoopPoint& b) {
                   return a.score > b.score;
               });
+
+    // ---- Local endpoint refinement for top candidates ----
+    if (endpointRefineRadius > 0) {
+        const int topK = std::min(50, static_cast<int>(candidates.size()));
+        const int searchRadius = std::max(0, endpointRefineRadius);
+        for (int i = 0; i < topK; ++i) {
+            auto& lp = candidates[i];
+            int origB1 = static_cast<int>(lp.loopStart);
+            int origB2 = static_cast<int>(lp.loopEnd);
+            int bestB1 = origB1;
+            int bestB2 = origB2;
+            float originalScore = lp.score;
+            float bestScore = lp.score;
+            for (int dB1 = -searchRadius; dB1 <= searchRadius; ++dB1) {
+                for (int dB2 = -searchRadius; dB2 <= searchRadius; ++dB2) {
+                    if (dB1 == 0 && dB2 == 0) continue;
+                    int nb1 = origB1 + dB1;
+                    int nb2 = origB2 + dB2;
+                    if (nb1 < 0 || nb2 >= numChromaFrames || nb2 <= nb1) continue;
+                    float s = computeScore(nb1, nb2);
+                    if (s > bestScore) {
+                        bestScore = s;
+                        bestB1 = nb1;
+                        bestB2 = nb2;
+                    }
+                }
+            }
+            if (bestScore > lp.score) {
+                lp.loopStart      = bestB1;
+                lp.loopEnd        = bestB2;
+                lp.loopStartFrame = bestB1;
+                lp.loopEndFrame   = bestB2;
+                // Keep the original ranking score: refinement should improve
+                // endpoint placement without letting local score bumps reorder
+                // unrelated candidates ahead of musically preferred loops.
+                lp.score          = originalScore;
+                // recompute noteDiff (Euclidean distance on raw chroma endpoints)
+                float nd = 0.0f;
+                for (int c = 0; c < 12; ++c) {
+                    float diff = chroma[c][bestB1] - chroma[c][bestB2];
+                    nd += diff * diff;
+                }
+                lp.noteDiff = std::sqrt(nd);
+                // loudnessDiff intentionally left unchanged
+            }
+        }
+    }
+
+    // ---- Near-duplicate NMS (non-maximum suppression) ----
+    // Sort so the best candidate in each (start,end) cluster comes first.
+    // Then keep the highest-scoring candidate and skip any other candidate
+    // whose loopStartFrame and loopEndFrame are both within nmsFrameRadius
+    // of an already-kept candidate.
+    const int nmsFrameRadius = 12;
+    std::sort(candidates.begin(), candidates.end(),
+              [](const LoopPoint& a, const LoopPoint& b) {
+                  if (a.score != b.score) return a.score > b.score;
+                  if (a.loudnessDiff != b.loudnessDiff) return a.loudnessDiff < b.loudnessDiff;
+                  return a.noteDiff < b.noteDiff;
+              });
+    std::vector<LoopPoint> kept;
+    kept.reserve(candidates.size());
+    for (const auto& lp : candidates) {
+        bool nearDuplicate = false;
+        for (const auto& kp : kept) {
+            if (std::abs(lp.loopStartFrame - kp.loopStartFrame) <= nmsFrameRadius &&
+                std::abs(lp.loopEndFrame - kp.loopEndFrame) <= nmsFrameRadius) {
+                nearDuplicate = true;
+                break;
+            }
+        }
+        if (!nearDuplicate) {
+            kept.push_back(lp);
+        }
+    }
+    candidates = std::move(kept);
+
     LF_LOG("[scoreCandidates] done topScore=%.4f",
            candidates.empty() ? 0.0f : candidates[0].score);
 }
@@ -389,7 +506,8 @@ void LoopFinder::prioritizeDuration(std::vector<LoopPoint>& candidates) {
 
     auto score90 = scoreVals.begin() + scoreVals.size() * 9 / 10;
     std::nth_element(scoreVals.begin(), score90, scoreVals.end());
-    float scoreThreshold = std::max(*score90, candidates[0].score - 1e-4f);
+    const float durationScoreTolerance = 1e-3f;  // Allow nearly-equal-scoring longer candidates
+    float scoreThreshold = std::max(*score90, candidates[0].score - durationScoreTolerance);
 
     float dbThreshold = 0.25f;
     if (!loudVals.empty()) {
@@ -513,14 +631,15 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
             }
         }
 
-        float medianRef = 1.0f;
+        float rawMedian = 0.0f;
         if (!allVals.empty()) {
             auto mid = allVals.begin() + allVals.size() / 2;
             std::nth_element(allVals.begin(), mid, allVals.end());
-            medianRef = std::abs(*mid);
+            rawMedian = *mid;  // raw median in dB domain (may be negative)
         }
-        medianRef = std::max(medianRef, 1e-10f);
-        LF_LOG("[analyze] step 4: weighted median abs=%.6f", medianRef);
+        const float amin = 1e-10f;
+        float medianRef = std::max(rawMedian, amin);
+        LF_LOG("[analyze] step 4: weighted median raw=%.6f clippedRef=%.6f", rawMedian, medianRef);
 
         float maxDb = -1e30f;
         for (int k = 0; k < numFreqBins; ++k) {
@@ -618,7 +737,8 @@ std::vector<LoopPoint> LoopFinder::analyze(const float* monoSignal, int signalLe
 
     // 8. Score candidates
     LF_LOG("[analyze] step 8: scoreCandidates");
-    scoreCandidates(chromagram, bpm, config.hopSize, sampleRate, candidates);
+    scoreCandidates(chromagram, bpm, config.hopSize, sampleRate, candidates,
+                    config.endpointRefineRadius);
     t1 = std::chrono::high_resolution_clock::now();
     LF_PERF("scoreCandidates", std::chrono::duration_cast<std::chrono::milliseconds>(t1 - t0).count());
     t0 = t1;

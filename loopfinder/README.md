@@ -73,6 +73,9 @@ build/Release/loopfinder_test.exe path/to/audio.flac --no-hpss
 
 # 调整候选网格密度。数值越小，越允许 off-beat 候选
 build/Release/loopfinder_test.exe path/to/audio.flac --grid=1
+
+# 关闭局部端点细化（默认半径 6 帧；设为 0 以关闭）
+build/Release/loopfinder_test.exe path/to/audio.flac --refine=0
 ```
 
 ### Android NDK (交叉编译)
@@ -149,33 +152,12 @@ Top N 返回
 
 有意保留的差异:
 
-- PyMusicLooper 使用 librosa beat/PLP；loopfinder 使用 aubio beat，再叠加 fallback grid。默认 `candidateFrameStep=4`，用于让 Top5 候选段更稳定地接近 PyMusicLooper。`--grid=1`/`2` 会允许更多 off-beat 候选。
+- PyMusicLooper 使用 librosa beat/PLP；loopfinder 使用 aubio beat，再叠加 fallback grid。默认 `candidateFrameStep=4`，让默认 Top 候选更稳定；`--grid=2` 可用于诊断/覆盖落在 4 帧网格之间的 PyMusicLooper 候选帧，`--grid=1` 会允许更多 off-beat 候选但候选量更大、剪枝更不稳定。
 - HPSS 默认开启。批量测试中 HPSS on/off 的分数都接近，但 HPSS on 的 Top5 更稳；可通过 `LoopFinder::Config::useHPSS=false` 或测试参数 `--no-hpss` 关闭。
-- PyMusicLooper 当前的 duration priority 基本不会实际重排；loopfinder 为兼容默认关闭 `prioritizeDuration`。
+- PyMusicLooper 会对几乎同分的候选优先选择更长循环段；loopfinder 默认开启 `prioritizeDuration`，可用 `--no-duration-priority` 或 `LoopFinder::Config::prioritizeDuration=false` 关闭。
+- loopfinder 默认对 Top50 候选做局部端点细化（`endpointRefineRadius=6`，在候选 beat 帧周围 ±6 帧搜索更优 chroma 相似度位置以微调端点）。可通过 `--refine=0` 或 `LoopFinder::Config::endpointRefineRadius=0` 关闭。PyMusicLooper 无此步骤。
+- 端点细化后会对相近候选做 NMS 去重（起止帧均在 12 帧内视作同一簇），避免同一循环点的微小变体挤占 TopN。
 
-## 批量对比
-
-仓库根目录提供对比脚本:
-
-```bash
-python tools/compare_loopfinder.py music --top 20
-```
-
-脚本会同时运行 PyMusicLooper、loopfinder 默认 HPSS、loopfinder `--no-hpss`，并打印候选 sample/frame、C++ Top1 与 PyMusicLooper Top 候选中最近点的距离和 score 差异。
-
-PyMusicLooper 结果会缓存在仓库根目录的 `.loop_compare_cache/`。缓存键包含音频路径、文件大小、mtime 和 `--top`，音频不变时不会重复跑 Python 分析。
-
-刷新缓存:
-
-```bash
-python tools/compare_loopfinder.py music --top 20 --refresh-cache
-```
-
-可传递 C++ 测试参数:
-
-```bash
-python tools/compare_loopfinder.py music/5.flac --top 20 --cpp-arg=--grid=1
-```
 
 ## 未实现 / 不承担
 

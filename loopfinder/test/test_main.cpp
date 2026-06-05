@@ -32,12 +32,17 @@ int main(int argc, char** argv) {
         std::string arg = argv[i];
         if (arg == "--no-hpss") config.useHPSS = false;
         if (arg == "--duration-priority") config.prioritizeDuration = true;
+        if (arg == "--no-duration-priority") config.prioritizeDuration = false;
         if (arg.rfind("--grid=", 0) == 0) config.candidateFrameStep = std::stoi(arg.substr(7));
+        if (arg.rfind("--top=", 0) == 0) config.topN = std::stoi(arg.substr(6));
+        if (arg.rfind("--refine=", 0) == 0) config.endpointRefineRadius = std::stoi(arg.substr(9));
     }
 
     std::cout << "config: useHPSS=" << (config.useHPSS ? "true" : "false")
               << "  prioritizeDuration=" << (config.prioritizeDuration ? "true" : "false")
               << "  candidateFrameStep=" << config.candidateFrameStep
+              << "  topN=" << config.topN
+              << "  endpointRefineRadius=" << config.endpointRefineRadius
               << "\n";
 
     auto results = finder.analyze(
