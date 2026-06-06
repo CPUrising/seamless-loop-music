@@ -74,14 +74,10 @@ namespace seamless_loop_music.UI.Views
 
         private void BtnAddFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            var dialog = new UI.FolderPicker();
+            if (dialog.ShowDialog(this) && !string.IsNullOrEmpty(dialog.ResultPath))
             {
-                Description = LocalizationService.Instance["MusicFoldersHeader"],
-                ShowNewFolderButton = false
-            };
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                _playerService.AddMusicFolder(dialog.SelectedPath);
+                _playerService.AddMusicFolder(dialog.ResultPath);
                 LoadFolders();
             }
         }
