@@ -15,10 +15,13 @@ public:
         int   nFFT                  = 2048;
         int   hopSize               = 512;
         // Dense grid fallback for PyMusicLooper-like PLP beat coverage.
-        // Lower values allow more off-beat candidates; 4 is steadier for Top5 alignment.
+        // Step 4 keeps the default candidate set stable; use --grid=2 when
+        // diagnosing tracks whose PyMusicLooper beat frames fall between grid points.
         int   candidateFrameStep    = 4;
         bool  useHPSS               = true;
-        bool  prioritizeDuration    = false;
+        bool  prioritizeDuration    = true;
+        // 对已入围 top 候选做局部端点细化半径（帧数），0 关闭
+        int   endpointRefineRadius = 6;
     };
 
     LoopFinder() = default;
@@ -35,7 +38,8 @@ private:
 
     void scoreCandidates(const std::vector<std::vector<float>>& chroma,
                          float bpm, int hopSize, int sampleRate,
-                         std::vector<LoopPoint>& candidates);
+                         std::vector<LoopPoint>& candidates,
+                         int endpointRefineRadius);
 
     void prioritizeDuration(std::vector<LoopPoint>& candidates);
 
