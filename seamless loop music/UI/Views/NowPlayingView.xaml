@@ -68,21 +68,21 @@
 
         <Grid Grid.Row="1" Margin="40,10,40,40">
             <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="1.2*"/>
+                <ColumnDefinition Width="1*"/>
                 <!-- Left: Artwork & Info -->
                 <ColumnDefinition Width="1*"/>
                 <!-- Right: Queue -->
             </Grid.ColumnDefinitions>
 
             <!-- Left: Large Album Cover & Info -->
-            <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" HorizontalAlignment="Center">
+            <Grid Grid.Column="0" VerticalAlignment="Center" Margin="0,0,20,0" >
                 <Grid.RowDefinitions>
                     <RowDefinition Height="*"/>
                     <RowDefinition Height="Auto"/>
                 </Grid.RowDefinitions>
 
                 <!-- Artwork Container: Centered square -->
-                <Grid Grid.Row="0">
+                <Grid Grid.Row="0" HorizontalAlignment="Center">
                     <Border CornerRadius="24" Background="#181825">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="40" Color="Black" Opacity="0.4" ShadowDepth="10"/>
@@ -98,15 +98,37 @@
                 </Grid>
 
                 <!-- Track Info: Left aligned relative to artwork -->
-                <StackPanel Grid.Row="1" Margin="0,30,0,0" HorizontalAlignment="Left">
-                    <Viewbox HorizontalAlignment="Left" MaxHeight="50" StretchDirection="DownOnly" MaxWidth="450">
-                        <TextBlock Text="{Binding CurrentTrack.DisplayName}" FontSize="32" FontWeight="Bold" Foreground="White"/>
-                    </Viewbox>
-                    <TextBlock Text="{Binding CurrentTrack.Artist}" FontSize="20" Foreground="#BAC2DE" Margin="0,8,0,0" 
-                               Opacity="0.8"/>
-                    <TextBlock Text="{Binding CurrentTrack.Album}" FontSize="16" Foreground="#9399B2" Margin="0,5,0,0" 
-                               Opacity="0.6"/>
-                </StackPanel>
+                <Grid Grid.Row="1" Margin="0,30,0,0" HorizontalAlignment="Stretch">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                        <RowDefinition Height="Auto"/>
+                    </Grid.RowDefinitions>
+                    <Grid Grid.Row="0" HorizontalAlignment="Stretch">
+                        <ContentControl Style="{StaticResource Marquee}"  
+                            Content="{Binding CurrentTrack.DisplayName}" 
+                            FontSize="28" 
+                            FontWeight="Bold" 
+                            Foreground="White"
+                            VerticalAlignment="Center"/>
+                    </Grid>
+                    <Grid Grid.Row="1" HorizontalAlignment="Stretch">
+                        <ContentControl Style="{StaticResource Marquee}"
+                        Content="{Binding CurrentTrack.Artist}" 
+                        FontSize="20" 
+                        Foreground="#BAC2DE" 
+                        Margin="0,8,0,0" 
+                        Opacity="0.8"/>
+                    </Grid>
+                    <Grid Grid.Row="2" HorizontalAlignment="Stretch">
+                        <ContentControl Style="{StaticResource Marquee}"  
+                        Content="{Binding CurrentTrack.Album}" 
+                        FontSize="16" 
+                        Foreground="#9399B2" 
+                        Margin="0,5,0,0" 
+                        Opacity="0.6"/>
+                    </Grid>
+                </Grid>
             </Grid>
 
             <!-- Right: Playback Queue -->

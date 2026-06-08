@@ -176,8 +176,16 @@ namespace seamless_loop_music.UI.ViewModels
             try
             {
                 var pos = _playbackService.CurrentTime;
-                CurrentTime = pos.TotalSeconds;
-                CurrentTimeStr = pos.ToString(@"mm\:ss");
+                double newCurrentTime = pos.TotalSeconds;
+                if (Math.Abs(CurrentTime - newCurrentTime) > 0.05)
+                {
+                    CurrentTime = newCurrentTime;
+                }
+                string newTimeStr = pos.ToString(@"mm\:ss");
+                if (CurrentTimeStr != newTimeStr)
+                {
+                    CurrentTimeStr = newTimeStr;
+                }
 
                 var total = _playbackService.TotalTime;
                 TotalTime = total.TotalSeconds;
@@ -186,7 +194,11 @@ namespace seamless_loop_music.UI.ViewModels
                 // 换算 0-1000 比例
                 if (TotalTime > 0)
                 {
-                    ProgressValue = (CurrentTime / TotalTime) * 1000.0;
+                    double newProgress = (CurrentTime / TotalTime) * 1000.0;
+                    if (Math.Abs(ProgressValue - newProgress) > 0.5)
+                    {
+                        ProgressValue = newProgress;
+                    }
                 }
 
                 PlayState = _playbackService.PlaybackState.ToString();

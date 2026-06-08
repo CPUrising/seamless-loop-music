@@ -56,8 +56,8 @@ namespace seamless_loop_music
             if (_activeCanvas == null || _activePresenter == null) return;
             _activeCanvas.Dispatcher.BeginInvoke(new Action(() =>
             {
-                _activeCanvas.UpdateLayout();
-                _activePresenter.UpdateLayout();
+               // _activeCanvas.UpdateLayout();
+               // _activePresenter.UpdateLayout();
 
                 double windowWidth = _activeCanvas.ActualWidth;
             double textWidth = _activePresenter.ActualWidth;

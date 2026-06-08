@@ -41,7 +41,7 @@
     <Message Importance="high" 
              Condition="'$(CMakeAvailable)' == 'true' And '$(_NativeDllExists)' != 'true'"
              Text="Building loopfinder.dll (first time)..." />
-    <Message Importance="normal"
+    <Message Importance="high"
              Condition="'$(CMakeAvailable)' == 'false' And '$(_NativeDllExists)' != 'true'"
              Text="CMake not found. Skipping loopfinder.dll build. Install CMake or set SkipNativeBuild=true." />
   </Target>
