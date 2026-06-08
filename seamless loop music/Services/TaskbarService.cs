@@ -21,6 +21,7 @@ namespace seamless_loop_music.Services
         private ITaskbarList3 _taskbarList;
         
         private readonly DispatcherTimer _progressTimer;
+        private IntPtr _cachedLivePreviewHBitmap = IntPtr.Zero;
 
         [DllImport("dwmapi.dll")]
         private static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
@@ -127,6 +128,7 @@ namespace seamless_loop_music.Services
                 int maxHeight = (int)((long)lParam & 0xFFFF);
 
                 SendThumbnailToTaskbar(hwnd, maxWidth, maxHeight);
+                PrepareLivePreviewBitmap();
                 handled = true;
             }
             else if (msg == WM_DWMSENDICONICLIVEPREVIEWBITMAP)
@@ -372,12 +374,78 @@ namespace seamless_loop_music.Services
             });
         }
 
-        private void SendLivePreviewToTaskbar(IntPtr hwnd)
+        private void PrepareLivePreviewBitmap()
         {
             if (_ownerWindow == null) return;
 
+            _ownerWindow.Dispatcher.BeginInvoke(DispatcherPriority.Background, new Action(() =>
+            {
+                try
+                {
+                    double width = _ownerWindow.ActualWidth;
+                    double height = _ownerWindow.ActualHeight;
+
+                    if (_ownerWindow.WindowState == WindowState.Minimized)
+                    {
+                        var bounds = _ownerWindow.RestoreBounds;
+                        if (bounds.Width > 0 && bounds.Height > 0)
+                        {
+                            width = bounds.Width;
+                            height = bounds.Height;
+                        }
+                    }
+
+                    if (double.IsNaN(width) || width <= 0) width = 1024;
+                    if (double.IsNaN(height) || height <= 0) height = 700;
+
+                    var dpiScale = System.Windows.Media.VisualTreeHelper.GetDpi(_ownerWindow);
+                    double dpiX = dpiScale.PixelsPerInchX;
+                    double dpiY = dpiScale.PixelsPerInchY;
+
+                    int bmpW = (int)Math.Round(width * dpiScale.DpiScaleX);
+                    int bmpH = (int)Math.Round(height * dpiScale.DpiScaleY);
+
+                    var renderTarget = new System.Windows.Media.Imaging.RenderTargetBitmap(
+                        bmpW, bmpH, dpiX, dpiY, System.Windows.Media.PixelFormats.Pbgra32);
+                    
+                    renderTarget.Render(_ownerWindow);
+
+                    using (var bitmap = BitmapSourceToBitmap(renderTarget))
+                    {
+                        IntPtr newHBitmap = bitmap.GetHbitmap();
+                        
+                        var oldHBitmap = _cachedLivePreviewHBitmap;
+                        _cachedLivePreviewHBitmap = newHBitmap;
+                        
+                        if (oldHBitmap != IntPtr.Zero)
+                        {
+                            DeleteObject(oldHBitmap);
+                        }
+                    }
+                }
+                catch (Exception ex)
+                {
+                    System.Diagnostics.Debug.WriteLine($"Error pre-rendering live preview: {ex.Message}");
+                }
+            }));
+        }
+
+        private void SendLivePreviewToTaskbar(IntPtr hwnd)
+        {
             try
             {
+                if (_cachedLivePreviewHBitmap != IntPtr.Zero)
+                {
+                    var point = new System.Drawing.Point(0, 0);
+                    DwmSetIconicLivePreviewBitmap(hwnd, _cachedLivePreviewHBitmap, ref point, 0);
+                    
+                    DeleteObject(_cachedLivePreviewHBitmap);
+                    _cachedLivePreviewHBitmap = IntPtr.Zero;
+                    return;
+                }
+
+                if (_ownerWindow == null) return;
+                
                 _ownerWindow.Dispatcher.Invoke(() =>
                 {
                     double width = _ownerWindow.ActualWidth;
@@ -396,7 +464,6 @@ namespace seamless_loop_music.Services
                     if (double.IsNaN(width) || width <= 0) width = 1024;
                     if (double.IsNaN(height) || height <= 0) height = 700;
 
-                    // Get system DPI scaling for this window to prevent shrink effect on high DPI screens
                     var dpiScale = System.Windows.Media.VisualTreeHelper.GetDpi(_ownerWindow);
                     double dpiX = dpiScale.PixelsPerInchX;
                     double dpiY = dpiScale.PixelsPerInchY;
