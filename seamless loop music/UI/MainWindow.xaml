@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:views="clr-namespace:seamless_loop_music.UI.Views"
         xmlns:prism="http://prismlibrary.com/"
-        Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="725" Width="1024"
+        Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="725" Width="1120"
         Icon="/Resources/app_icon.png"
         Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterScreen"
