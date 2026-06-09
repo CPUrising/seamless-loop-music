@@ -434,6 +434,9 @@ namespace seamless_loop_music.UI.ViewModels
         private void OnAnalyzeTrack(MusicTrack track)
         {
             if (track == null) return;
+
+            _playbackService.SetQueue(TracksView.Cast<MusicTrack>().ToList(), track, _selectedCategoryItem);
+            _ = _playbackService.LoadTrackAsync(track, true);
             
             // 1. 导航到详情页
             var parameters = new NavigationParameters();

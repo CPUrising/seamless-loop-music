@@ -311,40 +311,50 @@ namespace seamless_loop_music.UI.ViewModels
             else LoopEndSample = targetVal.ToString();
         }
 
-        private async void ExecuteSmartMatchReverse()
+        private async void ExecuteSmartMatchReverse() => await DoSmartMatchAsync(true);
+
+        private async void ExecuteSmartMatchForward() => await DoSmartMatchAsync(false);
+
+        private async Task DoSmartMatchAsync(bool adjustStart)
         {
             try
             {
-                ApplyLocalSettingsToService();
+                if (_currentTrack == null) return;
+                // 先取当前循环点：随后的静默载入会发布 TrackLoadedEvent 重置文本框，提前读出避免丢失用户输入
                 if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
-                
-                var result = await _playbackService.FindBestLoopPointsAsync(start, end, true);
+
+                // 未播放时也能匹配：AudioLooper 分析依赖引擎持有的文件路径，需先静默载入
+                if (!await EnsureTrackLoadedAsync()) return;
+
+                ApplyLocalSettingsToService();
+
+                var result = await _playbackService.FindBestLoopPointsAsync(start, end, adjustStart);
                 LoopStartSample = result.Start.ToString();
                 LoopEndSample = result.End.ToString();
                 StatusMessage = LocalizationService.Instance["StatusDone"];
             }
             catch (Exception ex)
             {
-                System.Diagnostics.Debug.WriteLine($"[SmartMatchReverse失败] {ex.Message}");
+                System.Diagnostics.Debug.WriteLine($"[SmartMatch失败] {ex.Message}");
             }
         }
 
-        private async void ExecuteSmartMatchForward()
+        /// <summary>
+        /// 确保选中曲目已载入播放引擎。智能匹配与寻环分析都依赖
+        /// 引擎持有的文件路径/当前曲目；自动寻环入口可以要求同步开始播放。
+        /// </summary>
+        private async Task<bool> EnsureTrackLoadedAsync(bool autoPlay = false)
         {
-            try
+            if (_currentTrack == null) return false;
+            if (_playbackService.CurrentTrack?.Id != _currentTrack.Id)
             {
-                ApplyLocalSettingsToService();
-                if (!long.TryParse(LoopStartSample, out long start) || !long.TryParse(LoopEndSample, out long end)) return;
-                
-                var result = await _playbackService.FindBestLoopPointsAsync(start, end, false);
-                LoopStartSample = result.Start.ToString();
-                LoopEndSample = result.End.ToString();
-                StatusMessage = LocalizationService.Instance["StatusDone"];
+                await _playbackService.LoadTrackAsync(_currentTrack, autoPlay);
             }
-            catch (Exception ex)
+            else if (autoPlay)
             {
-                System.Diagnostics.Debug.WriteLine($"[SmartMatchForward失败] {ex.Message}");
+                _playbackService.Play();
             }
+            return true;
         }
 
         private void ExecuteResetAB()
@@ -358,18 +368,21 @@ namespace seamless_loop_music.UI.ViewModels
         {
             try
             {
-                if (_playbackService.CurrentTrack == null) return;
+                if (_currentTrack == null) return;
 
                 if (!await EnsureAnalyzerReadyAsync()) return;
+
+                // 点击自动寻环时切到当前编辑曲目并开始播放，避免仍停留在上一首歌。
+                if (!await EnsureTrackLoadedAsync(autoPlay: true)) return;
 
                 IsAnalyzing = true;
                 StatusMessage = LocalizationService.Instance["StatusSearching"];
 
                 List<LoopCandidate> candidates = null;
 
-                if (!string.IsNullOrEmpty(_playbackService.CurrentTrack.LoopCandidatesJson))
+                if (!string.IsNullOrEmpty(_currentTrack.LoopCandidatesJson))
                 {
-                    candidates = _loopAnalysisService.DeserializeLoopCandidates(_playbackService.CurrentTrack.LoopCandidatesJson);
+                    candidates = _loopAnalysisService.DeserializeLoopCandidates(_currentTrack.LoopCandidatesJson);
                 }
 
                 if (candidates == null || candidates.Count == 0)
@@ -421,10 +434,7 @@ namespace seamless_loop_music.UI.ViewModels
 
             if (long.TryParse(LoopEndSample, out long end) && long.TryParse(LoopStartSample, out long start))
             {
-                if (_playbackService.CurrentTrack?.Id != _currentTrack?.Id)
-                {
-                    await _playbackService.LoadTrackAsync(_currentTrack, false);
-                }
+                if (!await EnsureTrackLoadedAsync()) return;
 
                 _playbackService.SetLoopPoints(start, end);
                 
