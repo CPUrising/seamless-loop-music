@@ -36,6 +36,7 @@ namespace seamless_loop_music.Data
         List<string> GetMusicFolders();
         void AddMusicFolder(string folderPath);
         void RemoveMusicFolder(string folderPath);
+        int CleanupTracksOutsideMusicFolders(IEnumerable<string> folderPaths);
         
         
         // Settings
@@ -301,6 +302,37 @@ namespace seamless_loop_music.Data
         public void RemoveMusicFolder(string folderPath)
         {
             using (var db = GetConnection()) db.Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = folderPath });
+        }
+
+        public int CleanupTracksOutsideMusicFolders(IEnumerable<string> folderPaths)
+        {
+            var normalizedFolders = (folderPaths ?? Enumerable.Empty<string>())
+                .Select(NormalizePath)
+                .Where(p => !string.IsNullOrEmpty(p))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            using (var db = GetConnection())
+            {
+                var tracks = db.Query<(int Id, string FilePath)>("SELECT Id, FilePath FROM Tracks").ToList();
+                var idsToDelete = tracks
+                    .Where(t => normalizedFolders.Count == 0 || !IsPathUnderAnyFolder(t.FilePath, normalizedFolders))
+                    .Select(t => t.Id)
+                    .ToList();
+
+                if (idsToDelete.Count == 0)
+                {
+                    return 0;
+                }
+
+                using (var trans = db.BeginTransaction())
+                {
+                    DeleteTrackRows(db, idsToDelete, trans);
+                    trans.Commit();
+                }
+
+                return idsToDelete.Count;
+            }
         }
 
         public string GetSetting(string key, string defaultValue = null)
@@ -582,24 +614,79 @@ namespace seamless_loop_music.Data
         }
         public int CleanupMissingFiles()
         {
-            int deletedCount = 0;
             using (var db = GetConnection())
             {
                 var tracks = db.Query<(int Id, string FilePath)>("SELECT Id, FilePath FROM Tracks").ToList();
+                var idsToDelete = tracks
+                    .Where(track => string.IsNullOrEmpty(track.FilePath) || !File.Exists(track.FilePath))
+                    .Select(track => track.Id)
+                    .ToList();
+
+                if (idsToDelete.Count == 0)
+                {
+                    return 0;
+                }
+
                 using (var trans = db.BeginTransaction())
                 {
-                    foreach (var track in tracks)
-                    {
-                        if (!string.IsNullOrEmpty(track.FilePath) && !File.Exists(track.FilePath))
-                        {
-                            db.Execute("DELETE FROM Tracks WHERE Id = @Id", new { Id = track.Id }, transaction: trans);
-                            deletedCount++;
-                        }
-                    }
+                    DeleteTrackRows(db, idsToDelete, trans);
                     trans.Commit();
                 }
+
+                return idsToDelete.Count;
             }
-            return deletedCount;
+        }
+
+        private static void DeleteTrackRows(IDbConnection db, List<int> trackIds, IDbTransaction trans)
+        {
+            foreach (var batch in BatchTrackIds(trackIds, 500))
+            {
+                db.Execute("DELETE FROM PlaylistItems WHERE SongId IN @Ids", new { Ids = batch }, transaction: trans);
+                db.Execute("DELETE FROM LoopPoints WHERE TrackId IN @Ids", new { Ids = batch }, transaction: trans);
+                db.Execute("DELETE FROM UserRatings WHERE TrackId IN @Ids", new { Ids = batch }, transaction: trans);
+                db.Execute("DELETE FROM QueuedTracks WHERE TrackId IN @Ids", new { Ids = batch }, transaction: trans);
+                db.Execute("DELETE FROM Tracks WHERE Id IN @Ids", new { Ids = batch }, transaction: trans);
+            }
+        }
+
+        private static IEnumerable<List<int>> BatchTrackIds(List<int> trackIds, int batchSize)
+        {
+            for (int i = 0; i < trackIds.Count; i += batchSize)
+            {
+                yield return trackIds.Skip(i).Take(batchSize).ToList();
+            }
+        }
+
+        private static bool IsPathUnderAnyFolder(string filePath, List<string> normalizedFolders)
+        {
+            var normalizedFile = NormalizePath(filePath);
+            if (string.IsNullOrEmpty(normalizedFile))
+            {
+                return false;
+            }
+
+            return normalizedFolders.Any(folder =>
+                normalizedFile.Equals(folder, StringComparison.OrdinalIgnoreCase) ||
+                normalizedFile.StartsWith(folder + Path.DirectorySeparatorChar, StringComparison.OrdinalIgnoreCase));
+        }
+
+        private static string NormalizePath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path))
+            {
+                return null;
+            }
+
+            try
+            {
+                return Path.GetFullPath(path)
+                    .Replace(Path.AltDirectorySeparatorChar, Path.DirectorySeparatorChar)
+                    .TrimEnd(Path.DirectorySeparatorChar);
+            }
+            catch
+            {
+                return null;
+            }
         }
         public void RepairMissingCategoryCovers()
         {

@@ -155,7 +155,10 @@ namespace seamless_loop_music.Services
         public void RemoveMusicFolder(string folderPath)
         {
             _databaseHelper.RemoveMusicFolder(folderPath);
+            _databaseHelper.CleanupTracksOutsideMusicFolders(_databaseHelper.GetMusicFolders());
+            _databaseHelper.RepairMissingCategoryCovers();
             _folderWatcherService.Value.RefreshWatchers(); // 同步刷新监视器
+            _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
         }
 
         public async Task ScanMusicFoldersAsync()
@@ -166,6 +169,20 @@ namespace seamless_loop_music.Services
             try
             {
                 var folders = GetMusicFolders();
+                bool dbChanged = false;
+
+                // 1. 清理物理上已经不存在、或不再属于当前音乐文件夹的记录
+                int deletedCount = await Task.Run(() =>
+                {
+                    int missing = _databaseHelper.CleanupMissingFiles();
+                    int outsideFolders = _databaseHelper.CleanupTracksOutsideMusicFolders(folders);
+                    return missing + outsideFolders;
+                });
+                if (deletedCount > 0)
+                {
+                    dbChanged = true;
+                }
+
                 var existingTracks = _databaseHelper.GetAllTracks().ToDictionary(t => t.FilePath, t => t);
                 
                 var allFiles = folders.Where(System.IO.Directory.Exists)
@@ -195,15 +212,6 @@ namespace seamless_loop_music.Services
                     System.IO.File.GetLastWriteTime(f) > existing.LastModified ||
                     (abPairs.ContainsKey(f) && existing.LoopStart == 0) // 如果是 A/B 但之前没设置过循环点，也重新扫一次
                 ).ToList();
-
-                bool dbChanged = false;
-
-                // 1. 清理物理上已经不存在的文件记录
-                int deletedCount = await Task.Run(() => _databaseHelper.CleanupMissingFiles());
-                if (deletedCount > 0)
-                {
-                    dbChanged = true;
-                }
 
                 // 2. 扫描新增或更新的文件记录
                 if (filesToScan.Count > 0)

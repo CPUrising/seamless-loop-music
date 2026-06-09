@@ -1,5 +1,9 @@
 using System.Collections.Generic;
+using System;
+using System.Diagnostics;
+using System.Linq;
 using System.Windows;
+using System.Windows.Threading;
 using Prism.Ioc;
 using Prism.Events;
 using seamless_loop_music.Events;
@@ -16,6 +20,7 @@ namespace seamless_loop_music
         private readonly INotifyIconService _notifyIconService;
         private readonly IPlayerService _playerService;
         private readonly IEventAggregator _eventAggregator;
+        private bool _onboardingShownThisSession;
 
         public static readonly DependencyProperty MaximizedPaddingProperty =
             DependencyProperty.Register("MaximizedPadding", typeof(Thickness), typeof(MainWindow), new PropertyMetadata(new Thickness(0)));
@@ -57,7 +62,37 @@ namespace seamless_loop_music
 
             UpdateTitle();
 
+            this.Loaded += MainWindow_Loaded;
             this.Closing += MainWindow_Closing;
+        }
+
+        private void MainWindow_Loaded(object sender, RoutedEventArgs e)
+        {
+            Dispatcher.BeginInvoke(new Action(ShowOnboardingIfNeeded), DispatcherPriority.ApplicationIdle);
+        }
+
+        private void ShowOnboardingIfNeeded()
+        {
+            if (_onboardingShownThisSession)
+            {
+                return;
+            }
+
+            try
+            {
+                if (_playerService.GetMusicFolders().Any())
+                {
+                    return;
+                }
+
+                _onboardingShownThisSession = true;
+                var onboardingWindow = new OnboardingWindow(_playerService, _eventAggregator) { Owner = this };
+                onboardingWindow.ShowDialog();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Onboarding Error] {ex.Message}");
+            }
         }
 
 

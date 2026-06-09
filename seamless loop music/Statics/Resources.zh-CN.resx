@@ -421,4 +421,46 @@
   <data name="PyRankingPreviewTip" xml:space="preserve">
     <value>试听此循环方案</value>
   </data>
+  <data name="OnboardingTitle" xml:space="preserve">
+    <value>设置音乐库</value>
+  </data>
+  <data name="OnboardingHeading" xml:space="preserve">
+    <value>添加你的音乐文件夹</value>
+  </data>
+  <data name="OnboardingIntro" xml:space="preserve">
+    <value>选择存放歌曲的文件夹，程序会立即扫描并建立音乐库。</value>
+  </data>
+  <data name="OnboardingStepFolderTitle" xml:space="preserve">
+    <value>选择文件夹</value>
+  </data>
+  <data name="OnboardingStepFolderDesc" xml:space="preserve">
+    <value>选择一个包含音乐文件的文件夹。</value>
+  </data>
+  <data name="OnboardingStepScanTitle" xml:space="preserve">
+    <value>自动扫描</value>
+  </data>
+  <data name="OnboardingStepScanDesc" xml:space="preserve">
+    <value>歌曲、专辑、艺术家和循环信息会被载入音乐库。</value>
+  </data>
+  <data name="OnboardingStepPlayTitle" xml:space="preserve">
+    <value>开始播放</value>
+  </data>
+  <data name="OnboardingStepPlayDesc" xml:space="preserve">
+    <value>打开歌曲开始播放，再寻找或调整无缝循环点。</value>
+  </data>
+  <data name="OnboardingChooseFolder" xml:space="preserve">
+    <value>选择音乐文件夹</value>
+  </data>
+  <data name="OnboardingLater" xml:space="preserve">
+    <value>稍后再说</value>
+  </data>
+  <data name="OnboardingStatusReady" xml:space="preserve">
+    <value>当前还没有配置音乐文件夹。</value>
+  </data>
+  <data name="OnboardingStatusScanning" xml:space="preserve">
+    <value>正在添加文件夹并扫描音乐...</value>
+  </data>
+  <data name="OnboardingScanError" xml:space="preserve">
+    <value>扫描文件夹失败：{0}</value>
+  </data>
 </root>
