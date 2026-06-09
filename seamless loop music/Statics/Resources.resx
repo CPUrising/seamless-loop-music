@@ -421,4 +421,46 @@
   <data name="PyRankingPreviewTip" xml:space="preserve">
     <value>Preview this loop point</value>
   </data>
+  <data name="OnboardingTitle" xml:space="preserve">
+    <value>Set up your music library</value>
+  </data>
+  <data name="OnboardingHeading" xml:space="preserve">
+    <value>Add your music folder</value>
+  </data>
+  <data name="OnboardingIntro" xml:space="preserve">
+    <value>Choose the folder where your songs are stored. The app will scan it and build your library automatically.</value>
+  </data>
+  <data name="OnboardingStepFolderTitle" xml:space="preserve">
+    <value>Pick a folder</value>
+  </data>
+  <data name="OnboardingStepFolderDesc" xml:space="preserve">
+    <value>Select one folder that contains your music files.</value>
+  </data>
+  <data name="OnboardingStepScanTitle" xml:space="preserve">
+    <value>Scan automatically</value>
+  </data>
+  <data name="OnboardingStepScanDesc" xml:space="preserve">
+    <value>Tracks, albums, artists, and loop data are loaded into the library.</value>
+  </data>
+  <data name="OnboardingStepPlayTitle" xml:space="preserve">
+    <value>Start listening</value>
+  </data>
+  <data name="OnboardingStepPlayDesc" xml:space="preserve">
+    <value>Open a track, play it, then find or adjust seamless loop points.</value>
+  </data>
+  <data name="OnboardingChooseFolder" xml:space="preserve">
+    <value>Choose Music Folder</value>
+  </data>
+  <data name="OnboardingLater" xml:space="preserve">
+    <value>Later</value>
+  </data>
+  <data name="OnboardingStatusReady" xml:space="preserve">
+    <value>No music folder is configured yet.</value>
+  </data>
+  <data name="OnboardingStatusScanning" xml:space="preserve">
+    <value>Adding folder and scanning music...</value>
+  </data>
+  <data name="OnboardingScanError" xml:space="preserve">
+    <value>Could not scan the folder: {0}</value>
+  </data>
 </root>

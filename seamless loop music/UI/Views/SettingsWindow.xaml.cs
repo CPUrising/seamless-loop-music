@@ -4,6 +4,7 @@ using System.Windows;
 using Prism.Events;
 using seamless_loop_music.Services;
 using seamless_loop_music.Events;
+using seamless_loop_music.Models;
 using System.Globalization;
 
 namespace seamless_loop_music.UI.Views
@@ -74,14 +75,10 @@ namespace seamless_loop_music.UI.Views
 
         private void BtnAddFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new System.Windows.Forms.FolderBrowserDialog
+            var dialog = new UI.FolderPicker();
+            if (dialog.ShowDialog(this) && !string.IsNullOrEmpty(dialog.ResultPath))
             {
-                Description = LocalizationService.Instance["MusicFoldersHeader"],
-                ShowNewFolderButton = false
-            };
-            if (dialog.ShowDialog() == System.Windows.Forms.DialogResult.OK)
-            {
-                _playerService.AddMusicFolder(dialog.SelectedPath);
+                _playerService.AddMusicFolder(dialog.ResultPath);
                 LoadFolders();
             }
         }
@@ -92,6 +89,7 @@ namespace seamless_loop_music.UI.Views
             {
                 _playerService.RemoveMusicFolder(path);
                 LoadFolders();
+                SelectAllTracks();
             }
         }
 
@@ -103,6 +101,7 @@ namespace seamless_loop_music.UI.Views
             {
                 await _playerService.ScanMusicFoldersAsync();
                 _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
+                SelectAllTracks();
                 MessageBox.Show(LocalizationService.Instance["MsgScanCompleted"], 
                     LocalizationService.Instance["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Information);
             }
@@ -154,6 +153,18 @@ namespace seamless_loop_music.UI.Views
         private void BtnClose_Click(object sender, RoutedEventArgs e)
         {
             this.Close();
+        }
+
+        private void SelectAllTracks()
+        {
+            var loc = LocalizationService.Instance;
+            _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Publish(new CategoryItem
+            {
+                Id = -1,
+                Name = loc["PlaylistAll"],
+                Icon = "\U0001F3B6",
+                Type = CategoryType.Playlist
+            });
         }
     }
 }

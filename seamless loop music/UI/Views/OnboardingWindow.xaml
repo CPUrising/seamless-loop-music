@@ -1,0 +1,132 @@
+<Window x:Class="seamless_loop_music.UI.Views.OnboardingWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="{Binding [OnboardingTitle], Source={StaticResource Loc}}"
+        Height="470" Width="600"
+        ResizeMode="NoResize"
+        WindowStartupLocation="CenterOwner"
+        Background="{StaticResource BrushBackground}"
+        Foreground="{StaticResource BrushTextPrimary}"
+        FontFamily="Microsoft YaHei">
+    <Grid Margin="28">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+
+        <Grid Grid.Row="0" Margin="0,0,0,20">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="Auto"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <Border Width="64" Height="64" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,18,0">
+                <TextBlock Text="{StaticResource IconMusic}" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+
+            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                <TextBlock Text="{Binding [OnboardingHeading], Source={StaticResource Loc}}"
+                           FontSize="26"
+                           FontWeight="Bold"
+                           Foreground="{StaticResource BrushAccent}"
+                           TextWrapping="Wrap"/>
+                <TextBlock Text="{Binding [OnboardingIntro], Source={StaticResource Loc}}"
+                           Margin="0,8,0,0"
+                           FontSize="14"
+                           Foreground="{StaticResource BrushTextSecondary}"
+                           TextWrapping="Wrap"
+                           LineHeight="22"/>
+            </StackPanel>
+        </Grid>
+
+        <Border Grid.Row="1" Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="20">
+            <StackPanel>
+                <Grid Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{StaticResource IconFolder}" FontSize="22" VerticalAlignment="Top"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding [OnboardingStepFolderTitle], Source={StaticResource Loc}}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                        <TextBlock Text="{Binding [OnboardingStepFolderDesc], Source={StaticResource Loc}}"
+                                   Margin="0,4,0,0"
+                                   FontSize="13"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid Margin="0,0,0,18">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{StaticResource IconRefresh}" FontSize="22" VerticalAlignment="Top"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding [OnboardingStepScanTitle], Source={StaticResource Loc}}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                        <TextBlock Text="{Binding [OnboardingStepScanDesc], Source={StaticResource Loc}}"
+                                   Margin="0,4,0,0"
+                                   FontSize="13"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36"/>
+                        <ColumnDefinition Width="*"/>
+                    </Grid.ColumnDefinitions>
+                    <TextBlock Text="{StaticResource IconAnalyze}" FontSize="22" VerticalAlignment="Top"/>
+                    <StackPanel Grid.Column="1">
+                        <TextBlock Text="{Binding [OnboardingStepPlayTitle], Source={StaticResource Loc}}"
+                                   FontSize="16"
+                                   FontWeight="SemiBold"
+                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                        <TextBlock Text="{Binding [OnboardingStepPlayDesc], Source={StaticResource Loc}}"
+                                   Margin="0,4,0,0"
+                                   FontSize="13"
+                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   TextWrapping="Wrap"/>
+                    </StackPanel>
+                </Grid>
+            </StackPanel>
+        </Border>
+
+        <Grid Grid.Row="2" Margin="0,22,0,0">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="*"/>
+                <ColumnDefinition Width="Auto"/>
+            </Grid.ColumnDefinitions>
+
+            <TextBlock x:Name="txtStatus"
+                       Text="{Binding [OnboardingStatusReady], Source={StaticResource Loc}}"
+                       Foreground="{StaticResource BrushTextSecondary}"
+                       FontSize="13"
+                       VerticalAlignment="Center"
+                       TextWrapping="Wrap"/>
+
+            <StackPanel Grid.Column="1" Orientation="Horizontal">
+                <Button x:Name="btnLater"
+                        Content="{Binding [OnboardingLater], Source={StaticResource Loc}}"
+                        Style="{StaticResource SecondaryButton}"
+                        Padding="18,9"
+                        Margin="0,0,10,0"
+                        Click="BtnLater_Click"/>
+                <Button x:Name="btnChooseFolder"
+                        Content="{Binding [OnboardingChooseFolder], Source={StaticResource Loc}}"
+                        Style="{StaticResource PrimaryButton}"
+                        Padding="18,9"
+                        Click="BtnChooseFolder_Click"/>
+            </StackPanel>
+        </Grid>
+    </Grid>
+</Window>
