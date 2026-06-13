@@ -10,6 +10,13 @@ using seamless_loop_music.Data.Repositories;
 
 namespace seamless_loop_music.Services
 {
+    public enum AppExitBehavior
+    {
+        Ask = 0,
+        MinimizeToTray = 1,
+        Exit = 2
+    }
+
     public interface IAppStateService
     {
         Task SaveCurrentStateAsync();
@@ -18,7 +25,10 @@ namespace seamless_loop_music.Services
         // 记录当前的分类上下文
         CategoryItem CurrentCategory { get; set; }
 
-        // 托盘行为设置
+        // 软件退出行为设置
+        AppExitBehavior ExitBehavior { get; set; }
+
+        // 旧托盘行为字段保留兼容，新的设置页不再直接暴露。
         bool MinimizeToTray { get; set; }
         bool CloseToTray { get; set; }
         bool IsExiting { get; set; }
@@ -33,7 +43,8 @@ namespace seamless_loop_music.Services
         private readonly IPlaylistManager _playlistManager;
         
         public CategoryItem CurrentCategory { get; set; }
-        
+
+        public AppExitBehavior ExitBehavior { get; set; } = AppExitBehavior.Ask;
         public bool MinimizeToTray { get; set; }
         public bool CloseToTray { get; set; }
         public bool IsExiting { get; set; }
@@ -92,7 +103,10 @@ namespace seamless_loop_music.Services
                     // 6. 保存语言设置
                     _db.SetSetting("App.Language", LocalizationService.Instance.CurrentCulture.Name);
 
-                    // 7. 保存托盘行为设置
+                    // 7. 保存软件退出行为设置
+                    _db.SetSetting("App.ExitBehavior", ((int)ExitBehavior).ToString());
+
+                    // 兼容旧版本设置键，避免升级后旧数据立即失效。
                     _db.SetSetting("App.MinimizeToTray", MinimizeToTray.ToString());
                     _db.SetSetting("App.CloseToTray", CloseToTray.ToString());
 
@@ -141,7 +155,19 @@ namespace seamless_loop_music.Services
                     catch { }
                 }
 
-                // 2.3 恢复托盘行为设置
+                // 2.3 恢复软件退出行为设置。默认 Ask，符合新版交互预期。
+                string exitBehaviorStr = _db.GetSetting("App.ExitBehavior", ((int)AppExitBehavior.Ask).ToString());
+                if (int.TryParse(exitBehaviorStr, out int exitBehaviorValue) &&
+                    Enum.IsDefined(typeof(AppExitBehavior), exitBehaviorValue))
+                {
+                    ExitBehavior = (AppExitBehavior)exitBehaviorValue;
+                }
+                else
+                {
+                    ExitBehavior = AppExitBehavior.Ask;
+                }
+
+                // 旧托盘行为设置仍恢复给旧逻辑/外部服务使用。
                 MinimizeToTray = _db.GetSetting("App.MinimizeToTray", "False").ToLower() == "true";
                 CloseToTray = _db.GetSetting("App.CloseToTray", "False").ToLower() == "true";
 

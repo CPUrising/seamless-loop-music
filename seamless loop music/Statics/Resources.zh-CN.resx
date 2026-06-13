@@ -59,7 +59,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppTitle" xml:space="preserve">
-    <value>无缝循环音乐播放器</value>
+    <value>SeamlessLoopMusicPlayer</value>
   </data>
   <data name="LoopStartLabel" xml:space="preserve">
     <value>循环起点</value>
@@ -462,5 +462,53 @@
   </data>
   <data name="OnboardingScanError" xml:space="preserve">
     <value>扫描文件夹失败：{0}</value>
+  </data>
+  <data name="SettingsSub" xml:space="preserve">
+    <value>配置应用行为、音乐库来源、歌词和数据工具。</value>
+  </data>
+  <data name="SettingsGeneral" xml:space="preserve">
+    <value>通用</value>
+  </data>
+  <data name="SettingsGeneralSub" xml:space="preserve">
+    <value>语言与窗口行为</value>
+  </data>
+  <data name="SettingsMusic" xml:space="preserve">
+    <value>音乐</value>
+  </data>
+  <data name="SettingsMusicSub" xml:space="preserve">
+    <value>音乐库文件夹与扫描</value>
+  </data>
+  <data name="SettingsData" xml:space="preserve">
+    <value>数据</value>
+  </data>
+  <data name="SettingsDataSub" xml:space="preserve">
+    <value>数据库同步与维护</value>
+  </data>
+  <data name="ExitBehaviorHeader" xml:space="preserve">
+    <value>软件退出选项</value>
+  </data>
+  <data name="ExitBehaviorSub" xml:space="preserve">
+    <value>选择关闭主窗口时执行的操作。</value>
+  </data>
+  <data name="ExitBehaviorAsk" xml:space="preserve">
+    <value>询问</value>
+  </data>
+  <data name="ExitBehaviorMinimizeToTray" xml:space="preserve">
+    <value>最小化到托盘</value>
+  </data>
+  <data name="ExitBehaviorExit" xml:space="preserve">
+    <value>直接退出</value>
+  </data>
+  <data name="ExitDialogTitle" xml:space="preserve">
+    <value>Infomation</value>
+  </data>
+  <data name="ExitDialogMessage" xml:space="preserve">
+    <value>确定要关闭吗？</value>
+  </data>
+  <data name="ExitDialogRemember" xml:space="preserve">
+    <value>记住我的选择</value>
+  </data>
+  <data name="TrayPlayMode" xml:space="preserve">
+    <value>循环播放</value>
   </data>
 </root>

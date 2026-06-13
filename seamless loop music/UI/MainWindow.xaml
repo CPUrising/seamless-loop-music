@@ -14,6 +14,7 @@
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
+        <!-- Main window padding adapts when maximized to preserve custom chrome shadow spacing -->
         <Style x:Key="MainWindowStyle" TargetType="Window">
             <Setter Property="Padding" Value="0"/>
             <Style.Triggers>
@@ -69,19 +70,12 @@
                 <Image Source="/Resources/app_icon.png" Width="18" Height="18" Margin="0,0,10,0"/>
                 <TextBlock Text="{Binding [AppTitle], Source={StaticResource Loc}}" 
                            Foreground="{StaticResource BrushTextSecondary}" 
-                           FontSize="13" 
+                           FontSize="12" 
                            VerticalAlignment="Center"
                            FontWeight="Medium"/>
             </StackPanel>
 
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Right">
-                <!-- Settings Button (Now in Title Bar) -->
-                <Button Click="BtnSettings_Click" 
-                        Height="NaN"
-                        Style="{StaticResource TitleBarButtonStyle}" 
-                        Content="{StaticResource PathSettings}"
-                        ToolTip="{Binding [Settings], Source={StaticResource Loc}}"/>
-                
                 <!-- System Controls -->
                 <Button Click="BtnMinimize_Click" 
                         Height="NaN"
@@ -106,7 +100,7 @@
             </Border>
         </Grid>
 
-        <!-- Bottom Bar: Playback Controls (Always visible) -->
+        <!-- Bottom playback surface stays persistent across Prism region navigation -->
         <Border Grid.Row="2" Background="{StaticResource BrushTitleBar}" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BrushBorder}">
             <views:PlaybackControlBar x:Name="BottomPlaybackControlBar" />
         </Border>

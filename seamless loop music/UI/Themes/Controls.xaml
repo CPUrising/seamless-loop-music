@@ -6,8 +6,8 @@
         <Setter Property="Background" Value="{StaticResource BrushSurface}"/>
         <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
-        <Setter Property="Width" Value="34"/>
-        <Setter Property="Height" Value="34"/>
+        <Setter Property="Width" Value="30"/>
+        <Setter Property="Height" Value="30"/>
         <Setter Property="Cursor" Value="Hand"/>
         <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
         <Setter Property="RenderTransform">
@@ -18,7 +18,7 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Button">
-                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="17">
+                    <Border x:Name="border" Background="{TemplateBinding Background}" CornerRadius="6">
                         <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
                     </Border>
                     <ControlTemplate.Triggers>
@@ -267,6 +267,86 @@
         </Setter>
     </Style>
 
+    <!-- Global ScrollBar: transparent track, no arrow buttons, capsule thumb with a wider hit area. -->
+    <Style x:Key="TransparentScrollRepeatButton" TargetType="RepeatButton">
+        <Setter Property="Focusable" Value="False"/>
+        <Setter Property="IsTabStop" Value="False"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="RepeatButton">
+                    <Border Background="Transparent"/>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Global ScrollBar: visual thumb is 7px, while ScrollBar width/height remains 12px for easier pointing. -->
+    <Style TargetType="ScrollBar">
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="BorderThickness" Value="0"/>
+        <Setter Property="Width" Value="12"/>
+        <Setter Property="MinWidth" Value="12"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ScrollBar">
+                    <Grid x:Name="Root" Background="Transparent" Width="12">
+                        <Track x:Name="PART_Track"
+                               IsDirectionReversed="True"
+                               Focusable="False">
+                            <Track.DecreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageUpCommand"
+                                              Style="{StaticResource TransparentScrollRepeatButton}"/>
+                            </Track.DecreaseRepeatButton>
+                            <Track.Thumb>
+                                <Thumb x:Name="Thumb" Background="{StaticResource BrushScrollThumb}">
+                                    <Thumb.Template>
+                                        <ControlTemplate TargetType="Thumb">
+                                            <Border x:Name="ThumbVisual"
+                                                    Margin="2.5,3"
+                                                    Background="{TemplateBinding Background}"
+                                                    CornerRadius="4"/>
+                                            <ControlTemplate.Triggers>
+                                                <Trigger Property="IsMouseOver" Value="True">
+                                                    <Setter TargetName="ThumbVisual" Property="Background" Value="{StaticResource BrushScrollThumbHover}"/>
+                                                </Trigger>
+                                                <Trigger Property="IsDragging" Value="True">
+                                                    <Setter TargetName="ThumbVisual" Property="Background" Value="{StaticResource BrushScrollThumbPressed}"/>
+                                                </Trigger>
+                                            </ControlTemplate.Triggers>
+                                        </ControlTemplate>
+                                    </Thumb.Template>
+                                </Thumb>
+                            </Track.Thumb>
+                            <Track.IncreaseRepeatButton>
+                                <RepeatButton Command="ScrollBar.PageDownCommand"
+                                              Style="{StaticResource TransparentScrollRepeatButton}"/>
+                            </Track.IncreaseRepeatButton>
+                        </Track>
+                    </Grid>
+                    <ControlTemplate.Triggers>
+                        <!-- Horizontal scrollbars are supported but intentionally slim; most views disable them. -->
+                        <Trigger Property="Orientation" Value="Horizontal">
+                            <Setter Property="Height" Value="12"/>
+                            <Setter Property="MinHeight" Value="12"/>
+                            <Setter Property="Width" Value="Auto"/>
+                            <Setter TargetName="Root" Property="Width" Value="Auto"/>
+                            <Setter TargetName="Root" Property="Height" Value="12"/>
+                            <Setter TargetName="PART_Track" Property="IsDirectionReversed" Value="False"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+        <Style.Triggers>
+            <Trigger Property="Orientation" Value="Horizontal">
+                <Setter Property="Height" Value="12"/>
+                <Setter Property="MinHeight" Value="12"/>
+                <Setter Property="Width" Value="Auto"/>
+                <Setter Property="MinWidth" Value="0"/>
+            </Trigger>
+        </Style.Triggers>
+    </Style>
+
     <!-- Sidebar ListBoxItem Style -->
     <Style x:Key="SidebarListBoxItem" TargetType="ListBoxItem" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="HorizontalContentAlignment" Value="Center"/>
@@ -276,6 +356,9 @@
                     <Grid Background="Transparent" 
                           ToolTip="{Binding Name}"
                           ToolTipService.InitialShowDelay="0"
+                          ToolTipService.Placement="Right"
+                          ToolTipService.HorizontalOffset="5"
+                          ToolTipService.VerticalOffset="12"
                           HorizontalAlignment="Stretch">
                         <Border x:Name="Indicator" Width="3" Height="20" Background="{StaticResource BrushAccent}" HorizontalAlignment="Left" Visibility="Hidden" Margin="2,0,0,0"/>
                         <Border x:Name="ContentBorder" Background="Transparent" CornerRadius="8" Margin="4,4" Padding="8" HorizontalAlignment="Center" Width="48" Height="48">
@@ -340,16 +423,16 @@
                               StrokeThickness="1.5"
                               HorizontalAlignment="Center" 
                               VerticalAlignment="Center"
-                              Width="16" Height="16" 
+                              Width="13" Height="11" 
                               Stretch="Uniform"/>
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="#1FFFFFFF"/>
+                            <Setter Property="Background" Value="{StaticResource BrushOverlayHover}"/>
                             <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="#2FFFFFFF"/>
+                            <Setter Property="Background" Value="{StaticResource BrushOverlayPressed}"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
                                     <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>

@@ -8,6 +8,7 @@ using Prism.Mvvm;
 using Prism.Regions;
 using Prism.Events;
 using System.ComponentModel;
+using System.Windows;
 using System.Windows.Data;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
@@ -43,15 +44,29 @@ namespace seamless_loop_music.UI.ViewModels
             get => _selectedCategory;
             set 
             {
+                // 设置入口与专辑/艺术家/歌单/文件夹同级；内容显示在右侧 LibraryContentRegion。
+                if (value?.IsSettings == true)
+                {
+                    SetProperty(ref _selectedCategory, value);
+                    CategoryItems.Clear();
+                    _regionManager.RequestNavigate("LibraryContentRegion", "SettingsView");
+                    RaiseNavigationStateProperties();
+                    RaisePropertyChanged(nameof(SelectedCategory));
+                    return;
+                }
+
                 if (SetProperty(ref _selectedCategory, value))
                 {
+                    _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
                     _ = LoadCategoryItems();
-                    RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
+                    RaiseNavigationStateProperties();
                 }
             }
         }
 
         public bool IsPlaylistCategorySelected => SelectedCategory?.Type == CategoryType.Playlist;
+        public bool IsSettingsCategorySelected => SelectedCategory?.IsSettings == true;
+        public GridLength MiddleColumnWidth => IsSettingsCategorySelected ? new GridLength(0) : new GridLength(280);
 
         private ObservableCollection<CategoryItem> _categoryItems = new ObservableCollection<CategoryItem>();
         public ObservableCollection<CategoryItem> CategoryItems
@@ -195,13 +210,20 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 // 记住当前的选中状态
                 var currentNavType = SelectedCategory?.Type;
+                var wasSettings = SelectedCategory?.IsSettings == true;
                 var currentItem = SelectedCategoryItem;
 
                 InitializeNavigationCategories();
-                
+
+                if (wasSettings)
+                {
+                    SelectedCategory = NavigationCategories.FirstOrDefault(n => n.IsSettings);
+                    return;
+                }
+
                 if (currentNavType.HasValue)
                 {
-                    SelectedCategory = NavigationCategories.FirstOrDefault(n => n.Type == currentNavType.Value);
+                    SelectedCategory = NavigationCategories.FirstOrDefault(n => !n.IsSettings && n.Type == currentNavType.Value);
                     _ = LoadCategoryItems(currentItem);
                 }
             });
@@ -231,7 +253,7 @@ namespace seamless_loop_music.UI.ViewModels
                         {
                             _selectedCategory = targetNav; // 直接设字段，避免 setter 触发额外的 Load
                             RaisePropertyChanged(nameof(SelectedCategory));
-                            RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
+                            RaiseNavigationStateProperties();
                             await LoadCategoryItems(item);
                         }
                     }
@@ -299,8 +321,19 @@ namespace seamless_loop_music.UI.ViewModels
                 new CategoryNavTarget { Name = loc["NavAlbum"], Icon = "💿", Type = CategoryType.Album },
                 new CategoryNavTarget { Name = loc["NavArtist"], Icon = "👤", Type = CategoryType.Artist },
                 new CategoryNavTarget { Name = loc["NavPlaylist"], Icon = "📂", Type = CategoryType.Playlist },
-                new CategoryNavTarget { Name = loc["NavFolder"], Icon = "📁", Type = CategoryType.Folder }
+                new CategoryNavTarget { Name = loc["NavFolder"], Icon = "📁", Type = CategoryType.Folder },
+
+                // 设置入口与专辑/艺术家/歌单/文件夹同级；内容显示在右侧 LibraryContentRegion。
+                new CategoryNavTarget { Name = loc["Settings"], Icon = "⚙", Type = CategoryType.Playlist, IsSettings = true }
             };
+        }
+
+        private void RaiseNavigationStateProperties()
+        {
+            RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
+            RaisePropertyChanged(nameof(IsFolderCategorySelected));
+            RaisePropertyChanged(nameof(IsSettingsCategorySelected));
+            RaisePropertyChanged(nameof(MiddleColumnWidth));
         }
 
         private async Task LoadCategoryItems(CategoryItem targetToSelect = null)

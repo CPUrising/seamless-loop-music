@@ -70,7 +70,7 @@ namespace seamless_loop_music.Statics {
         }
         
         /// <summary>
-        ///   查找类似 Seamless Loop Music Player 的本地化字符串。
+        ///   查找类似 SeamlessLoopMusicPlayer 的本地化字符串。
         /// </summary>
         public static string AppTitle {
             get {
@@ -309,6 +309,78 @@ namespace seamless_loop_music.Statics {
         public static string DialogSelectPlaylist {
             get {
                 return ResourceManager.GetString("DialogSelectPlaylist", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Ask every time 的本地化字符串。
+        /// </summary>
+        public static string ExitBehaviorAsk {
+            get {
+                return ResourceManager.GetString("ExitBehaviorAsk", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Exit directly 的本地化字符串。
+        /// </summary>
+        public static string ExitBehaviorExit {
+            get {
+                return ResourceManager.GetString("ExitBehaviorExit", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 App exit option 的本地化字符串。
+        /// </summary>
+        public static string ExitBehaviorHeader {
+            get {
+                return ResourceManager.GetString("ExitBehaviorHeader", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Minimize to tray 的本地化字符串。
+        /// </summary>
+        public static string ExitBehaviorMinimizeToTray {
+            get {
+                return ResourceManager.GetString("ExitBehaviorMinimizeToTray", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Choose what happens when you close the main window. 的本地化字符串。
+        /// </summary>
+        public static string ExitBehaviorSub {
+            get {
+                return ResourceManager.GetString("ExitBehaviorSub", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 确定要关闭吗？ 的本地化字符串。
+        /// </summary>
+        public static string ExitDialogMessage {
+            get {
+                return ResourceManager.GetString("ExitDialogMessage", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Remember my choice 的本地化字符串。
+        /// </summary>
+        public static string ExitDialogRemember {
+            get {
+                return ResourceManager.GetString("ExitDialogRemember", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Infomation 的本地化字符串。
+        /// </summary>
+        public static string ExitDialogTitle {
+            get {
+                return ResourceManager.GetString("ExitDialogTitle", resourceCulture);
             }
         }
         
@@ -781,6 +853,132 @@ namespace seamless_loop_music.Statics {
         }
         
         /// <summary>
+        ///   查找类似 Choose Music Folder 的本地化字符串。
+        /// </summary>
+        public static string OnboardingChooseFolder {
+            get {
+                return ResourceManager.GetString("OnboardingChooseFolder", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Add your music folder 的本地化字符串。
+        /// </summary>
+        public static string OnboardingHeading {
+            get {
+                return ResourceManager.GetString("OnboardingHeading", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Choose the folder where your songs are stored. The app will scan it and build your library automatically. 的本地化字符串。
+        /// </summary>
+        public static string OnboardingIntro {
+            get {
+                return ResourceManager.GetString("OnboardingIntro", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Later 的本地化字符串。
+        /// </summary>
+        public static string OnboardingLater {
+            get {
+                return ResourceManager.GetString("OnboardingLater", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Could not scan the folder: {0} 的本地化字符串。
+        /// </summary>
+        public static string OnboardingScanError {
+            get {
+                return ResourceManager.GetString("OnboardingScanError", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 No music folder is configured yet. 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStatusReady {
+            get {
+                return ResourceManager.GetString("OnboardingStatusReady", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Adding folder and scanning music... 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStatusScanning {
+            get {
+                return ResourceManager.GetString("OnboardingStatusScanning", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Select one folder that contains your music files. 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStepFolderDesc {
+            get {
+                return ResourceManager.GetString("OnboardingStepFolderDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Pick a folder 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStepFolderTitle {
+            get {
+                return ResourceManager.GetString("OnboardingStepFolderTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Open a track, play it, then find or adjust seamless loop points. 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStepPlayDesc {
+            get {
+                return ResourceManager.GetString("OnboardingStepPlayDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Start listening 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStepPlayTitle {
+            get {
+                return ResourceManager.GetString("OnboardingStepPlayTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Tracks, albums, artists, and loop data are loaded into the library. 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStepScanDesc {
+            get {
+                return ResourceManager.GetString("OnboardingStepScanDesc", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Scan automatically 的本地化字符串。
+        /// </summary>
+        public static string OnboardingStepScanTitle {
+            get {
+                return ResourceManager.GetString("OnboardingStepScanTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Set up your music library 的本地化字符串。
+        /// </summary>
+        public static string OnboardingTitle {
+            get {
+                return ResourceManager.GetString("OnboardingTitle", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   查找类似 All Tracks 的本地化字符串。
         /// </summary>
         public static string PlaylistAll {
@@ -939,6 +1137,69 @@ namespace seamless_loop_music.Statics {
         public static string Settings {
             get {
                 return ResourceManager.GetString("Settings", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Data 的本地化字符串。
+        /// </summary>
+        public static string SettingsData {
+            get {
+                return ResourceManager.GetString("SettingsData", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Database sync and maintenance 的本地化字符串。
+        /// </summary>
+        public static string SettingsDataSub {
+            get {
+                return ResourceManager.GetString("SettingsDataSub", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 General 的本地化字符串。
+        /// </summary>
+        public static string SettingsGeneral {
+            get {
+                return ResourceManager.GetString("SettingsGeneral", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Language and window behavior 的本地化字符串。
+        /// </summary>
+        public static string SettingsGeneralSub {
+            get {
+                return ResourceManager.GetString("SettingsGeneralSub", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Music 的本地化字符串。
+        /// </summary>
+        public static string SettingsMusic {
+            get {
+                return ResourceManager.GetString("SettingsMusic", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Library folders and scanning 的本地化字符串。
+        /// </summary>
+        public static string SettingsMusicSub {
+            get {
+                return ResourceManager.GetString("SettingsMusicSub", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Configure app behavior, library sources, lyrics, and data tools. 的本地化字符串。
+        /// </summary>
+        public static string SettingsSub {
+            get {
+                return ResourceManager.GetString("SettingsSub", resourceCulture);
             }
         }
         
@@ -1137,6 +1398,15 @@ namespace seamless_loop_music.Statics {
         public static string TrayMinimizeToTray {
             get {
                 return ResourceManager.GetString("TrayMinimizeToTray", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   查找类似 Loop playback 的本地化字符串。
+        /// </summary>
+        public static string TrayPlayMode {
+            get {
+                return ResourceManager.GetString("TrayPlayMode", resourceCulture);
             }
         }
         

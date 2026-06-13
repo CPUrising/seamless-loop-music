@@ -43,7 +43,7 @@
                                     <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
                                     <Style.Triggers>
                                         <DataTrigger Binding="{Binding IsAnalyzing}" Value="True">
-                                            <Setter Property="Foreground" Value="#FF4500"/>
+                                            <Setter Property="Foreground" Value="{StaticResource BrushAnalyzing}"/>
                                             <Setter Property="FontSize" Value="16"/>
                                         </DataTrigger>
                                     </Style.Triggers>

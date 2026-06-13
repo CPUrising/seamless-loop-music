@@ -1,0 +1,25 @@
+<UserControl x:Class="seamless_loop_music.UI.Views.Settings.SettingsDataView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:prism="http://prismlibrary.com/"
+             prism:ViewModelLocator.AutoWireViewModel="True"
+             mc:Ignorable="d"
+             d:DesignHeight="520" d:DesignWidth="720">
+    <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+        <StackPanel>
+            <!-- Data page header. -->
+            <TextBlock Text="{Binding [SettingsData], Source={StaticResource Loc}}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}"/>
+            <TextBlock Text="{Binding [SettingsDataSub], Source={StaticResource Loc}}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,22"/>
+
+            <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
+                <StackPanel>
+                    <TextBlock Text="{Binding [DataManagementHeader], Source={StaticResource Loc}}" Style="{StaticResource SectionHeaderText}"/>
+                    <TextBlock Text="{Binding [DataManagementSub], Source={StaticResource Loc}}" Style="{StaticResource SectionDescriptionText}" Margin="0,0,0,16" TextWrapping="Wrap"/>
+                    <Button Content="{Binding SyncButtonText}" Command="{Binding SyncCommand}" Style="{StaticResource ProminentPrimaryButton}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+        </StackPanel>
+    </ScrollViewer>
+</UserControl>

@@ -104,10 +104,10 @@
             <RowDefinition Height="*"/>    <!-- List -->
         </Grid.RowDefinitions>
 
-        <!-- Playlist Header & Stats -->
-        <Border Grid.Row="0" Margin="20,20,20,10" Background="{StaticResource BrushSurface}" CornerRadius="12" Padding="25,20">
+        <!-- Surface card: category summary keeps the track pane visually anchored -->
+        <Border Grid.Row="0" Margin="20,20,20,10" Padding="25,20">
             <Border.Style>
-                <Style TargetType="Border">
+                <Style TargetType="Border" BasedOn="{StaticResource SurfaceCard}">
                     <Style.Triggers>
                         <DataTrigger Binding="{Binding IsCompact}" Value="True">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -154,8 +154,8 @@
             </Grid>
         </Border>
 
-        <!-- Search Bar -->
-        <Border Grid.Row="1" Margin="20,5,20,10" Background="{StaticResource BrushSurface}" CornerRadius="10" Height="44">
+        <!-- Shared surface treatment for lightweight search inputs -->
+        <Border Grid.Row="1" Margin="20,5,20,10" Style="{StaticResource SurfaceCard}" CornerRadius="10" Height="44">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
