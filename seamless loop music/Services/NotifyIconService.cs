@@ -17,7 +17,6 @@ namespace seamless_loop_music.Services
         private readonly IAppStateService _appStateService;
         private readonly Prism.Ioc.IContainerProvider _container;
         private UI.Views.TrayControlsWindow _trayWindow;
-        private ToolStripMenuItem _showHideItem;
 
         public NotifyIconService(IEventAggregator eventAggregator, IPlaybackService playbackService, IAppStateService appStateService, Prism.Ioc.IContainerProvider container)
         {
@@ -52,73 +51,6 @@ namespace seamless_loop_music.Services
 
             _notifyIcon.MouseClick += NotifyIcon_MouseClick;
             _notifyIcon.DoubleClick += NotifyIcon_DoubleClick;
-
-            InitializeContextMenu();
-        }
-
-        private void InitializeContextMenu()
-        {
-            var contextMenu = new ContextMenuStrip();
-            contextMenu.Opening += (s, e) => UpdateContextMenuItems();
-
-            _showHideItem = new ToolStripMenuItem(string.Empty, null, (s, e) => ToggleMainWindow());
-            
-            var playPauseItem = new ToolStripMenuItem(string.Empty, null, (s, e) => {
-                if (_playbackService.PlaybackState == NAudio.Wave.PlaybackState.Playing)
-                    _playbackService.Pause();
-                else
-                    _playbackService.Play();
-            });
-
-            var nextItem = new ToolStripMenuItem(string.Empty, null, (s, e) => _playbackService.Next());
-            var prevItem = new ToolStripMenuItem(string.Empty, null, (s, e) => _playbackService.Previous());
-            
-            var exitItem = new ToolStripMenuItem(string.Empty, null, (s, e) => 
-            {
-                _appStateService.IsExiting = true;
-                Application.Current.Shutdown();
-            });
-
-            contextMenu.Items.Add(_showHideItem);
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(playPauseItem);
-            contextMenu.Items.Add(prevItem);
-            contextMenu.Items.Add(nextItem);
-            contextMenu.Items.Add(new ToolStripSeparator());
-            contextMenu.Items.Add(exitItem);
-
-            _notifyIcon.ContextMenuStrip = contextMenu;
-            
-            // Initial update
-            UpdateContextMenuItems();
-        }
-
-        private void UpdateContextMenuItems()
-        {
-            if (_notifyIcon.ContextMenuStrip == null) return;
-
-            var loc = LocalizationService.Instance;
-            var isVisible = Application.Current.MainWindow?.IsVisible ?? false;
-
-            _showHideItem.Text = isVisible ? loc["MenuHideToTray"] : loc["MenuShowMainWindow"];
-
-            // Update other items text
-            var items = _notifyIcon.ContextMenuStrip.Items;
-            
-            // playPauseItem
-            if (items[2] is ToolStripMenuItem playPauseItem)
-            {
-                playPauseItem.Text = _playbackService.PlaybackState == NAudio.Wave.PlaybackState.Playing ? loc["MenuPause"] : loc["MenuPlay"];
-            }
-
-            // prevItem
-            if (items[3] is ToolStripMenuItem prevItem) prevItem.Text = loc["MenuPrevious"];
-
-            // nextItem
-            if (items[4] is ToolStripMenuItem nextItem) nextItem.Text = loc["MenuNext"];
-
-            // exitItem
-            if (items[6] is ToolStripMenuItem exitItem) exitItem.Text = loc["MenuExit"];
         }
 
         private void ToggleMainWindow()
@@ -169,6 +101,10 @@ namespace seamless_loop_music.Services
         {
             if (e.Button == MouseButtons.Left)
             {
+                ShowMainWindow();
+            }
+            else if (e.Button == MouseButtons.Right)
+            {
                 ShowTrayControls();
             }
         }
@@ -180,6 +116,11 @@ namespace seamless_loop_music.Services
                 if (_trayWindow == null)
                 {
                     _trayWindow = _container.Resolve<UI.Views.TrayControlsWindow>();
+                }
+
+                if (_trayWindow.DataContext is UI.ViewModels.TrayControlsViewModel viewModel)
+                {
+                    viewModel.RefreshMenuState();
                 }
 
                 _trayWindow.ShowAtTaskbar();

@@ -59,7 +59,7 @@
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
   <data name="AppTitle" xml:space="preserve">
-    <value>Seamless Loop Music Player</value>
+    <value>SeamlessLoopMusicPlayer</value>
   </data>
   <data name="LoopStartLabel" xml:space="preserve">
     <value>Loop Start</value>
@@ -462,5 +462,53 @@
   </data>
   <data name="OnboardingScanError" xml:space="preserve">
     <value>Could not scan the folder: {0}</value>
+  </data>
+  <data name="SettingsSub" xml:space="preserve">
+    <value>Configure app behavior, library sources, lyrics, and data tools.</value>
+  </data>
+  <data name="SettingsGeneral" xml:space="preserve">
+    <value>General</value>
+  </data>
+  <data name="SettingsGeneralSub" xml:space="preserve">
+    <value>Language and window behavior</value>
+  </data>
+  <data name="SettingsMusic" xml:space="preserve">
+    <value>Music</value>
+  </data>
+  <data name="SettingsMusicSub" xml:space="preserve">
+    <value>Library folders and scanning</value>
+  </data>
+  <data name="SettingsData" xml:space="preserve">
+    <value>Data</value>
+  </data>
+  <data name="SettingsDataSub" xml:space="preserve">
+    <value>Database sync and maintenance</value>
+  </data>
+  <data name="ExitBehaviorHeader" xml:space="preserve">
+    <value>App exit option</value>
+  </data>
+  <data name="ExitBehaviorSub" xml:space="preserve">
+    <value>Choose what happens when you close the main window.</value>
+  </data>
+  <data name="ExitBehaviorAsk" xml:space="preserve">
+    <value>Ask every time</value>
+  </data>
+  <data name="ExitBehaviorMinimizeToTray" xml:space="preserve">
+    <value>Minimize to tray</value>
+  </data>
+  <data name="ExitBehaviorExit" xml:space="preserve">
+    <value>Exit directly</value>
+  </data>
+  <data name="ExitDialogTitle" xml:space="preserve">
+    <value>Infomation</value>
+  </data>
+  <data name="ExitDialogMessage" xml:space="preserve">
+    <value>确定要关闭吗？</value>
+  </data>
+  <data name="ExitDialogRemember" xml:space="preserve">
+    <value>Remember my choice</value>
+  </data>
+  <data name="TrayPlayMode" xml:space="preserve">
+    <value>Loop playback</value>
   </data>
 </root>

@@ -8,47 +8,7 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d" 
              d:DesignHeight="600" d:DesignWidth="1000">
-    <UserControl.Resources>
-        <Style x:Key="TopBarButtonStyle" TargetType="Button">
-            <Setter Property="Background" Value="#313244"/>
-            <Setter Property="Foreground" Value="White"/>
-            <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Cursor" Value="Hand"/>
-            <Setter Property="Padding" Value="15,8"/>
-            <Setter Property="RenderTransformOrigin" Value="0.5,0.5"/>
-            <Setter Property="RenderTransform">
-                <Setter.Value>
-                    <ScaleTransform ScaleX="1" ScaleY="1"/>
-                </Setter.Value>
-            </Setter>
-            <Setter Property="Template">
-                <Setter.Value>
-                    <ControlTemplate TargetType="Button">
-                        <Border x:Name="border" Background="{TemplateBinding Background}" 
-                                CornerRadius="10" 
-                                Padding="{TemplateBinding Padding}">
-                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
-                        </Border>
-                        <ControlTemplate.Triggers>
-                            <Trigger Property="IsMouseOver" Value="True">
-                                <Setter Property="Background" Value="#45475A"/>
-                            </Trigger>
-                            <Trigger Property="IsPressed" Value="True">
-                                <Setter Property="Opacity" Value="0.8"/>
-                                <Setter Property="RenderTransform">
-                                    <Setter.Value>
-                                        <ScaleTransform ScaleX="0.95" ScaleY="0.95"/>
-                                    </Setter.Value>
-                                </Setter>
-                            </Trigger>
-                        </ControlTemplate.Triggers>
-                    </ControlTemplate>
-                </Setter.Value>
-            </Setter>
-        </Style>
-    </UserControl.Resources>
-
-    <Grid Background="#1E1E2E">
+    <Grid Background="{StaticResource BrushBackground}">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto"/>
             <RowDefinition Height="*"/>
@@ -58,11 +18,11 @@
         <StackPanel Grid.Row="0" Orientation="Horizontal" Margin="30,20,0,10">
             <Button Content="{Binding [BtnBackToLibrary], Source={StaticResource Loc}}" 
                     Command="{Binding GoBackCommand}"
-                    Style="{StaticResource TopBarButtonStyle}"/>
+                    Style="{StaticResource PageTopButton}"/>
             
             <Button Content="{Binding [BtnEditLoop], Source={StaticResource Loc}}" 
                     Command="{Binding GoToEditCommand}"
-                    Style="{StaticResource TopBarButtonStyle}"
+                    Style="{StaticResource PageTopButton}"
                     Margin="15,0,0,0"/>
         </StackPanel>
 
@@ -83,7 +43,7 @@
 
                 <!-- Artwork Container: Centered square -->
                 <Grid Grid.Row="0" HorizontalAlignment="Center">
-                    <Border CornerRadius="24" Background="#181825">
+                    <Border Background="{StaticResource BrushSurfaceDark}" CornerRadius="24">
                         <Border.Effect>
                             <DropShadowEffect BlurRadius="40" Color="Black" Opacity="0.4" ShadowDepth="10"/>
                         </Border.Effect>
@@ -91,7 +51,7 @@
                             <Image Source="{Binding AlbumCoverImage}" Stretch="UniformToFill" />
 
                             <!-- Fallback Text if no cover -->
-                            <TextBlock Text="🎵" FontSize="80" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#313244"
+                            <TextBlock Text="🎵" FontSize="80" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="{StaticResource BrushSurface}"
                                        Visibility="{Binding AlbumCoverImage, Converter={StaticResource NullToVisibilityInverseConverter}}"/>
                         </Grid>
                     </Border>
@@ -109,14 +69,14 @@
                             Content="{Binding CurrentTrack.DisplayName}" 
                             FontSize="28" 
                             FontWeight="Bold" 
-                            Foreground="White"
+                            Foreground="{StaticResource BrushTextPrimary}"
                             VerticalAlignment="Center"/>
                     </Grid>
                     <Grid Grid.Row="1" HorizontalAlignment="Stretch">
                         <ContentControl Style="{StaticResource Marquee}"
                         Content="{Binding CurrentTrack.Artist}" 
                         FontSize="20" 
-                        Foreground="#BAC2DE" 
+                        Foreground="{StaticResource BrushTextPrimary}"
                         Margin="0,8,0,0" 
                         Opacity="0.8"/>
                     </Grid>
@@ -124,7 +84,7 @@
                         <ContentControl Style="{StaticResource Marquee}"  
                         Content="{Binding CurrentTrack.Album}" 
                         FontSize="16" 
-                        Foreground="#9399B2" 
+                        Foreground="{StaticResource BrushTextSecondary}"
                         Margin="0,5,0,0" 
                         Opacity="0.6"/>
                     </Grid>
@@ -132,14 +92,14 @@
             </Grid>
 
             <!-- Right: Playback Queue -->
-            <Border Grid.Column="1" Background="#181825" CornerRadius="24" Padding="15" Margin="20,0,0,0">
+            <Border Grid.Column="1" Background="{StaticResource BrushSurfaceDark}" CornerRadius="24" Padding="15" Margin="20,0,0,0">
                 <Grid>
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto"/>
                         <RowDefinition/>
                     </Grid.RowDefinitions>
 
-                    <TextBlock Grid.Row="0" Text="{Binding [HeaderQueue], Source={StaticResource Loc}}" Foreground="White" FontSize="20" FontWeight="SemiBold" Margin="15,10,0,20"/>
+                    <TextBlock Grid.Row="0" Text="{Binding [HeaderQueue], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextPrimary}" FontSize="20" FontWeight="SemiBold" Margin="15,10,0,20"/>
 
                     <ContentControl Grid.Row="1" prism:RegionManager.RegionName="NowPlayingListRegion" />
                 </Grid>

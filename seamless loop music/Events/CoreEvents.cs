@@ -47,4 +47,5 @@ namespace seamless_loop_music.Events
     /// 当界面语言发生切换时发布
     /// </summary>
     public class LanguageChangedEvent : PubSubEvent<System.Globalization.CultureInfo> { }
+
 }
