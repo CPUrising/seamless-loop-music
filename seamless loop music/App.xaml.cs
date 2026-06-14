@@ -15,6 +15,8 @@ using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.UI;
 using seamless_loop_music.UI.Views;
 using seamless_loop_music.UI.ViewModels;
+using seamless_loop_music.UI.Views.Settings;
+using seamless_loop_music.UI.ViewModels.Settings;
 
 namespace seamless_loop_music
 {
@@ -99,6 +101,10 @@ namespace seamless_loop_music
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
             containerRegistry.RegisterForNavigation<TrackListView, TrackListViewModel>();
             containerRegistry.RegisterForNavigation<NowPlayingView, NowPlayingViewModel>();
+            containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
+            containerRegistry.RegisterForNavigation<SettingsGeneralView, SettingsGeneralViewModel>();
+            containerRegistry.RegisterForNavigation<SettingsMusicView, SettingsMusicViewModel>();
+            containerRegistry.RegisterForNavigation<SettingsDataView, SettingsDataViewModel>();
             
             containerRegistry.RegisterSingleton<LoopWorkspaceViewModel>();
             containerRegistry.RegisterSingleton<TrayControlsViewModel>();

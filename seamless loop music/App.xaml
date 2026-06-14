@@ -5,7 +5,8 @@
              xmlns:services="clr-namespace:seamless_loop_music.Services"
              xmlns:converters="clr-namespace:seamless_loop_music.UI.Converters"
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
-             xmlns:prism="http://prismlibrary.com/">
+             xmlns:prism="http://prismlibrary.com/"
+             xmlns:sys="clr-namespace:System;assembly=mscorlib">
     <Application.Resources>
         <ResourceDictionary>
             <ResourceDictionary.MergedDictionaries>
@@ -17,6 +18,12 @@
                 <ResourceDictionary Source="UI/Themes/Styles.xaml"/>
                 <ResourceDictionary Source="UI/Themes/Controls.xaml"/>
             </ResourceDictionary.MergedDictionaries>
+
+            <!-- Centralized font size resources so they can be changed application-wide -->
+            <sys:Double x:Key="HeaderFontSize">26</sys:Double>
+            <sys:Double x:Key="SubHeaderFontSize">13</sys:Double>
+            <sys:Double x:Key="SectionHeaderFontSize">200</sys:Double>
+            <sys:Double x:Key="ComboBoxFontSize">16</sys:Double>
 
             <x:Static Member="services:LocalizationService.Instance" x:Key="Loc" />
             <BooleanToVisibilityConverter x:Key="BooleanToVisibilityConverter"/>
