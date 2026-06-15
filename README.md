@@ -61,6 +61,8 @@
 
 ## 📖 使用指南
 
+早期基本功能的介绍视频 [更适合galgame玩家的无缝循环音乐播放器--v1.9.1](https://www.bilibili.com/video/BV1qPR6B5E2K/?share_source=copy_web&vd_source=5e0e15f7816bccd11a0ac05542f9f54f)
+
 ### 1. 导入与扫描
 
 点击主界面“设置（齿轮）”，添加音乐所在文件夹后点击“立即扫描”。系统将自动提取元数据。
