@@ -54,6 +54,8 @@ Supports logically concatenating two independent tracks (e.g., `Intro.wav` + `Lo
 
 ## 📖 Usage Guide
 
+Introduction video for early basic features  [更适合galgame玩家的无缝循环音乐播放器--v1.9.1](https://www.bilibili.com/video/BV1qPR6B5E2K/?share_source=copy_web&vd_source=5e0e15f7816bccd11a0ac05542f9f54f)
+
 ### 1. Import and Scan
 Click the **Settings (Gear)** icon, add the music folder, and click "Scan Now." The system will extract metadata and generate audio fingerprints.
 
