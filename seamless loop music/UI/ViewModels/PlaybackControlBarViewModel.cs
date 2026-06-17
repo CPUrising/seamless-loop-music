@@ -64,10 +64,13 @@ namespace seamless_loop_music.UI.ViewModels
         public double TotalTime { get => _totalTime; set => SetProperty(ref _totalTime, value); }
 
         private double _progressValue;
-        public double ProgressValue { get => _progressValue; set => SetProperty(ref _progressValue, value); }
-
-        public bool IsDragging { get; set; }
-        public bool IsUpdating { get; set; }
+        public double ProgressValue
+        {
+            get => _progressValue;
+            // Dopamine 模式：set 只发送 Seek 指令，不赋值、不触发 PropertyChanged
+            // 防止 UI 双向绑定与定时器刷新之间产生死循环
+            set => OnSeek(value);
+        }
 
         private double _volumeValue = 100;
         public double VolumeValue 
@@ -170,43 +173,37 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void OnStatusTimerTick(object sender, EventArgs e)
         {
-            if (_playbackService == null || IsDragging) return;
+            if (_playbackService == null) return;
 
-            IsUpdating = true;
-            try
+            var pos = _playbackService.CurrentTime;
+            double newCurrentTime = pos.TotalSeconds;
+            if (Math.Abs(CurrentTime - newCurrentTime) > 0.05)
             {
-                var pos = _playbackService.CurrentTime;
-                double newCurrentTime = pos.TotalSeconds;
-                if (Math.Abs(CurrentTime - newCurrentTime) > 0.05)
-                {
-                    CurrentTime = newCurrentTime;
-                }
-                string newTimeStr = pos.ToString(@"mm\:ss");
-                if (CurrentTimeStr != newTimeStr)
-                {
-                    CurrentTimeStr = newTimeStr;
-                }
-
-                var total = _playbackService.TotalTime;
-                TotalTime = total.TotalSeconds;
-                TotalTimeStr = total.ToString(@"mm\:ss");
-
-                // 换算 0-1000 比例
-                if (TotalTime > 0)
-                {
-                    double newProgress = (CurrentTime / TotalTime) * 1000.0;
-                    if (Math.Abs(ProgressValue - newProgress) > 0.5)
-                    {
-                        ProgressValue = newProgress;
-                    }
-                }
-
-                PlayState = _playbackService.PlaybackState.ToString();
+                CurrentTime = newCurrentTime;
             }
-            finally
+            string newTimeStr = pos.ToString(@"mm\:ss");
+            if (CurrentTimeStr != newTimeStr)
             {
-                IsUpdating = false;
+                CurrentTimeStr = newTimeStr;
             }
+
+            var total = _playbackService.TotalTime;
+            TotalTime = total.TotalSeconds;
+            TotalTimeStr = total.ToString(@"mm\:ss");
+
+            // 换算 0-1000 比例，直接写后台字段，手动触发 PropertyChanged
+            // 绕过 set 访问器中的 Seek 逻辑，避免死循环
+            if (TotalTime > 0)
+            {
+                double newProgress = (CurrentTime / TotalTime) * 1000.0;
+                if (Math.Abs(_progressValue - newProgress) > 0.5)
+                {
+                    _progressValue = newProgress;
+                    RaisePropertyChanged(nameof(ProgressValue));
+                }
+            }
+
+            PlayState = _playbackService.PlaybackState.ToString();
         }
 
         private void OnPlayPause()
@@ -292,10 +289,7 @@ string path = track.EffectiveCoverPath;
             AlbumCoverImage = null;
         }
 
-        public void SeekToProgress(double value)
-        {
-            OnSeek(value);
-        }
+
 
         private void OnExecuteChangePlayMode()
         {

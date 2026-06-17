@@ -29,7 +29,19 @@ namespace seamless_loop_music.UI.ViewModels
         }
 
         private double _progressValue;
-        public double ProgressValue { get => _progressValue; set => SetProperty(ref _progressValue, value); }
+        public double ProgressValue
+        {
+            get => _progressValue;
+            // Dopamine 模式：set 只发送 Seek 指令，不赋值、不触发 PropertyChanged
+            set
+            {
+                if (_playbackService.TotalTime.TotalSeconds > 0)
+                {
+                    var target = TimeSpan.FromSeconds(value / 1000.0 * _playbackService.TotalTime.TotalSeconds);
+                    _playbackService.Seek(target);
+                }
+            }
+        }
 
         private string _currentTimeStr = "00:00";
         private string _totalTimeStr = "00:00";
@@ -125,7 +137,6 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
-        public bool IsUpdating { get; set; }
         private readonly System.Windows.Threading.DispatcherTimer _statusTimer;
 
         public TrayControlsViewModel(IPlaybackService playbackService, IAppStateService appStateService)
@@ -215,34 +226,20 @@ namespace seamless_loop_music.UI.ViewModels
 
         private void UpdateProgress()
         {
-            if (IsUpdating) return;
-            IsUpdating = true;
-            try
-            {
-                var pos = _playbackService.CurrentTime;
-                var total = _playbackService.TotalTime;
+            var pos = _playbackService.CurrentTime;
+            var total = _playbackService.TotalTime;
                 
-                CurrentTimeStr = pos.ToString(@"mm\:ss");
-                TotalTimeStr = total.ToString(@"mm\:ss");
+            CurrentTimeStr = pos.ToString(@"mm\:ss");
+            TotalTimeStr = total.ToString(@"mm\:ss");
 
-                if (total.TotalSeconds > 0)
-                {
-                    ProgressValue = (pos.TotalSeconds / total.TotalSeconds) * 1000.0;
-                }
-            }
-            finally
+            // 直接写后台字段，手动触发 PropertyChanged，绕过 set 中的 Seek 逻辑
+            if (total.TotalSeconds > 0)
             {
-                IsUpdating = false;
+                _progressValue = (pos.TotalSeconds / total.TotalSeconds) * 1000.0;
+                RaisePropertyChanged(nameof(ProgressValue));
             }
         }
 
-        public void SeekToProgress(double value)
-        {
-            if (_playbackService.TotalTime.TotalSeconds > 0)
-            {
-                var target = TimeSpan.FromSeconds(value / 1000.0 * _playbackService.TotalTime.TotalSeconds);
-                _playbackService.Seek(target);
-            }
-        }
+
     }
 }
