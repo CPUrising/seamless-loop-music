@@ -14,6 +14,8 @@
         </Grid>
         <Slider x:Name="ProgressBar" Style="{StaticResource ModernSlider}"
                 Value="{Binding ProgressValue, Mode=TwoWay}" Maximum="1000"
-                IsMoveToPointEnabled="True" Margin="0,2,0,0"/>
+                IsMoveToPointEnabled="True" Margin="0,2,0,0"
+                Thumb.DragStarted="ProgressBar_DragStarted"
+                Thumb.DragCompleted="ProgressBar_DragCompleted"/>
     </StackPanel>
 </UserControl>

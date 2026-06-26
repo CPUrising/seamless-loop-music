@@ -63,13 +63,36 @@ namespace seamless_loop_music.UI.ViewModels
         private double _totalTime;
         public double TotalTime { get => _totalTime; set => SetProperty(ref _totalTime, value); }
 
+        private bool _isDragging = false;
+        public bool IsDragging
+        {
+            get => _isDragging;
+            set => SetProperty(ref _isDragging, value);
+        }
+
         private double _progressValue;
         public double ProgressValue
         {
             get => _progressValue;
             // Dopamine 模式：set 只发送 Seek 指令，不赋值、不触发 PropertyChanged
             // 防止 UI 双向绑定与定时器刷新之间产生死循环
-            set => OnSeek(value);
+            set
+            {
+                if (IsDragging)
+                {
+                    _progressValue = value;
+                    if (TotalTime > 0)
+                    {
+                        var tempSeconds = (value / 1000.0) * TotalTime;
+                        var tempTime = TimeSpan.FromSeconds(tempSeconds);
+                        CurrentTimeStr = tempTime.ToString(@"mm\:ss");
+                    }
+                }
+                else
+                {
+                    OnSeek(value);
+                }
+            }
         }
 
         private double _volumeValue = 100;
@@ -118,6 +141,8 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand ChangePlayModeCommand { get; }
         public DelegateCommand ShowRatingPlaylistCommand { get; }
         public DelegateCommand<MusicTrack> RateCommand { get; }
+        public DelegateCommand DragStartedCommand { get; }
+        public DelegateCommand DragCompletedCommand { get; }
 
         public PlaybackControlBarViewModel(IPlaybackService playbackService, IRegionManager regionManager, IEventAggregator eventAggregator, TrackMetadataService metadataService, ITrackRepository trackRepository)
         {
@@ -136,6 +161,8 @@ namespace seamless_loop_music.UI.ViewModels
             ChangePlayModeCommand = new DelegateCommand(OnExecuteChangePlayMode);
             ShowRatingPlaylistCommand = new DelegateCommand(OnShowRatingPlaylist);
             RateCommand = new DelegateCommand<MusicTrack>(OnRateTrack);
+            DragStartedCommand = new DelegateCommand(OnDragStarted);
+            DragCompletedCommand = new DelegateCommand(OnDragCompleted);
 
             UpdatePlayModeText();
 
@@ -175,6 +202,8 @@ namespace seamless_loop_music.UI.ViewModels
         {
             if (_playbackService == null) return;
 
+            if (IsDragging) return;
+ 
             var pos = _playbackService.CurrentTime;
             double newCurrentTime = pos.TotalSeconds;
             if (Math.Abs(CurrentTime - newCurrentTime) > 0.05)
@@ -219,6 +248,17 @@ namespace seamless_loop_music.UI.ViewModels
                 var target = TimeSpan.FromSeconds(value.Value / 1000.0 * _playbackService.TotalTime.TotalSeconds);
                 _playbackService.Seek(target);
             }
+        }
+
+        private void OnDragStarted()
+        {
+            IsDragging = true;
+        }
+
+        private void OnDragCompleted()
+        {
+            IsDragging = false;
+            OnSeek(_progressValue);
         }
 
         private void OnOpenDetail()
