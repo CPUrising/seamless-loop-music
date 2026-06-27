@@ -75,6 +75,17 @@ namespace seamless_loop_music.Services
 
             BuildContextMenu();
             CreateContextMenuHost();
+
+            // Subscribe to playback state changes to refresh tray context menu in real-time
+            _eventAggregator.GetEvent<PlaybackStateChangedEvent>().Subscribe(OnPlaybackStateChanged);
+        }
+
+        private void OnPlaybackStateChanged(NAudio.Wave.PlaybackState state)
+        {
+            Application.Current.Dispatcher.Invoke(() =>
+            {
+                RefreshContextMenuState();
+            });
         }
 
         /// <summary>
@@ -346,6 +357,8 @@ namespace seamless_loop_music.Services
 
         public void Dispose()
         {
+            _eventAggregator.GetEvent<PlaybackStateChangedEvent>().Unsubscribe(OnPlaybackStateChanged);
+
             _notifyIcon.Visible = false;
             _notifyIcon.Dispose();
 
