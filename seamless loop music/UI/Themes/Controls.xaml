@@ -464,56 +464,65 @@
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="MenuItem">
-                    <Border x:Name="BgBorder" 
-                            Background="{TemplateBinding Background}" 
-                            BorderBrush="{TemplateBinding BorderBrush}" 
-                            BorderThickness="{TemplateBinding BorderThickness}"
-                            Padding="{TemplateBinding Padding}">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="*"/>
-                                <ColumnDefinition Width="Auto"/>
-                            </Grid.ColumnDefinitions>
-                            <!-- Text Header -->
-                            <ContentPresenter Grid.Column="0" 
-                                              ContentSource="Header" 
-                                              VerticalAlignment="Center"
-                                              Margin="0,0,16,0"/>
-                            <!-- Right Icons Column -->
-                            <Grid Grid.Column="1" VerticalAlignment="Center">
-                                <!-- Right CheckMark (for checkable items) -->
-                                <Path x:Name="Glyph" 
-                                      Width="12" 
-                                      Height="10" 
-                                      Stretch="Uniform" 
-                                      Fill="{StaticResource BrushAccent}" 
-                                      Data="M 0,5.1 L 1.7,3.4 L 4.3,6 L 10.3,0 L 12,1.7 L 4.3,9.4 Z"
-                                      Visibility="Collapsed"/>
-                                <!-- Right Arrow (for submenu headers) -->
-                                <Path x:Name="Arrow" 
-                                      Width="6" 
-                                      Height="10" 
-                                      Stretch="Uniform" 
-                                      Fill="{TemplateBinding Foreground}" 
-                                      Data="M 0,0 L 4,4 L 0,8 Z"
-                                      Visibility="Collapsed"/>
+                    <Grid x:Name="TemplateRoot">
+                        <Border x:Name="BgBorder" 
+                                Background="{TemplateBinding Background}" 
+                                BorderBrush="{TemplateBinding BorderBrush}" 
+                                BorderThickness="{TemplateBinding BorderThickness}"
+                                Padding="{TemplateBinding Padding}">
+                            <Grid>
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="*"/>
+                                    <ColumnDefinition Width="Auto"/>
+                                </Grid.ColumnDefinitions>
+                                <!-- Text Header -->
+                                <ContentPresenter Grid.Column="0" 
+                                                  ContentSource="Header" 
+                                                  VerticalAlignment="Center"
+                                                  Margin="0,0,16,0"/>
+                                <!-- Right Icons Column -->
+                                <Grid Grid.Column="1" VerticalAlignment="Center">
+                                    <!-- Right CheckMark (for checkable items) -->
+                                    <Path x:Name="Glyph" 
+                                          Width="12" 
+                                          Height="10" 
+                                          Stretch="Uniform" 
+                                          Fill="{StaticResource BrushAccent}" 
+                                          Data="M 0,5.1 L 1.7,3.4 L 4.3,6 L 10.3,0 L 12,1.7 L 4.3,9.4 Z"
+                                          Visibility="Collapsed"/>
+                                    <!-- Right Arrow (for submenu headers) -->
+                                    <Path x:Name="Arrow" 
+                                          Width="6" 
+                                          Height="10" 
+                                          Stretch="Uniform" 
+                                          Fill="{TemplateBinding Foreground}" 
+                                          Data="M 0,0 L 4,4 L 0,8 Z"
+                                          Visibility="Collapsed"/>
+                                </Grid>
                             </Grid>
-                            <!-- Submenu Popup (Required for submenu popup to display) -->
-                            <Popup x:Name="PART_Popup"
-                                   AllowsTransparency="true"
-                                   Focusable="false"
-                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
-                                   Placement="Right">
-                                <Border Background="{StaticResource BrushSurface}"
-                                        BorderBrush="{StaticResource BrushSurfaceHighlight}"
-                                        BorderThickness="1"
-                                        Padding="4"
-                                        CornerRadius="4">
-                                    <ItemsPresenter x:Name="ItemsPresenter" />
-                                </Border>
-                            </Popup>
-                        </Grid>
-                    </Border>
+                        </Border>
+                        <!-- Submenu Popup (Required for submenu popup to display) -->
+                        <!-- PlacementTarget is explicitly set to BgBorder to isolate alignment from padding offsets -->
+                        <Popup x:Name="PART_Popup"
+                               AllowsTransparency="true"
+                               Focusable="false"
+                               IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                               Placement="Right"
+                               PlacementTarget="{Binding ElementName=BgBorder}"
+                               VerticalOffset="-5"
+                               HorizontalOffset="-2">
+                            <Border Background="{StaticResource BrushSurface}"
+                                    BorderBrush="{StaticResource BrushSurfaceHighlight}"
+                                    BorderThickness="1"
+                                    Padding="4"
+                                    CornerRadius="4">
+                                <Border.Effect>
+                                    <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.25" Color="Black"/>
+                                </Border.Effect>
+                                <ItemsPresenter x:Name="ItemsPresenter" />
+                            </Border>
+                        </Popup>
+                    </Grid>
                     <ControlTemplate.Triggers>
                         <!-- Trigger for checked items -->
                         <Trigger Property="IsChecked" Value="True">
