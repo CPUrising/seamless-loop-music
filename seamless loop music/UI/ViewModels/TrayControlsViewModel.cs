@@ -28,27 +28,7 @@ namespace seamless_loop_music.UI.ViewModels
             set => SetProperty(ref _isPlaying, value);
         }
 
-        private double _progressValue;
-        public double ProgressValue
-        {
-            get => _progressValue;
-            // Dopamine 模式：set 只发送 Seek 指令，不赋值、不触发 PropertyChanged
-            set
-            {
-                if (_playbackService.TotalTime.TotalSeconds > 0)
-                {
-                    var target = TimeSpan.FromSeconds(value / 1000.0 * _playbackService.TotalTime.TotalSeconds);
-                    _playbackService.Seek(target);
-                }
-            }
-        }
 
-        private string _currentTimeStr = "00:00";
-        private string _totalTimeStr = "00:00";
-        public string TimeDisplay => $"{_currentTimeStr} / {_totalTimeStr}";
-
-        public string CurrentTimeStr { get => _currentTimeStr; set { if (SetProperty(ref _currentTimeStr, value)) RaisePropertyChanged(nameof(TimeDisplay)); } }
-        public string TotalTimeStr { get => _totalTimeStr; set { if (SetProperty(ref _totalTimeStr, value)) RaisePropertyChanged(nameof(TimeDisplay)); } }
 
         public ICommand PlayCommand { get; }
         public ICommand NextCommand { get; }
@@ -137,7 +117,7 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
-        private readonly System.Windows.Threading.DispatcherTimer _statusTimer;
+
 
         public TrayControlsViewModel(IPlaybackService playbackService, IAppStateService appStateService)
         {
@@ -171,12 +151,7 @@ namespace seamless_loop_music.UI.ViewModels
                 Application.Current.Shutdown();
             });
 
-            _statusTimer = new System.Windows.Threading.DispatcherTimer
-            {
-                Interval = TimeSpan.FromMilliseconds(500)
-            };
-            _statusTimer.Tick += (s, e) => UpdateProgress();
-            _statusTimer.Start();
+
         }
 
         public void RefreshMenuState()
@@ -224,21 +199,7 @@ namespace seamless_loop_music.UI.ViewModels
             RefreshMenuState();
         }
 
-        private void UpdateProgress()
-        {
-            var pos = _playbackService.CurrentTime;
-            var total = _playbackService.TotalTime;
-                
-            CurrentTimeStr = pos.ToString(@"mm\:ss");
-            TotalTimeStr = total.ToString(@"mm\:ss");
 
-            // 直接写后台字段，手动触发 PropertyChanged，绕过 set 中的 Seek 逻辑
-            if (total.TotalSeconds > 0)
-            {
-                _progressValue = (pos.TotalSeconds / total.TotalSeconds) * 1000.0;
-                RaisePropertyChanged(nameof(ProgressValue));
-            }
-        }
 
 
     }
