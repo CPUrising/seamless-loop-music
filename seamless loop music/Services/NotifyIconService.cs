@@ -83,43 +83,77 @@ namespace seamless_loop_music.Services
         {
             var loc = LocalizationService.Instance;
 
-            _playPauseItem = new MenuItem { Header = loc["MenuPlay"] };
+            var trayStyle = Application.Current.TryFindResource("TrayMenuItemStyle") as Style;
+
+            _playPauseItem = new MenuItem { Header = loc["MenuPlay"], StaysOpenOnClick = true };
+            if (trayStyle != null) _playPauseItem.Style = trayStyle;
             _playPauseItem.Click += (s, e) =>
             {
                 if (_playbackService.PlaybackState == NAudio.Wave.PlaybackState.Playing)
                     _playbackService.Pause();
                 else
                     _playbackService.Play();
+                
+                RefreshContextMenuState();
             };
 
-            _prevItem = new MenuItem { Header = loc["MenuPrevious"] };
-            _prevItem.Click += (s, e) => _playbackService.Previous();
+            _prevItem = new MenuItem { Header = loc["MenuPrevious"], StaysOpenOnClick = true };
+            if (trayStyle != null) _prevItem.Style = trayStyle;
+            _prevItem.Click += (s, e) => 
+            {
+                _playbackService.Previous();
+                RefreshContextMenuState();
+            };
 
-            _nextItem = new MenuItem { Header = loc["MenuNext"] };
-            _nextItem.Click += (s, e) => _playbackService.Next();
+            _nextItem = new MenuItem { Header = loc["MenuNext"], StaysOpenOnClick = true };
+            if (trayStyle != null) _nextItem.Style = trayStyle;
+            _nextItem.Click += (s, e) => 
+            {
+                _playbackService.Next();
+                RefreshContextMenuState();
+            };
 
             // Play mode sub-items
-            _singleLoopItem = new MenuItem { Header = loc["TipPlayModeSingle"], IsCheckable = true };
-            _singleLoopItem.Click += (s, e) => { _playbackService.PlayMode = PlayMode.SingleLoop; };
+            _singleLoopItem = new MenuItem { Header = loc["TipPlayModeSingle"], IsCheckable = true, StaysOpenOnClick = true };
+            if (trayStyle != null) _singleLoopItem.Style = trayStyle;
+            _singleLoopItem.Click += (s, e) => 
+            { 
+                _playbackService.PlayMode = PlayMode.SingleLoop; 
+                RefreshContextMenuState();
+            };
 
-            _listLoopItem = new MenuItem { Header = loc["TipPlayModeList"], IsCheckable = true };
-            _listLoopItem.Click += (s, e) => { _playbackService.PlayMode = PlayMode.ListLoop; };
+            _listLoopItem = new MenuItem { Header = loc["TipPlayModeList"], IsCheckable = true, StaysOpenOnClick = true };
+            if (trayStyle != null) _listLoopItem.Style = trayStyle;
+            _listLoopItem.Click += (s, e) => 
+            { 
+                _playbackService.PlayMode = PlayMode.ListLoop; 
+                RefreshContextMenuState();
+            };
 
-            _shuffleItem = new MenuItem { Header = loc["TipPlayModeShuffle"], IsCheckable = true };
-            _shuffleItem.Click += (s, e) => { _playbackService.PlayMode = PlayMode.Shuffle; };
+            _shuffleItem = new MenuItem { Header = loc["TipPlayModeShuffle"], IsCheckable = true, StaysOpenOnClick = true };
+            if (trayStyle != null) _shuffleItem.Style = trayStyle;
+            _shuffleItem.Click += (s, e) => 
+            { 
+                _playbackService.PlayMode = PlayMode.Shuffle; 
+                RefreshContextMenuState();
+            };
 
             var playModeMenu = new MenuItem { Header = loc["TrayPlayMode"] };
+            if (trayStyle != null) playModeMenu.Style = trayStyle;
             playModeMenu.Items.Add(_singleLoopItem);
             playModeMenu.Items.Add(_listLoopItem);
             playModeMenu.Items.Add(_shuffleItem);
 
-            _seamlessLoopItem = new MenuItem { Header = loc["FeatureLoop"], IsCheckable = true };
+            _seamlessLoopItem = new MenuItem { Header = loc["FeatureLoop"], IsCheckable = true, StaysOpenOnClick = true };
+            if (trayStyle != null) _seamlessLoopItem.Style = trayStyle;
             _seamlessLoopItem.Click += (s, e) =>
             {
                 _playbackService.IsSeamlessLoopEnabled = _seamlessLoopItem.IsChecked;
+                RefreshContextMenuState();
             };
 
             _exitItem = new MenuItem { Header = loc["MenuExit"] };
+            if (trayStyle != null) _exitItem.Style = trayStyle;
             _exitItem.Click += (s, e) =>
             {
                 _appStateService.IsExiting = true;
@@ -127,6 +161,11 @@ namespace seamless_loop_music.Services
             };
 
             _trayContextMenu = new ContextMenu();
+            var contextMenuStyle = Application.Current.TryFindResource("TrayContextMenuStyle") as Style;
+            if (contextMenuStyle != null)
+            {
+                _trayContextMenu.Style = contextMenuStyle;
+            }
             _trayContextMenu.Items.Add(_playPauseItem);
             _trayContextMenu.Items.Add(_prevItem);
             _trayContextMenu.Items.Add(_nextItem);
@@ -235,8 +274,8 @@ namespace seamless_loop_music.Services
         {
             if (e.Button == MouseButtons.Left)
             {
-                // Left-click: show custom TrayControlsWindow panel
-                ShowTrayControls();
+                // Left-click: show the main window (temporarily changed from ShowTrayControls per CPU's request)
+                ShowMainWindow();
             }
             else if (e.Button == MouseButtons.Right)
             {

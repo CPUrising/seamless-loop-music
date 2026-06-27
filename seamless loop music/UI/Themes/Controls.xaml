@@ -455,4 +455,110 @@
         </Style.Triggers>
     </Style>
 
+    <!-- Tray ContextMenu Item Style (keeps left alignment neat and moves checkmarks/arrows to the right) -->
+    <Style x:Key="TrayMenuItemStyle" TargetType="MenuItem">
+        <Setter Property="Height" Value="36"/>
+        <Setter Property="Background" Value="Transparent"/>
+        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+        <Setter Property="Padding" Value="16,6,16,6"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="MenuItem">
+                    <Border x:Name="BgBorder" 
+                            Background="{TemplateBinding Background}" 
+                            BorderBrush="{TemplateBinding BorderBrush}" 
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="*"/>
+                                <ColumnDefinition Width="Auto"/>
+                            </Grid.ColumnDefinitions>
+                            <!-- Text Header -->
+                            <ContentPresenter Grid.Column="0" 
+                                              ContentSource="Header" 
+                                              VerticalAlignment="Center"
+                                              Margin="0,0,16,0"/>
+                            <!-- Right Icons Column -->
+                            <Grid Grid.Column="1" VerticalAlignment="Center">
+                                <!-- Right CheckMark (for checkable items) -->
+                                <Path x:Name="Glyph" 
+                                      Width="12" 
+                                      Height="10" 
+                                      Stretch="Uniform" 
+                                      Fill="{StaticResource BrushAccent}" 
+                                      Data="M 0,5.1 L 1.7,3.4 L 4.3,6 L 10.3,0 L 12,1.7 L 4.3,9.4 Z"
+                                      Visibility="Collapsed"/>
+                                <!-- Right Arrow (for submenu headers) -->
+                                <Path x:Name="Arrow" 
+                                      Width="6" 
+                                      Height="10" 
+                                      Stretch="Uniform" 
+                                      Fill="{TemplateBinding Foreground}" 
+                                      Data="M 0,0 L 4,4 L 0,8 Z"
+                                      Visibility="Collapsed"/>
+                            </Grid>
+                            <!-- Submenu Popup (Required for submenu popup to display) -->
+                            <Popup x:Name="PART_Popup"
+                                   AllowsTransparency="true"
+                                   Focusable="false"
+                                   IsOpen="{Binding IsSubmenuOpen, RelativeSource={RelativeSource TemplatedParent}}"
+                                   Placement="Right">
+                                <Border Background="{StaticResource BrushSurface}"
+                                        BorderBrush="{StaticResource BrushSurfaceHighlight}"
+                                        BorderThickness="1"
+                                        Padding="4"
+                                        CornerRadius="4">
+                                    <ItemsPresenter x:Name="ItemsPresenter" />
+                                </Border>
+                            </Popup>
+                        </Grid>
+                    </Border>
+                    <ControlTemplate.Triggers>
+                        <!-- Trigger for checked items -->
+                        <Trigger Property="IsChecked" Value="True">
+                            <Setter TargetName="Glyph" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <!-- Trigger for submenu items -->
+                        <Trigger Property="HasItems" Value="True">
+                            <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
+                        </Trigger>
+                        <Trigger Property="IsMouseOver" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                        </Trigger>
+                        <!-- If submenu is open, highlight the parent item -->
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                        </Trigger>
+                    </ControlTemplate.Triggers>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
+    <!-- Tray ContextMenu Style to ensure first-level and submenus share the same container appearance -->
+    <Style x:Key="TrayContextMenuStyle" TargetType="ContextMenu">
+        <Setter Property="Background" Value="{StaticResource BrushSurface}"/>
+        <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceHighlight}"/>
+        <Setter Property="BorderThickness" Value="1"/>
+        <Setter Property="Padding" Value="4"/>
+        <Setter Property="Template">
+            <Setter.Value>
+                <ControlTemplate TargetType="ContextMenu">
+                    <!-- Added DropShadowEffect for a premium modern feel -->
+                    <Border Background="{TemplateBinding Background}"
+                            BorderBrush="{TemplateBinding BorderBrush}"
+                            BorderThickness="{TemplateBinding BorderThickness}"
+                            Padding="{TemplateBinding Padding}"
+                            CornerRadius="4">
+                        <Border.Effect>
+                            <DropShadowEffect BlurRadius="10" ShadowDepth="2" Opacity="0.25" Color="Black"/>
+                        </Border.Effect>
+                        <ItemsPresenter />
+                    </Border>
+                </ControlTemplate>
+            </Setter.Value>
+        </Setter>
+    </Style>
+
 </ResourceDictionary>
