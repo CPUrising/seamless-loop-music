@@ -33,6 +33,8 @@ namespace seamless_loop_music.Services
         private MenuItem _shuffleItem;
         private MenuItem _seamlessLoopItem;
         private MenuItem _exitItem;
+        private MenuItem _openMainItem;
+        private MenuItem _playModeMenu;
 
         // Hidden helper window to anchor ContextMenu and handle its Deactivated close
         private Window _contextMenuHost;
@@ -138,11 +140,11 @@ namespace seamless_loop_music.Services
                 RefreshContextMenuState();
             };
 
-            var playModeMenu = new MenuItem { Header = loc["TrayPlayMode"] };
-            if (trayStyle != null) playModeMenu.Style = trayStyle;
-            playModeMenu.Items.Add(_singleLoopItem);
-            playModeMenu.Items.Add(_listLoopItem);
-            playModeMenu.Items.Add(_shuffleItem);
+            _playModeMenu = new MenuItem { Header = loc["TrayPlayMode"] };
+            if (trayStyle != null) _playModeMenu.Style = trayStyle;
+            _playModeMenu.Items.Add(_singleLoopItem);
+            _playModeMenu.Items.Add(_listLoopItem);
+            _playModeMenu.Items.Add(_shuffleItem);
 
             _seamlessLoopItem = new MenuItem { Header = loc["FeatureLoop"], IsCheckable = true, StaysOpenOnClick = true };
             if (trayStyle != null) _seamlessLoopItem.Style = trayStyle;
@@ -151,6 +153,10 @@ namespace seamless_loop_music.Services
                 _playbackService.IsSeamlessLoopEnabled = _seamlessLoopItem.IsChecked;
                 RefreshContextMenuState();
             };
+
+            _openMainItem = new MenuItem { Header = loc["MenuShowMainWindow"] ?? "显示主窗口" };
+            if (trayStyle != null) _openMainItem.Style = trayStyle;
+            _openMainItem.Click += (s, e) => ShowMainWindow();
 
             _exitItem = new MenuItem { Header = loc["MenuExit"] };
             if (trayStyle != null) _exitItem.Style = trayStyle;
@@ -170,9 +176,10 @@ namespace seamless_loop_music.Services
             _trayContextMenu.Items.Add(_prevItem);
             _trayContextMenu.Items.Add(_nextItem);
             _trayContextMenu.Items.Add(new Separator());
-            _trayContextMenu.Items.Add(playModeMenu);
+            _trayContextMenu.Items.Add(_playModeMenu);
             _trayContextMenu.Items.Add(_seamlessLoopItem);
             _trayContextMenu.Items.Add(new Separator());
+            _trayContextMenu.Items.Add(_openMainItem);
             _trayContextMenu.Items.Add(_exitItem);
         }
 
@@ -214,6 +221,7 @@ namespace seamless_loop_music.Services
             _prevItem.Header = loc["MenuPrevious"];
             _nextItem.Header = loc["MenuNext"];
             _exitItem.Header = loc["MenuExit"];
+            _openMainItem.Header = loc["MenuShowMainWindow"] ?? "显示主窗口";
 
             _singleLoopItem.Header = loc["TipPlayModeSingle"];
             _singleLoopItem.IsChecked = _playbackService.PlayMode == PlayMode.SingleLoop;
@@ -221,6 +229,8 @@ namespace seamless_loop_music.Services
             _listLoopItem.IsChecked = _playbackService.PlayMode == PlayMode.ListLoop;
             _shuffleItem.Header = loc["TipPlayModeShuffle"];
             _shuffleItem.IsChecked = _playbackService.PlayMode == PlayMode.Shuffle;
+
+            _playModeMenu.Header = loc["TrayPlayMode"];
 
             _seamlessLoopItem.Header = loc["FeatureLoop"];
             _seamlessLoopItem.IsChecked = _playbackService.IsSeamlessLoopEnabled;
