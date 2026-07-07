@@ -64,7 +64,7 @@ jobs:
             core.setOutput('build_version', buildVersion);
 
       - name: Setup MSBuild
-        uses: microsoft/setup-msbuild@v2
+        uses: microsoft/setup-msbuild@v3
 
       - name: Configure loopfinder
         run: cmake -S loopfinder -B loopfinder/build -A x64 -DCMAKE_BUILD_TYPE=Release
@@ -122,7 +122,7 @@ jobs:
           Copy-Item -Path "$outputDir/*" -Destination $artifactDir -Recurse -Force
 
       - name: Upload build artifact
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: seamless-loop-music-${{ steps.version.outputs.build_version }}
           path: artifacts/seamless-loop-music
