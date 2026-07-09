@@ -22,6 +22,7 @@ namespace seamless_loop_music.Data.Repositories
                 t.FilePath,
                 t.DisplayName,
                 t.TotalSamples,
+                t.DurationMs,
                 t.LastModified,
                 t.CoverPath,
                 al.Name   AS Album,
@@ -100,11 +101,12 @@ namespace seamless_loop_music.Data.Repositories
                                 DisplayName  = @DisplayName,
                                 FilePath     = @FilePath,
                                 LastModified = @LastModified,
+                                DurationMs   = @DurationMs,
                                 CoverPath    = @CoverPath,
                                 AlbumId      = @AlbumId,
                                 ArtistId     = @ArtistId
                             WHERE Id = @Id;",
-                            new { track.DisplayName, track.FilePath, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId, track.Id },
+                            new { track.DisplayName, track.FilePath, track.LastModified, track.DurationMs, track.CoverPath, AlbumId = albumId, ArtistId = artistId, track.Id },
                             transaction: trans);
 
                         // 更新 LoopPoints
@@ -136,10 +138,10 @@ namespace seamless_loop_music.Data.Repositories
                         try
                         {
                             newId = db.ExecuteScalar<long>(@"
-                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId, ArtistId)
-                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId, @ArtistId);
+                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, DurationMs, LastModified, CoverPath, AlbumId, ArtistId)
+                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @DurationMs, @LastModified, @CoverPath, @AlbumId, @ArtistId);
                                 SELECT last_insert_rowid();",
-                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId },
+                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.DurationMs, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId },
                                 transaction: trans);
                             track.Id = (int)newId;
                         }
@@ -210,20 +212,21 @@ namespace seamless_loop_music.Data.Repositories
                                     DisplayName  = @DisplayName,
                                     CoverPath    = @CoverPath,
                                     LastModified = @LastModified,
+                                    DurationMs   = @DurationMs,
                                     AlbumId      = @AlbumId,
                                     ArtistId     = @ArtistId,
                                     TotalSamples = @TotalSamples  -- 更新为最新的物理采样数
                                 WHERE Id = @Id;",
-                                new { track.FilePath, track.DisplayName, track.CoverPath, track.LastModified, AlbumId = albumId, ArtistId = artistId, Id = trackId, track.TotalSamples },
+                                new { track.FilePath, track.DisplayName, track.CoverPath, track.LastModified, track.DurationMs, AlbumId = albumId, ArtistId = artistId, Id = trackId, track.TotalSamples },
                                 transaction: trans);
                         }
                         else
                         {
                             trackId = db.ExecuteScalar<long>(@"
-                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId, ArtistId)
-                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId, @ArtistId);
+                                INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, DurationMs, LastModified, CoverPath, AlbumId, ArtistId)
+                                VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @DurationMs, @LastModified, @CoverPath, @AlbumId, @ArtistId);
                                 SELECT last_insert_rowid();",
-                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId },
+                                new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.DurationMs, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId },
                                 transaction: trans);
                         }
 

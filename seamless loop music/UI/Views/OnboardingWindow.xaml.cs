@@ -51,7 +51,7 @@ namespace seamless_loop_music.UI.Views
             }
             catch (Exception ex)
             {
-                MessageBox.Show(
+                seamless_loop_music.AppDialogService.Show(
                     string.Format(loc["OnboardingScanError"], ex.Message),
                     loc["OnboardingTitle"],
                     MessageBoxButton.OK,

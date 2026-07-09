@@ -541,7 +541,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 var loc = LocalizationService.Instance;
                 var msg = string.Format(loc["MsgConfirmRemove"], tracksToRemove.Count, _selectedCategoryItem.Name);
-                var result = System.Windows.MessageBox.Show(msg, loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
+                var result = seamless_loop_music.AppDialogService.Show(msg, loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
                 if (result == System.Windows.MessageBoxResult.Yes)
                 {
                     foreach (var t in tracksToRemove)
@@ -553,7 +553,7 @@ namespace seamless_loop_music.UI.ViewModels
             }
             else
             {
-                System.Windows.MessageBox.Show(LocalizationService.Instance["TipCustomPlaylistOnly"], LocalizationService.Instance["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
+                seamless_loop_music.AppDialogService.Show(LocalizationService.Instance["TipCustomPlaylistOnly"], LocalizationService.Instance["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Information);
             }
         }
 
@@ -564,7 +564,7 @@ namespace seamless_loop_music.UI.ViewModels
 
             var loc = LocalizationService.Instance;
             var msg = string.Format(loc["MsgConfirmDelete"], tracksToDelete.Count);
-            var result = System.Windows.MessageBox.Show(msg, loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
+            var result = seamless_loop_music.AppDialogService.Show(msg, loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Warning);
             if (result == System.Windows.MessageBoxResult.Yes)
             {
                 foreach (var t in tracksToDelete)
@@ -582,7 +582,7 @@ namespace seamless_loop_music.UI.ViewModels
                     }
                     catch (Exception ex)
                     {
-                        System.Windows.MessageBox.Show($"删除文件 {t.FileName} 失败: {ex.Message}");
+                        seamless_loop_music.AppDialogService.Show($"删除文件 {t.FileName} 失败: {ex.Message}");
                     }
                 }
                 await ReloadTracksAsync();

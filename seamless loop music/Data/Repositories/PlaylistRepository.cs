@@ -15,7 +15,7 @@ namespace seamless_loop_music.Data.Repositories
         // ── 复用统一的 3NF 查询逻辑 ──────────────────────────────────────────
         private const string FullTrackSelect = @"
             SELECT 
-                t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.LastModified, t.CoverPath,
+                t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.DurationMs, t.LastModified, t.CoverPath,
                 al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist,
                 al.CoverPath AS AlbumCoverPath, ar.CoverPath AS ArtistCoverPath,
                 COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,

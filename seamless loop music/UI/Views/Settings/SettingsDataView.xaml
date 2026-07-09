@@ -20,6 +20,186 @@
                     <Button Content="{Binding SyncButtonText}" Command="{Binding SyncCommand}" Style="{StaticResource ProminentPrimaryButton}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
                 </StackPanel>
             </Border>
+
+            <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
+                <StackPanel>
+                    <TextBlock Text="GitHub 同步" Style="{StaticResource SectionHeaderText}"/>
+                    <TextBlock Text="同步歌单、循环点和评分到 GitHub sync.json；不会上传音乐文件。Token 当前明文保存在本机数据库。" Style="{StaticResource SectionDescriptionText}" Margin="0,0,0,16" TextWrapping="Wrap"/>
+
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Owner" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubOwner, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Repository" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Branch" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubBranch, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Path" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubPath, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                            <TextBlock Text="Token" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubToken, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="当前为 MVP：Token 以明文保存，仅建议在受信任的本机环境使用。" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button Content="保存配置"
+                                Command="{Binding SaveGitHubConfigCommand}"
+                                Style="{StaticResource ProminentPrimaryButton}"
+                                Margin="0,0,10,0"/>
+                        <Button Content="{Binding GitHubSyncButtonText}"
+                                Command="{Binding GitHubSyncNowCommand}"
+                                Style="{StaticResource ProminentPrimaryButton}"/>
+                    </StackPanel>
+
+                    <Border Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="上次同步时间" Foreground="{StaticResource BrushTextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding LastGitHubSyncTime}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,10"/>
+                            <TextBlock Text="当前状态" Foreground="{StaticResource BrushTextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding GitHubStatusText}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
+                <StackPanel>
+                    <TextBlock Text="数据管理" Style="{StaticResource SectionHeaderText}"/>
+                    <TextBlock Text="预览本机和云端同步数据，或执行明确的覆盖、删除、清理操作。" Style="{StaticResource SectionDescriptionText}" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button Content="{Binding RefreshOverviewButtonText}"
+                                Command="{Binding RefreshOverviewCommand}"
+                                Style="{StaticResource ProminentSecondaryButton}"/>
+                    </StackPanel>
+
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="本机数据" Foreground="{StaticResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="歌曲" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding LocalSongCount}" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Grid.Row="1" Text="歌单" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LocalPlaylistCount}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Text="循环点" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LocalLoopPointCount}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Text="评分" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LocalRatingCount}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="云端数据" Foreground="{StaticResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="歌曲引用" Foreground="{StaticResource BrushTextSecondary}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding CloudSongReferenceCount}" Foreground="{StaticResource BrushTextPrimary}"/>
+                                    <TextBlock Grid.Row="1" Text="歌单" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CloudPlaylistCount}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Text="循环点" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CloudLoopPointCount}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Text="评分" Foreground="{StaticResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CloudRatingCount}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="匹配摘要" Foreground="{StaticResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <WrapPanel>
+                                <TextBlock Text="云端状态：" Foreground="{StaticResource BrushTextSecondary}"/>
+                                <TextBlock Text="{Binding CloudStatusText}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock Text="已匹配云端引用：" Foreground="{StaticResource BrushTextSecondary}"/>
+                                <TextBlock Text="{Binding MatchedCloudSongReferences}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock Text="本机未找到：" Foreground="{StaticResource BrushTextSecondary}"/>
+                                <TextBlock Text="{Binding MissingCloudSongReferences}" Foreground="{StaticResource BrushTextPrimary}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="操作" Foreground="{StaticResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Button Content="用本机覆盖云端"
+                                Command="{Binding ForcePushLocalToCloudCommand}"
+                                Style="{StaticResource ProminentSecondaryButton}"
+                                Margin="0,0,10,0"/>
+                        <Button Content="删除云端同步文件"
+                                Command="{Binding DeleteCloudSnapshotCommand}"
+                                Style="{StaticResource ProminentDangerButton}"
+                                Margin="0,0,10,0"/>
+                        <Button Content="清除所选本机数据"
+                                Command="{Binding ClearLocalSyncDataCommand}"
+                                Style="{StaticResource ProminentDangerButton}"/>
+                    </StackPanel>
+
+                    <Border Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="当前状态" Foreground="{StaticResource BrushTextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding ManagementStatusText}" Foreground="{StaticResource BrushTextPrimary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+                </StackPanel>
+            </Border>
         </StackPanel>
     </ScrollViewer>
 </UserControl>

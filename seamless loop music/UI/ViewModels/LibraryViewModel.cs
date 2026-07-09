@@ -494,7 +494,7 @@ namespace seamless_loop_music.UI.ViewModels
                     if (allPlaylists.Any(p => p.Id != id && string.Equals(p.Name, newName, StringComparison.OrdinalIgnoreCase)))
                     {
                         App.Current.Dispatcher.Invoke(() => 
-                            System.Windows.MessageBox.Show(string.Format(loc["MsgPlaylistExists"], newName), 
+                            seamless_loop_music.AppDialogService.Show(string.Format(loc["MsgPlaylistExists"], newName),
                             loc["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
                         return;
                     }
@@ -511,7 +511,7 @@ namespace seamless_loop_music.UI.ViewModels
             if (SelectedCategoryItem == null || SelectedCategoryItem.Type != CategoryType.Playlist || SelectedCategoryItem.Id <= 0) return;
 
             var loc = LocalizationService.Instance;
-            var result = System.Windows.MessageBox.Show(string.Format(loc["MsgConfirmDeletePlaylist"], SelectedCategoryItem.Name), 
+            var result = seamless_loop_music.AppDialogService.Show(string.Format(loc["MsgConfirmDeletePlaylist"], SelectedCategoryItem.Name),
                 loc["SettingsTitle"], System.Windows.MessageBoxButton.YesNo, System.Windows.MessageBoxImage.Question);
             
             if (result == System.Windows.MessageBoxResult.Yes)
@@ -540,7 +540,7 @@ namespace seamless_loop_music.UI.ViewModels
                     if (allPlaylists.Any(p => string.Equals(p.Name, name, StringComparison.OrdinalIgnoreCase)))
                     {
                         App.Current.Dispatcher.Invoke(() => 
-                            System.Windows.MessageBox.Show(string.Format(loc["MsgPlaylistExists"], name), 
+                            seamless_loop_music.AppDialogService.Show(string.Format(loc["MsgPlaylistExists"], name),
                             loc["SettingsTitle"], System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Warning));
                         return;
                     }

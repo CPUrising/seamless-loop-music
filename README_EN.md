@@ -43,12 +43,18 @@ Supports logically concatenating two independent tracks (e.g., `Intro.wav` + `Lo
 
 ### 3. Seamless Playback System
 - **Seamless Loop Mode**: When enabled, the player performs sample-level jumps when reaching the loop end.
+- **Loop Marker Visualization**: The playback progress bar marks the current loop start and end with yellow vertical lines, making the active loop range easy to inspect.
 - **Mode Switching**: Quickly toggle between seamless looping and standard playback to suit your listening needs.
 
 ### 4. Robust Data Management
 - **Audio Fingerprinting**: Generates fingerprints based on "Filename + Total Samples." Loop configurations, aliases, and playlist info are automatically recovered even if files are moved or renamed.
 - **Database Sync**: Supports syncing database files from other devices. The system identifies tracks via fingerprints and automatically updates local loop points and metadata.
+- **GitHub Sync and Management**: Sync playlists, loop points, and ratings to a GitHub `sync.json`, with management actions for force-pushing local data, deleting the cloud snapshot, and clearing selected local sync data.
 - **Alias System**: Customize display names in the UI without modifying physical filenames.
+
+### 5. Consistent Desktop UI
+- Confirmation, warning, error, and information prompts use custom in-app dialogs instead of default system message boxes.
+- List context menus, data-management confirmations, and close prompts share rounded card-style visuals.
 
 ---
 

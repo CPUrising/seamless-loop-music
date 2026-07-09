@@ -14,6 +14,7 @@ namespace seamless_loop_music.Models
         private long _loopStart;
         private long _loopEnd;
         private long _totalSamples;
+        private long _durationMs;
         private string _artist;
         private string _album;
         private string _albumArtist;
@@ -54,6 +55,15 @@ namespace seamless_loop_music.Models
         { 
             get => _totalSamples; 
             set { _totalSamples = value; OnPropertyChanged(); } 
+        }
+
+        /// <summary>
+        /// 曲目时长（毫秒），由 TagLib 或 NAudio 计算填充
+        /// </summary>
+        public long DurationMs
+        {
+            get => _durationMs;
+            set { _durationMs = value; OnPropertyChanged(); }
         }
 
         public string Artist 

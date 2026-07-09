@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.ComponentModel;
 using System.Windows.Threading;
 using System.Windows.Media.Imaging;
 using Prism.Commands;
@@ -24,7 +25,27 @@ namespace seamless_loop_music.UI.ViewModels
         private readonly DispatcherTimer _statusTimer;
 
         private MusicTrack _currentTrack;
-        public MusicTrack CurrentTrack { get => _currentTrack; set => SetProperty(ref _currentTrack, value); }
+        public MusicTrack CurrentTrack
+        {
+            get => _currentTrack;
+            set
+            {
+                if (ReferenceEquals(_currentTrack, value))
+                    return;
+
+                var oldTrack = _currentTrack;
+                if (SetProperty(ref _currentTrack, value))
+                {
+                    if (oldTrack != null)
+                        oldTrack.PropertyChanged -= OnCurrentTrackPropertyChanged;
+
+                    if (_currentTrack != null)
+                        _currentTrack.PropertyChanged += OnCurrentTrackPropertyChanged;
+
+                    UpdateLoopMarkerState();
+                }
+            }
+        }
 
         private BitmapImage _albumCoverImage;
         public BitmapImage AlbumCoverImage
@@ -132,6 +153,34 @@ namespace seamless_loop_music.UI.ViewModels
             }
         }
 
+        private bool _hasLoopStartMarker;
+        public bool HasLoopStartMarker
+        {
+            get => _hasLoopStartMarker;
+            set => SetProperty(ref _hasLoopStartMarker, value);
+        }
+
+        private bool _hasLoopEndMarker;
+        public bool HasLoopEndMarker
+        {
+            get => _hasLoopEndMarker;
+            set => SetProperty(ref _hasLoopEndMarker, value);
+        }
+
+        private double _loopStartMarkerLeft;
+        public double LoopStartMarkerLeft
+        {
+            get => _loopStartMarkerLeft;
+            set => SetProperty(ref _loopStartMarkerLeft, value);
+        }
+
+        private double _loopEndMarkerLeft;
+        public double LoopEndMarkerLeft
+        {
+            get => _loopEndMarkerLeft;
+            set => SetProperty(ref _loopEndMarkerLeft, value);
+        }
+
         public DelegateCommand PlayCommand { get; }
         public DelegateCommand StopCommand { get; }
         public DelegateCommand PrevCommand { get; }
@@ -182,6 +231,7 @@ namespace seamless_loop_music.UI.ViewModels
             {
                 App.Current.Dispatcher.Invoke(() => UpdatePlayModeText());
             };
+            _eventAggregator.GetEvent<LoopPointsChangedEvent>().Subscribe(_ => UpdateLoopMarkerState(), ThreadOption.UIThread);
 
             _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(_ => 
             {
@@ -233,6 +283,40 @@ namespace seamless_loop_music.UI.ViewModels
             }
 
             PlayState = _playbackService.PlaybackState.ToString();
+        }
+
+        private void UpdateLoopMarkerState()
+        {
+            var track = CurrentTrack;
+            var hasLoopPoints = track != null && track.TotalSamples > 0;
+
+            HasLoopStartMarker = hasLoopPoints;
+            HasLoopEndMarker = hasLoopPoints;
+
+            if (!hasLoopPoints)
+            {
+                LoopStartMarkerLeft = 0;
+                LoopEndMarkerLeft = 0;
+                return;
+            }
+
+            var totalSamples = (double)track.TotalSamples;
+            var loopEndSample = track.LoopEnd <= 0 ? track.TotalSamples : track.LoopEnd;
+            LoopStartMarkerLeft = Math.Max(0d, Math.Min(1d, track.LoopStart / totalSamples));
+            LoopEndMarkerLeft = Math.Max(0d, Math.Min(1d, loopEndSample / totalSamples));
+        }
+
+        private void OnCurrentTrackPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e == null)
+                return;
+
+            if (e.PropertyName == nameof(MusicTrack.LoopStart) ||
+                e.PropertyName == nameof(MusicTrack.LoopEnd) ||
+                e.PropertyName == nameof(MusicTrack.TotalSamples))
+            {
+                UpdateLoopMarkerState();
+            }
         }
 
         private void OnPlayPause()

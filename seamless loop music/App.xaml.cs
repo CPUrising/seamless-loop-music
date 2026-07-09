@@ -17,6 +17,8 @@ using seamless_loop_music.UI.Views;
 using seamless_loop_music.UI.ViewModels;
 using seamless_loop_music.UI.Views.Settings;
 using seamless_loop_music.UI.ViewModels.Settings;
+using seamless_loop_music.Services.Sync;
+using seamless_loop_music.Services.Sync.Backend;
 
 namespace seamless_loop_music
 {
@@ -96,6 +98,10 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<ITaskbarService, TaskbarService>();
             containerRegistry.RegisterSingleton<INotifyIconService, NotifyIconService>();
             containerRegistry.RegisterSingleton<IFoldersService, FoldersService>();
+            containerRegistry.RegisterSingleton<ISyncSnapshotStore, SQLiteSyncSnapshotStore>();
+            containerRegistry.RegisterSingleton<ISyncBackend, GitHubContentsSyncBackend>();
+            containerRegistry.RegisterSingleton<IGitHubSyncService, GitHubSyncService>();
+            containerRegistry.RegisterSingleton<IGitHubSyncManagementService, GitHubSyncManagementService>();
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
@@ -167,7 +173,7 @@ namespace seamless_loop_music
             catch (Exception ex)
             {
                 System.IO.File.WriteAllText("crash_log.txt", ex.ToString());
-                MessageBox.Show("Initialization error. Check crash_log.txt for details.");
+                seamless_loop_music.AppDialogService.Show("Initialization error. Check crash_log.txt for details.");
             }
         }
     }

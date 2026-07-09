@@ -73,7 +73,7 @@ namespace seamless_loop_music.UI.Views
                 if (allPlaylists.Any(p => string.Equals(p.Name, newName, System.StringComparison.OrdinalIgnoreCase)))
                 {
                     var msg = string.Format(seamless_loop_music.Statics.Resources.MsgPlaylistExists, newName);
-                    MessageBox.Show(msg, seamless_loop_music.Statics.Resources.DialogNewPlaylist, MessageBoxButton.OK, MessageBoxImage.Warning);
+                    seamless_loop_music.AppDialogService.Show(msg, seamless_loop_music.Statics.Resources.DialogNewPlaylist, MessageBoxButton.OK, MessageBoxImage.Warning);
                     return;
                 }
 
@@ -87,7 +87,7 @@ namespace seamless_loop_music.UI.Views
 
             if (SelectedPlaylist == null)
             {
-                MessageBox.Show(seamless_loop_music.Statics.Resources.MsgNameEmpty, seamless_loop_music.Statics.Resources.DialogSelectPlaylist, MessageBoxButton.OK, MessageBoxImage.Information);
+                seamless_loop_music.AppDialogService.Show(seamless_loop_music.Statics.Resources.MsgNameEmpty, seamless_loop_music.Statics.Resources.DialogSelectPlaylist, MessageBoxButton.OK, MessageBoxImage.Information);
                 return;
             }
 

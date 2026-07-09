@@ -423,7 +423,7 @@ namespace seamless_loop_music.UI.ViewModels
             if (status == 0) return true;
 
             string detail = _loopAnalysisService.LastError ?? "未知错误";
-            System.Windows.MessageBox.Show($"分析引擎不可用。\n{detail}",
+            seamless_loop_music.AppDialogService.Show($"分析引擎不可用。\n{detail}",
                 "环境检查", System.Windows.MessageBoxButton.OK, System.Windows.MessageBoxImage.Error);
             return false;
         }

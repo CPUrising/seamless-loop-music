@@ -137,6 +137,13 @@ namespace seamless_loop_music.Services
                             track.DisplayName = file.Tag.Title;
                         }
                     }
+
+                    // 填充时长（毫秒）
+                    if (track.DurationMs <= 0 && file.Properties != null)
+                    {
+                        long ms = (long)file.Properties.Duration.TotalMilliseconds;
+                        if (ms > 0) track.DurationMs = ms;
+                    }
                 }
 
                 // 获取封面 (带缓存) - 移到 using 块外面，避免文件锁定冲突

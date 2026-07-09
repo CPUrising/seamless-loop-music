@@ -27,7 +27,7 @@ namespace seamless_loop_music.UI.Views
             if (string.IsNullOrWhiteSpace(InputTextBox.Text))
             {
                 var loc = Services.LocalizationService.Instance;
-                MessageBox.Show(loc["MsgNameEmpty"] ?? "名称不能为空喵！", loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
+                seamless_loop_music.AppDialogService.Show(loc["MsgNameEmpty"] ?? "名称不能为空喵！", loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
                 return;
             }
             this.DialogResult = true;

@@ -570,4 +570,6 @@
         </Setter>
     </Style>
 
+    <Style TargetType="ContextMenu" BasedOn="{StaticResource TrayContextMenuStyle}"/>
+
 </ResourceDictionary>
