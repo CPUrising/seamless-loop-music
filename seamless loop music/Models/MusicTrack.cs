@@ -122,17 +122,7 @@ namespace seamless_loop_music.Models
 
         public string EffectiveCoverPath
         {
-            get
-            {
-                // 优先级：歌曲自身封面优先 > 专辑封面保底 > 歌手封面保底，且物理文件必须存在
-                if (!string.IsNullOrEmpty(CoverPath) && System.IO.File.Exists(CoverPath))
-                    return CoverPath;
-                if (!string.IsNullOrEmpty(AlbumCoverPath) && System.IO.File.Exists(AlbumCoverPath))
-                    return AlbumCoverPath;
-                if (!string.IsNullOrEmpty(ArtistCoverPath) && System.IO.File.Exists(ArtistCoverPath))
-                    return ArtistCoverPath;
-                return null;
-            }
+            get { return TrackCoverResolver.Resolve(CoverPath, AlbumCoverPath, ArtistCoverPath); }
         }
 
         private bool SetProperty<T>(ref T storage, T value, [CallerMemberName] string propertyName = null)

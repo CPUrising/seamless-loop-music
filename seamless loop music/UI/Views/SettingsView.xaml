@@ -21,10 +21,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurface}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrushSurface}"/>
                             </Trigger>
                             <Trigger Property="IsSelected" Value="True">
-                                <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                                <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -33,14 +33,14 @@
         </Style>
     </UserControl.Resources>
 
-    <Grid Background="{StaticResource BrushBackground}">
+    <Grid Background="{DynamicResource BrushBackground}">
         <Grid.ColumnDefinitions>
             <ColumnDefinition Width="250"/>
             <ColumnDefinition Width="*"/>
         </Grid.ColumnDefinitions>
 
         <!-- Left: settings first-level navigation rail. -->
-        <Border Grid.Column="0" Background="{StaticResource BrushSurfaceDark}" BorderBrush="{StaticResource BrushBorder}" BorderThickness="0,0,1,0" Padding="22,24">
+        <Border Grid.Column="0" Background="{DynamicResource BrushSurfaceDark}" BorderBrush="{DynamicResource BrushBorder}" BorderThickness="0,0,1,0" Padding="22,24">
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
@@ -49,11 +49,11 @@
 
                 <StackPanel Grid.Row="0" Margin="0,0,0,18">
                     <TextBlock Text="{Binding [SettingsTitle], Source={StaticResource Loc}}"
-                               Foreground="{StaticResource BrushTextPrimary}"
+                               Foreground="{DynamicResource BrushTextPrimary}"
                                FontSize="28"
                                FontWeight="Bold"/>
                     <TextBlock Text="{Binding [SettingsSub], Source={StaticResource Loc}}"
-                               Foreground="{StaticResource BrushTextSecondary}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
                                FontSize="13"
                                TextWrapping="Wrap"
                                Margin="0,8,0,0"/>
@@ -75,8 +75,8 @@
                                 </Grid.ColumnDefinitions>
                                 <TextBlock Grid.Column="0" Text="{Binding Icon}" FontSize="22" VerticalAlignment="Center" HorizontalAlignment="Center"/>
                                 <StackPanel Grid.Column="1">
-                                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource BrushTextPrimary}" FontSize="15" FontWeight="SemiBold"/>
-                                    <TextBlock Text="{Binding Description}" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
+                                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="15" FontWeight="SemiBold"/>
+                                    <TextBlock Text="{Binding Description}" Foreground="{DynamicResource BrushTextSecondary}" FontSize="11" TextWrapping="Wrap" Margin="0,3,0,0"/>
                                 </StackPanel>
                             </Grid>
                         </DataTemplate>

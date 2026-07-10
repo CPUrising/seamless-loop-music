@@ -217,6 +217,69 @@
   <data name="NavFolder" xml:space="preserve">
     <value>文件夹</value>
   </data>
+  <data name="NavPlaybackStatistics" xml:space="preserve">
+    <value>播放统计</value>
+  </data>
+  <data name="PlaybackStatisticsTitle" xml:space="preserve">
+    <value>播放统计</value>
+  </data>
+  <data name="StatisticsTopFive" xml:space="preserve">
+    <value>前 5 名</value>
+  </data>
+  <data name="StatisticsListeningDuration" xml:space="preserve">
+    <value>收听时长</value>
+  </data>
+  <data name="StatisticsTrackedTracks" xml:space="preserve">
+    <value>已追踪歌曲</value>
+  </data>
+  <data name="StatisticsTrackedTracksFormat" xml:space="preserve">
+    <value>{0} 首</value>
+  </data>
+  <data name="StatisticsMostListened" xml:space="preserve">
+    <value>最常听</value>
+  </data>
+  <data name="PlaybackStatisticsSaveErrorTitle" xml:space="preserve">
+    <value>播放统计</value>
+  </data>
+  <data name="PlaybackStatisticsSaveErrorMessage" xml:space="preserve">
+    <value>播放时长无法保存，请检查应用数据目录是否可写，然后重新尝试退出。</value>
+  </data>
+  <data name="StatisticsDay" xml:space="preserve">
+    <value>日</value>
+  </data>
+  <data name="StatisticsWeek" xml:space="preserve">
+    <value>周</value>
+  </data>
+  <data name="StatisticsMonth" xml:space="preserve">
+    <value>月</value>
+  </data>
+  <data name="StatisticsYear" xml:space="preserve">
+    <value>年</value>
+  </data>
+  <data name="StatisticsAll" xml:space="preserve">
+    <value>总</value>
+  </data>
+  <data name="StatisticsLoading" xml:space="preserve">
+    <value>正在加载...</value>
+  </data>
+  <data name="StatisticsEmpty" xml:space="preserve">
+    <value>暂无播放数据</value>
+  </data>
+  <data name="StatisticsDurationSeconds" xml:space="preserve">
+    <value>{0}秒</value>
+  </data>
+  <data name="StatisticsDurationMinutes" xml:space="preserve">
+    <value>{0}分</value>
+  </data>
+  <data name="StatisticsDurationMinutesSeconds" xml:space="preserve">
+    <value>{0}分{1}秒</value>
+  </data>
+  <data name="StatisticsDurationHours" xml:space="preserve">
+    <value>{0}小时</value>
+  </data>
+  <data name="StatisticsDurationHoursMinutes" xml:space="preserve">
+    <value>{0}小时{1}分</value>
+  </data>
   <data name="PlaylistAll" xml:space="preserve">
     <value>全部歌曲</value>
   </data>
@@ -284,7 +347,7 @@
     <value>🗑  从磁盘删除</value>
   </data>
   <data name="MsgConfirmDelete" xml:space="preserve">
-    <value>确定要从磁盘删除选中的 {0} 首曲目吗？\n文件将被移动到回收站。</value>
+    <value>确定要从磁盘删除选中的 {0} 首曲目吗？&#xA;文件将被移动到回收站。</value>
   </data>
   <data name="MsgConfirmRemove" xml:space="preserve">
     <value>确定要从播放列表「{1}」中移除选中的 {0} 首曲目吗？</value>
@@ -510,5 +573,17 @@
   </data>
   <data name="TrayPlayMode" xml:space="preserve">
     <value>循环播放</value>
+  </data>
+  <data name="ThemeHeader" xml:space="preserve">
+    <value>外观</value>
+  </data>
+  <data name="ThemeSub" xml:space="preserve">
+    <value>切换应用的浅色或深色主题。</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>深色</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>浅色</value>
   </data>
 </root>

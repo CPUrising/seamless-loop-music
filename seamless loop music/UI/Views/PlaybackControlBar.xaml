@@ -14,7 +14,7 @@
         <Style x:Key="ControlToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource ImmediateToolTipStyle}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="Padding" Value="5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -24,10 +24,10 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSurface}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushSurface}"/>
                             </Trigger>
                             <Trigger Property="IsChecked" Value="True">
-                                <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -37,7 +37,7 @@
         <Style x:Key="ControlButtonStyle" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="BorderThickness" Value="0"/>
-            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             <Setter Property="Padding" Value="5"/>
             <Setter Property="Template">
                 <Setter.Value>
@@ -47,8 +47,8 @@
                         </Border>
                         <ControlTemplate.Triggers>
                             <Trigger Property="IsMouseOver" Value="True">
-                                <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSurface}"/>
-                                <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                                <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushSurface}"/>
+                                <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                             </Trigger>
                         </ControlTemplate.Triggers>
                     </ControlTemplate>
@@ -81,9 +81,9 @@
                         Margin="100,0,0,0"
                         ToolTip="{Binding [TipRateCurrent], Source={StaticResource Loc}}">
                     <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{StaticResource BrushWarning}"/>
+                        <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{DynamicResource BrushWarning}"/>
                         <TextBlock Text="{Binding CurrentTrack.Rating}" 
-                                   Foreground="{StaticResource BrushWarning}" 
+                                   Foreground="{DynamicResource BrushWarning}"
                                    VerticalAlignment="Center" FontWeight="Bold" Margin="4,0,0,0">
                             <TextBlock.Style>
                                 <Style TargetType="TextBlock">
@@ -108,7 +108,7 @@
                         HorizontalAlignment="Right" 
                         VerticalAlignment="Center">
                 <TextBlock Text="{Binding CurrentTrack.Rating}" 
-                                   Foreground="{StaticResource BrushWarning}" 
+                                   Foreground="{DynamicResource BrushWarning}"
                                    VerticalAlignment="Center" FontWeight="Bold" Margin="0,0,0,0">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
@@ -123,23 +123,23 @@
                 <Button Command="{Binding RateCommand}"
                         CommandParameter="{Binding CurrentTrack}"
                         Style="{StaticResource ControlButtonStyle}"
-                        Margin="0,0,0,0"
+                        Width="40" Height="40" Margin="0,0,0,0"
                         ToolTip="{Binding [TipRateCurrent], Source={StaticResource Loc}}">
                     <StackPanel Orientation="Horizontal">
-                        <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{StaticResource BrushWarning}"/>
+                        <md:PackIcon Kind="Star" Width="22" Height="22" Foreground="{DynamicResource BrushWarning}"/>
 
                     </StackPanel>
                 </Button>
                 <Button Command="{Binding ChangePlayModeCommand}"
                         Style="{StaticResource ControlButtonStyle}"
-                        Foreground="{StaticResource BrushTextSecondary}"
-                        Margin="0,0,8,0" Padding="5" Height="32" Width="32"
+                        Foreground="{DynamicResource BrushTextSecondary}"
+                        Margin="0,0,8,0" Padding="5" Height="40" Width="40"
                         ToolTip="{Binding PlayModeToolTipText}">
                     <md:PackIcon Kind="{Binding PlayModeIcon}" Width="22" Height="22"/>
                 </Button>
                 <ToggleButton IsChecked="{Binding IsSeamlessLoopEnabled}"
                                Style="{StaticResource ControlToggleStyle}"
-                               Margin="0,0,10,0"
+                               Width="40" Height="40" Margin="0,0,10,0"
                                ToolTip="{Binding [FeatureLoop], Source={StaticResource Loc}}">
                     <md:PackIcon Kind="Infinity" Width="22" Height="22"/>
                 </ToggleButton>

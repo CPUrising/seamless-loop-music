@@ -15,7 +15,7 @@
         <!-- Album Art -->
         <Border x:Name="ArtBorder" Width="{Binding ArtSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=48}" 
                 Height="{Binding ArtSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=48}" 
-                CornerRadius="6" Background="{StaticResource BrushSurface}" Margin="0,0,12,0">
+                CornerRadius="6" Background="{DynamicResource BrushSurface}" Margin="0,0,12,0">
             <Grid>
                 <md:PackIcon Kind="Music" Width="24" Height="24" HorizontalAlignment="Center" VerticalAlignment="Center" Opacity="0.3"/>
                 <Image Source="{Binding CoverImage, RelativeSource={RelativeSource AncestorType=UserControl}}" Stretch="UniformToFill">
@@ -36,17 +36,17 @@
             <ContentControl Grid.Row="0" 
                             Content="{Binding CurrentTrack.Title, FallbackValue='Not Playing'}" 
                             FontSize="{Binding TitleFontSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=14}" 
-                            FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}" 
+                            FontWeight="Bold" Foreground="{DynamicResource BrushTextPrimary}"
                             Style="{StaticResource Marquee}"
                             />
             <TextBlock Grid.Row="1" 
                        Text="{Binding CurrentTrack.Artist, FallbackValue='Unknown Artist'}" 
                        FontSize="{Binding SubtitleFontSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=12}" 
-                       Foreground="{StaticResource BrushTextPrimary}" Opacity="0.7"
+                       Foreground="{DynamicResource BrushTextPrimary}" Opacity="0.7"
                        Margin="0,2,0,0" TextTrimming="CharacterEllipsis"/>
             <TextBlock Grid.Row="2" 
                        x:Name="AlbumText" Text="{Binding CurrentTrack.Album}" 
-                       FontSize="11" Foreground="{StaticResource BrushTextPrimary}" Opacity="0.5"
+                       FontSize="11" Foreground="{DynamicResource BrushTextPrimary}" Opacity="0.5"
                        Visibility="{Binding ShowAlbum, RelativeSource={RelativeSource AncestorType=UserControl}, Converter={StaticResource BooleanToVisibilityConverter}}"
                        Margin="0,1,0,0" TextTrimming="CharacterEllipsis"/>
         </Grid>

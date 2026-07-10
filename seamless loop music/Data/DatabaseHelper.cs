@@ -86,6 +86,7 @@ namespace seamless_loop_music.Data
         {
             var conn = new SQLiteConnection(_connectionString);
             conn.Open();
+            conn.Execute("PRAGMA foreign_keys=ON;");
             return conn;
         }
 
@@ -108,6 +109,8 @@ namespace seamless_loop_music.Data
                 db.Execute(@"CREATE TABLE IF NOT EXISTS MusicFolders (Id INTEGER PRIMARY KEY AUTOINCREMENT, FolderPath TEXT NOT NULL UNIQUE, AddedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS AppSettings (Key TEXT PRIMARY KEY, Value TEXT);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS QueuedTracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, TrackId INTEGER, SortOrder INTEGER);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS PlaybackHistory (Id INTEGER PRIMARY KEY AUTOINCREMENT, TrackId INTEGER NOT NULL, PlayedAtUtc DATETIME NOT NULL, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS PlaybackSegments (SegmentId TEXT PRIMARY KEY, TrackId INTEGER NOT NULL, StartedAtUtcMs INTEGER NOT NULL, DurationMs INTEGER NOT NULL CHECK(DurationMs > 0), FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
 
                 // 执行迁移（加约束、查重等）
                 ApplyMigrations(db);
@@ -116,6 +119,10 @@ namespace seamless_loop_music.Data
                 db.Execute("CREATE INDEX IF NOT EXISTS idx_tracks_albumid ON Tracks(AlbumId);");
                 db.Execute("CREATE INDEX IF NOT EXISTS idx_tracks_artistid ON Tracks(ArtistId);");
                 db.Execute("CREATE INDEX IF NOT EXISTS idx_playlistitems_songid ON PlaylistItems(SongId);");
+                db.Execute("CREATE INDEX IF NOT EXISTS idx_playbackhistory_trackid_playedatutc ON PlaybackHistory(TrackId, PlayedAtUtc);");
+                db.Execute("CREATE INDEX IF NOT EXISTS idx_playbackhistory_playedatutc_trackid ON PlaybackHistory(PlayedAtUtc, TrackId);");
+                db.Execute("CREATE INDEX IF NOT EXISTS idx_playbacksegments_startedatutcms_trackid ON PlaybackSegments(StartedAtUtcMs, TrackId);");
+                db.Execute("CREATE INDEX IF NOT EXISTS idx_playbacksegments_trackid_startedatutcms ON PlaybackSegments(TrackId, StartedAtUtcMs);");
             }
         }
 

@@ -16,6 +16,7 @@ namespace seamless_loop_music.UI.ViewModels.Settings
         private readonly IPlayerService _playerService;
         private readonly IGitHubSyncService _githubSyncService;
         private readonly IGitHubSyncManagementService _gitHubSyncManagementService;
+        private readonly IPlaybackService _playbackService;
         private readonly IEventAggregator _eventAggregator;
         private bool _isSyncing;
         private string _gitHubOwner;
@@ -42,6 +43,7 @@ namespace seamless_loop_music.UI.ViewModels.Settings
         private bool _clearLocalPlaylists;
         private bool _clearLocalLoopPoints;
         private bool _clearLocalRatings;
+        private bool _clearLocalPlaybackStatistics;
 
         public bool IsSyncing
         {
@@ -222,6 +224,12 @@ namespace seamless_loop_music.UI.ViewModels.Settings
             set => SetProperty(ref _clearLocalRatings, value);
         }
 
+        public bool ClearLocalPlaybackStatistics
+        {
+            get => _clearLocalPlaybackStatistics;
+            set => SetProperty(ref _clearLocalPlaybackStatistics, value);
+        }
+
         public string RefreshOverviewButtonText => IsManagementBusy ? "正在刷新概览..." : "刷新数据概览";
 
         public DelegateCommand SyncCommand { get; }
@@ -232,11 +240,12 @@ namespace seamless_loop_music.UI.ViewModels.Settings
         public DelegateCommand DeleteCloudSnapshotCommand { get; }
         public DelegateCommand ClearLocalSyncDataCommand { get; }
 
-        public SettingsDataViewModel(IPlayerService playerService, IGitHubSyncService githubSyncService, IGitHubSyncManagementService gitHubSyncManagementService, IEventAggregator eventAggregator)
+        public SettingsDataViewModel(IPlayerService playerService, IGitHubSyncService githubSyncService, IGitHubSyncManagementService gitHubSyncManagementService, IPlaybackService playbackService, IEventAggregator eventAggregator)
         {
             _playerService = playerService;
             _githubSyncService = githubSyncService;
             _gitHubSyncManagementService = gitHubSyncManagementService;
+            _playbackService = playbackService;
             _eventAggregator = eventAggregator;
 
             LoadGitHubConfig();
@@ -413,7 +422,7 @@ namespace seamless_loop_music.UI.ViewModels.Settings
 
         private async void OnClearLocalSyncData()
         {
-            var dialog = new ClearLocalSyncDataDialog(ClearLocalPlaylists, ClearLocalLoopPoints, ClearLocalRatings)
+            var dialog = new ClearLocalSyncDataDialog(ClearLocalPlaylists, ClearLocalLoopPoints, ClearLocalRatings, ClearLocalPlaybackStatistics)
             {
                 Owner = Application.Current?.MainWindow
             };
@@ -424,8 +433,9 @@ namespace seamless_loop_music.UI.ViewModels.Settings
             ClearLocalPlaylists = dialog.ClearPlaylists;
             ClearLocalLoopPoints = dialog.ClearLoopPoints;
             ClearLocalRatings = dialog.ClearRatings;
+            ClearLocalPlaybackStatistics = dialog.ClearPlaybackStatistics;
 
-            if (!dialog.ClearPlaylists && !dialog.ClearLoopPoints && !dialog.ClearRatings)
+            if (!dialog.ClearPlaylists && !dialog.ClearLoopPoints && !dialog.ClearRatings && !dialog.ClearPlaybackStatistics)
             {
                 ManagementStatusText = "请至少选择一项要清除的本机同步数据。";
                 return;
@@ -434,27 +444,45 @@ namespace seamless_loop_music.UI.ViewModels.Settings
             IsManagementBusy = true;
             ManagementStatusText = "正在清除本机同步数据...";
 
+            var syncDataCleared = false;
+            var syncAffectedCount = 0;
+
             try
             {
-                var result = await _gitHubSyncManagementService.ClearLocalSyncDataAsync(new ClearLocalSyncDataSelection
+                var hasSyncSelection = ClearLocalPlaylists || ClearLocalLoopPoints || ClearLocalRatings;
+                var affectedCount = 0;
+                if (hasSyncSelection)
                 {
-                    ClearPlaylists = ClearLocalPlaylists,
-                    ClearLoopPoints = ClearLocalLoopPoints,
-                    ClearRatings = ClearLocalRatings
-                });
-
-                ManagementStatusText = result.Success
-                    ? $"本机同步数据已清除，受影响项约 {result.AffectedCount} 条。"
-                    : BuildManagementOperationStatus(result, string.Empty, "清除本机同步数据失败");
-
-                if (result.Success)
-                {
-                    _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
-                    await RefreshOverviewAsync();
+                    var result = await _gitHubSyncManagementService.ClearLocalSyncDataAsync(new ClearLocalSyncDataSelection
+                    {
+                        ClearPlaylists = ClearLocalPlaylists,
+                        ClearLoopPoints = ClearLocalLoopPoints,
+                        ClearRatings = ClearLocalRatings
+                    });
+                    if (!result.Success)
+                        throw new System.InvalidOperationException(BuildManagementOperationStatus(result, string.Empty, "清除本机同步数据失败"));
+                    syncDataCleared = true;
+                    syncAffectedCount = result.AffectedCount;
+                    affectedCount += syncAffectedCount;
                 }
+
+                if (ClearLocalPlaybackStatistics)
+                    affectedCount += await _playbackService.ClearPlaybackStatisticsAsync();
+
+                ManagementStatusText = $"本机同步数据已清除，受影响项约 {affectedCount} 条。";
+                _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
+                await RefreshOverviewAsync();
             }
             catch (System.Exception ex)
             {
+                if (syncDataCleared)
+                {
+                    _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
+                    await RefreshOverviewAsync();
+                    ManagementStatusText = $"部分本机数据已清除（约 {syncAffectedCount} 条），但播放统计清除失败：{ex.Message}";
+                    return;
+                }
+
                 ManagementStatusText = $"清除本机同步数据失败：{ex.Message}";
             }
             finally

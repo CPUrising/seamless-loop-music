@@ -10,14 +10,16 @@ namespace seamless_loop_music.UI.Views.Settings
         public bool ClearPlaylists { get; private set; }
         public bool ClearLoopPoints { get; private set; }
         public bool ClearRatings { get; private set; }
+        public bool ClearPlaybackStatistics { get; private set; }
 
-        public ClearLocalSyncDataDialog(bool clearPlaylists, bool clearLoopPoints, bool clearRatings)
+        public ClearLocalSyncDataDialog(bool clearPlaylists, bool clearLoopPoints, bool clearRatings, bool clearPlaybackStatistics)
         {
             InitializeComponent();
 
             PlaylistsCheckBox.IsChecked = clearPlaylists;
             LoopPointsCheckBox.IsChecked = clearLoopPoints;
             RatingsCheckBox.IsChecked = clearRatings;
+            PlaybackStatisticsCheckBox.IsChecked = clearPlaybackStatistics;
         }
 
         private void Cancel_Click(object sender, RoutedEventArgs e)
@@ -30,6 +32,7 @@ namespace seamless_loop_music.UI.Views.Settings
             ClearPlaylists = PlaylistsCheckBox.IsChecked == true;
             ClearLoopPoints = LoopPointsCheckBox.IsChecked == true;
             ClearRatings = RatingsCheckBox.IsChecked == true;
+            ClearPlaybackStatistics = PlaybackStatisticsCheckBox.IsChecked == true;
             DialogResult = true;
         }
 

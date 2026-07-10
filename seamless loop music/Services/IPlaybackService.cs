@@ -56,6 +56,10 @@ namespace seamless_loop_music.Services
         void RemoveFromQueue(int index);
         void ClearQueue();
         void MoveQueueItem(int fromIndex, int toIndex);
+        Task FlushPlaybackStatisticsAsync();
+        Task PersistPendingPlaybackStatisticsAsync();
+        void ResumePlaybackStatisticsAfterFailedFlush();
+        Task<int> ClearPlaybackStatisticsAsync();
     }
 }
 

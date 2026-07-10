@@ -3,8 +3,8 @@
     
     <!-- Icon Button (Circular) -->
     <Style x:Key="IconButton" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
-        <Setter Property="Background" Value="{StaticResource BrushSurface}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+        <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Width" Value="30"/>
         <Setter Property="Height" Value="30"/>
@@ -23,8 +23,8 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
-                            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
                             <Setter Property="Opacity" Value="0.8"/>
@@ -43,13 +43,13 @@
     <!-- Ghost IconButton (Transparent background by default) -->
     <Style x:Key="GhostIconButton" TargetType="Button" BasedOn="{StaticResource IconButton}">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
     </Style>
 
     <!-- Modern Text Button (Hyperlink style) -->
     <Style x:Key="ModernTextButton" TargetType="Button" BasedOn="{StaticResource ImmediateToolTipStyle}">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
         <Setter Property="BorderThickness" Value="0"/>
         <Setter Property="Padding" Value="0"/>
         <Setter Property="Cursor" Value="Hand"/>
@@ -64,7 +64,7 @@
                     </TextBlock>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Txt" Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            <Setter TargetName="Txt" Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                             <Setter TargetName="Txt" Property="TextDecorations" Value="Underline"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
@@ -96,10 +96,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurface}"/>
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrushSurface}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -122,10 +122,10 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurface}"/>
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrushSurface}"/>
                         </Trigger>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="Bg" Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                            <Setter TargetName="Bg" Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -135,11 +135,11 @@
 
     <!-- GridView Column Header Style -->
     <Style x:Key="ModernGridViewColumnHeader" TargetType="GridViewColumnHeader">
-        <Setter Property="Background" Value="{StaticResource BrushTitleBar}"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+        <Setter Property="Background" Value="{DynamicResource BrushTitleBar}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
         <Setter Property="Padding" Value="12,8"/>
         <Setter Property="BorderThickness" Value="0,0,0,1"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BrushBorder}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushBorder}"/>
         <Setter Property="HorizontalContentAlignment" Value="Left"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -156,28 +156,31 @@
 
     <!-- Custom Slider Style with Hover-Reveal Thumb -->
     <Style x:Key="ModernSlider" TargetType="Slider">
-        <Setter Property="Height" Value="20"/>
+        <Setter Property="Height" Value="28"/>
         <Setter Property="Margin" Value="0"/>
         <Setter Property="Template">
             <Setter.Value>
                 <ControlTemplate TargetType="Slider">
-                    <Grid>
+                    <Grid Background="Transparent">
                         <Border x:Name="TrackBackground"
                                 Height="3"
-                                Background="{StaticResource BrushSurfaceHighlight}"
+                                Background="{DynamicResource BrushSurfaceHighlight}"
                                 CornerRadius="1.5"
                                 VerticalAlignment="Center"/>
-                        <Track x:Name="PART_Track">
+                        <Track x:Name="PART_Track" VerticalAlignment="Stretch">
                             <Track.DecreaseRepeatButton>
                                 <RepeatButton Command="Slider.DecreaseLarge">
                                     <RepeatButton.Style>
                                         <Style TargetType="RepeatButton">
                                             <Setter Property="Template">
                                                 <Setter.Value>
-                                                    <ControlTemplate>
-                                                        <Border Height="3"
-                                                                Background="{StaticResource BrushAccent}"
-                                                                CornerRadius="1.5"/>
+                                                    <ControlTemplate TargetType="RepeatButton">
+                                                        <Grid Background="Transparent">
+                                                            <Border Height="3"
+                                                                    Background="{DynamicResource BrushAccent}"
+                                                                    CornerRadius="1.5"
+                                                                    VerticalAlignment="Center"/>
+                                                        </Grid>
                                                     </ControlTemplate>
                                                 </Setter.Value>
                                             </Setter>
@@ -191,10 +194,13 @@
                                         <Style TargetType="RepeatButton">
                                             <Setter Property="Template">
                                                 <Setter.Value>
-                                                    <ControlTemplate>
-                                                        <Border Height="3"
-                                                                Background="{StaticResource BrushSurfaceHighlight}"
-                                                                CornerRadius="1.5"/>
+                                                    <ControlTemplate TargetType="RepeatButton">
+                                                        <Grid Background="Transparent">
+                                                            <Border Height="3"
+                                                                    Background="{DynamicResource BrushSurfaceHighlight}"
+                                                                    CornerRadius="1.5"
+                                                                    VerticalAlignment="Center"/>
+                                                        </Grid>
                                                     </ControlTemplate>
                                                 </Setter.Value>
                                             </Setter>
@@ -215,8 +221,8 @@
                                                 <Setter.Value>
                                                     <ControlTemplate TargetType="Thumb">
                                                         <Ellipse x:Name="ThumbEllipse"
-                                                                 Fill="{StaticResource BrushAccent}"
-                                                                 Stroke="{StaticResource BrushBackground}"
+                                                                 Fill="{DynamicResource BrushAccent}"
+                                                                 Stroke="{DynamicResource BrushBackground}"
                                                                  StrokeThickness="1"
                                                                  Width="14"
                                                                  Height="14">
@@ -228,7 +234,7 @@
                                                         </Ellipse>
                                                         <ControlTemplate.Triggers>
                                                             <Trigger Property="IsMouseOver" Value="True">
-                                                                <Setter TargetName="ThumbEllipse" Property="Fill" Value="{StaticResource BrushAccentHover}"/>
+                                                                <Setter TargetName="ThumbEllipse" Property="Fill" Value="{DynamicResource BrushAccentHover}"/>
                                                             </Trigger>
                                                         </ControlTemplate.Triggers>
                                                     </ControlTemplate>
@@ -298,7 +304,7 @@
                                               Style="{StaticResource TransparentScrollRepeatButton}"/>
                             </Track.DecreaseRepeatButton>
                             <Track.Thumb>
-                                <Thumb x:Name="Thumb" Background="{StaticResource BrushScrollThumb}">
+                                <Thumb x:Name="Thumb" Background="{DynamicResource BrushScrollThumb}">
                                     <Thumb.Template>
                                         <ControlTemplate TargetType="Thumb">
                                             <Border x:Name="ThumbVisual"
@@ -307,10 +313,10 @@
                                                     CornerRadius="4"/>
                                             <ControlTemplate.Triggers>
                                                 <Trigger Property="IsMouseOver" Value="True">
-                                                    <Setter TargetName="ThumbVisual" Property="Background" Value="{StaticResource BrushScrollThumbHover}"/>
+                                                    <Setter TargetName="ThumbVisual" Property="Background" Value="{DynamicResource BrushScrollThumbHover}"/>
                                                 </Trigger>
                                                 <Trigger Property="IsDragging" Value="True">
-                                                    <Setter TargetName="ThumbVisual" Property="Background" Value="{StaticResource BrushScrollThumbPressed}"/>
+                                                    <Setter TargetName="ThumbVisual" Property="Background" Value="{DynamicResource BrushScrollThumbPressed}"/>
                                                 </Trigger>
                                             </ControlTemplate.Triggers>
                                         </ControlTemplate>
@@ -360,27 +366,27 @@
                           ToolTipService.HorizontalOffset="5"
                           ToolTipService.VerticalOffset="12"
                           HorizontalAlignment="Stretch">
-                        <Border x:Name="Indicator" Width="3" Height="20" Background="{StaticResource BrushAccent}" HorizontalAlignment="Left" Visibility="Hidden" Margin="2,0,0,0"/>
+                        <Border x:Name="Indicator" Width="3" Height="20" Background="{DynamicResource BrushAccent}" HorizontalAlignment="Left" Visibility="Hidden" Margin="2,0,0,0"/>
                         <Border x:Name="ContentBorder" Background="Transparent" CornerRadius="8" Margin="4,4" Padding="8" HorizontalAlignment="Center" Width="48" Height="48">
-                            <TextBlock x:Name="Icon" Text="{Binding Icon}" FontSize="24" Foreground="{StaticResource BrushTextSecondary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                            <TextBlock x:Name="Icon" Text="{Binding Icon}" FontSize="24" Foreground="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         </Border>
                     </Grid>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsSelected" Value="True">
-                            <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushTitleBar}"/>
-                            <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource BrushTitleBar}"/>
+                            <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                             <Setter TargetName="Indicator" Property="Visibility" Value="Visible"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushSurface}"/>
-                            <Setter TargetName="Icon" Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource BrushSurface}"/>
+                            <Setter TargetName="Icon" Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                         </Trigger>
                         <MultiTrigger>
                             <MultiTrigger.Conditions>
                                 <Condition Property="IsSelected" Value="True"/>
                                 <Condition Property="IsMouseOver" Value="True"/>
                             </MultiTrigger.Conditions>
-                            <Setter TargetName="ContentBorder" Property="Background" Value="{StaticResource BrushTitleBar}"/>
+                            <Setter TargetName="ContentBorder" Property="Background" Value="{DynamicResource BrushTitleBar}"/>
                         </MultiTrigger>
                         <Trigger Property="IsSelected" Value="True">
                             <Trigger.EnterActions>
@@ -400,7 +406,7 @@
     <!-- TitleBar Button Style -->
     <Style x:Key="TitleBarButtonStyle" TargetType="Button">
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextSecondary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextSecondary}"/>
         <Setter Property="Width" Value="46"/>
         <Setter Property="Height" Value="40"/>
         <Setter Property="Padding" Value="0"/>
@@ -428,11 +434,11 @@
                     </Border>
                     <ControlTemplate.Triggers>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource BrushOverlayHover}"/>
-                            <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                            <Setter Property="Background" Value="{DynamicResource BrushOverlayHover}"/>
+                            <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                         </Trigger>
                         <Trigger Property="IsPressed" Value="True">
-                            <Setter Property="Background" Value="{StaticResource BrushOverlayPressed}"/>
+                            <Setter Property="Background" Value="{DynamicResource BrushOverlayPressed}"/>
                             <Setter Property="RenderTransform">
                                 <Setter.Value>
                                     <ScaleTransform ScaleX="0.9" ScaleY="0.9"/>
@@ -450,7 +456,7 @@
         <Style.Triggers>
             <Trigger Property="IsMouseOver" Value="True">
                 <Setter Property="Background" Value="#E81123"/>
-                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
             </Trigger>
         </Style.Triggers>
     </Style>
@@ -459,7 +465,7 @@
     <Style x:Key="TrayMenuItemStyle" TargetType="MenuItem">
         <Setter Property="Height" Value="36"/>
         <Setter Property="Background" Value="Transparent"/>
-        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
         <Setter Property="Padding" Value="16,6,16,6"/>
         <Setter Property="Template">
             <Setter.Value>
@@ -487,7 +493,7 @@
                                           Width="12" 
                                           Height="10" 
                                           Stretch="Uniform" 
-                                          Fill="{StaticResource BrushAccent}" 
+                                          Fill="{DynamicResource BrushAccent}"
                                           Data="M 0,5.1 L 1.7,3.4 L 4.3,6 L 10.3,0 L 12,1.7 L 4.3,9.4 Z"
                                           Visibility="Collapsed"/>
                                     <!-- Right Arrow (for submenu headers) -->
@@ -511,8 +517,8 @@
                                PlacementTarget="{Binding ElementName=BgBorder}"
                                VerticalOffset="-5"
                                HorizontalOffset="-2">
-                            <Border Background="{StaticResource BrushSurface}"
-                                    BorderBrush="{StaticResource BrushSurfaceHighlight}"
+                            <Border Background="{DynamicResource BrushSurface}"
+                                    BorderBrush="{DynamicResource BrushSurfaceHighlight}"
                                     BorderThickness="1"
                                     Padding="4"
                                     CornerRadius="4">
@@ -533,11 +539,11 @@
                             <Setter TargetName="Arrow" Property="Visibility" Value="Visible"/>
                         </Trigger>
                         <Trigger Property="IsMouseOver" Value="True">
-                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
                         </Trigger>
                         <!-- If submenu is open, highlight the parent item -->
                         <Trigger Property="IsSubmenuOpen" Value="True">
-                            <Setter Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                            <Setter Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
                         </Trigger>
                     </ControlTemplate.Triggers>
                 </ControlTemplate>
@@ -547,8 +553,8 @@
 
     <!-- Tray ContextMenu Style to ensure first-level and submenus share the same container appearance -->
     <Style x:Key="TrayContextMenuStyle" TargetType="ContextMenu">
-        <Setter Property="Background" Value="{StaticResource BrushSurface}"/>
-        <Setter Property="BorderBrush" Value="{StaticResource BrushSurfaceHighlight}"/>
+        <Setter Property="Background" Value="{DynamicResource BrushSurface}"/>
+        <Setter Property="BorderBrush" Value="{DynamicResource BrushSurfaceHighlight}"/>
         <Setter Property="BorderThickness" Value="1"/>
         <Setter Property="Padding" Value="4"/>
         <Setter Property="Template">

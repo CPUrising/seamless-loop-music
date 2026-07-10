@@ -217,6 +217,69 @@
   <data name="NavFolder" xml:space="preserve">
     <value>Folders</value>
   </data>
+  <data name="NavPlaybackStatistics" xml:space="preserve">
+    <value>Playback statistics</value>
+  </data>
+  <data name="PlaybackStatisticsTitle" xml:space="preserve">
+    <value>Playback statistics</value>
+  </data>
+  <data name="StatisticsTopFive" xml:space="preserve">
+    <value>Top 5</value>
+  </data>
+  <data name="StatisticsListeningDuration" xml:space="preserve">
+    <value>Listening time</value>
+  </data>
+  <data name="StatisticsTrackedTracks" xml:space="preserve">
+    <value>Tracked tracks</value>
+  </data>
+  <data name="StatisticsTrackedTracksFormat" xml:space="preserve">
+    <value>{0} tracks</value>
+  </data>
+  <data name="StatisticsMostListened" xml:space="preserve">
+    <value>Most listened</value>
+  </data>
+  <data name="PlaybackStatisticsSaveErrorTitle" xml:space="preserve">
+    <value>Playback statistics</value>
+  </data>
+  <data name="PlaybackStatisticsSaveErrorMessage" xml:space="preserve">
+    <value>Playback time could not be saved. Check that the app data folder is writable, then try closing again.</value>
+  </data>
+  <data name="StatisticsDay" xml:space="preserve">
+    <value>Day</value>
+  </data>
+  <data name="StatisticsWeek" xml:space="preserve">
+    <value>Week</value>
+  </data>
+  <data name="StatisticsMonth" xml:space="preserve">
+    <value>Month</value>
+  </data>
+  <data name="StatisticsYear" xml:space="preserve">
+    <value>Year</value>
+  </data>
+  <data name="StatisticsAll" xml:space="preserve">
+    <value>All</value>
+  </data>
+  <data name="StatisticsLoading" xml:space="preserve">
+    <value>Loading...</value>
+  </data>
+  <data name="StatisticsEmpty" xml:space="preserve">
+    <value>No playback data yet</value>
+  </data>
+  <data name="StatisticsDurationSeconds" xml:space="preserve">
+    <value>{0}s</value>
+  </data>
+  <data name="StatisticsDurationMinutes" xml:space="preserve">
+    <value>{0}m</value>
+  </data>
+  <data name="StatisticsDurationMinutesSeconds" xml:space="preserve">
+    <value>{0}m {1}s</value>
+  </data>
+  <data name="StatisticsDurationHours" xml:space="preserve">
+    <value>{0}h</value>
+  </data>
+  <data name="StatisticsDurationHoursMinutes" xml:space="preserve">
+    <value>{0}h {1}m</value>
+  </data>
   <data name="PlaylistAll" xml:space="preserve">
     <value>All Tracks</value>
   </data>
@@ -284,7 +347,7 @@
     <value>🗑 Delete from Disk</value>
   </data>
   <data name="MsgConfirmDelete" xml:space="preserve">
-    <value>Are you sure you want to delete the selected {0} tracks from disk? They will be moved to the Recycle Bin.</value>
+    <value>Are you sure you want to delete the selected {0} tracks from disk?&#xA;They will be moved to the Recycle Bin.</value>
   </data>
   <data name="MsgConfirmRemove" xml:space="preserve">
     <value>Are you sure you want to remove the selected {0} tracks from playlist "{1}"?</value>
@@ -510,5 +573,17 @@
   </data>
   <data name="TrayPlayMode" xml:space="preserve">
     <value>Loop playback</value>
+  </data>
+  <data name="ThemeHeader" xml:space="preserve">
+    <value>Appearance</value>
+  </data>
+  <data name="ThemeSub" xml:space="preserve">
+    <value>Switch the app between light and dark themes.</value>
+  </data>
+  <data name="ThemeDark" xml:space="preserve">
+    <value>Dark</value>
+  </data>
+  <data name="ThemeLight" xml:space="preserve">
+    <value>Light</value>
   </data>
 </root>

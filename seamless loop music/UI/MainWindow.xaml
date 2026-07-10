@@ -5,12 +5,12 @@
         xmlns:prism="http://prismlibrary.com/"
         Title="{Binding [AppTitle], Source={StaticResource Loc}}" Height="725" Width="1120"
         Icon="/Resources/app_icon.png"
-        Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}" FontFamily="Microsoft YaHei"
+        Background="{DynamicResource BrushBackground}" Foreground="{DynamicResource BrushTextPrimary}" FontFamily="Microsoft YaHei"
         WindowStartupLocation="CenterScreen"
         WindowStyle="None">
     
     <WindowChrome.WindowChrome>
-        <WindowChrome CaptionHeight="30" GlassFrameThickness="0" CornerRadius="0" UseAeroCaptionButtons="False"/>
+        <WindowChrome CaptionHeight="30" GlassFrameThickness="0" CornerRadius="16" UseAeroCaptionButtons="False"/>
     </WindowChrome.WindowChrome>
 
     <Window.Resources>
@@ -57,19 +57,19 @@
 
 
     <Grid Margin="{Binding Padding, RelativeSource={RelativeSource AncestorType=Window}}">
-        <Grid.RowDefinitions>
-            <RowDefinition Height="Auto"/> <!-- Title Bar -->
-            <RowDefinition Height="*"/>    <!-- Main Content -->
-            <RowDefinition Height="Auto"/> <!-- Bottom Bar -->
-        </Grid.RowDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/> <!-- Title Bar -->
+                <RowDefinition Height="*"/>    <!-- Main Content -->
+                <RowDefinition Height="Auto"/> <!-- Bottom Bar -->
+            </Grid.RowDefinitions>
 
-        <!-- Custom Title Bar -->
-        <Grid Grid.Row="0" Height="30" Background="{StaticResource BrushSurfaceDark}">
+            <!-- Custom Title Bar -->
+            <Grid Grid.Row="0" Height="30" Background="{DynamicResource BrushSurfaceDark}">
             <!-- Left Side: Icon and Title -->
             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="12,0">
                 <Image Source="/Resources/app_icon.png" Width="18" Height="18" Margin="0,0,10,0"/>
                 <TextBlock Text="{Binding [AppTitle], Source={StaticResource Loc}}" 
-                           Foreground="{StaticResource BrushTextSecondary}" 
+                           Foreground="{DynamicResource BrushTextSecondary}"
                            FontSize="12" 
                            VerticalAlignment="Center"
                            FontWeight="Medium"/>
@@ -91,18 +91,18 @@
                         Style="{StaticResource TitleBarCloseButtonStyle}" 
                         Content="{StaticResource PathClose}"/>
             </StackPanel>
-        </Grid>
+            </Grid>
         
-        <Grid Grid.Row="1">
-            <!-- Main Content Region -->
-            <Border>
-                <ContentControl prism:RegionManager.RegionName="MainContentRegion" />
-            </Border>
-        </Grid>
+            <Grid Grid.Row="1">
+                <!-- Main Content Region -->
+                <Border>
+                    <ContentControl prism:RegionManager.RegionName="MainContentRegion" />
+                </Border>
+            </Grid>
 
-        <!-- Bottom playback surface stays persistent across Prism region navigation -->
-        <Border Grid.Row="2" Background="{StaticResource BrushTitleBar}" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{StaticResource BrushBorder}">
-            <views:PlaybackControlBar x:Name="BottomPlaybackControlBar" />
-        </Border>
+            <!-- Bottom playback surface stays persistent across Prism region navigation -->
+            <Border Grid.Row="2" Background="{DynamicResource BrushTitleBar}" Padding="15,10" BorderThickness="0,1,0,0" BorderBrush="{DynamicResource BrushBorder}">
+                <views:PlaybackControlBar x:Name="BottomPlaybackControlBar" />
+            </Border>
     </Grid>
 </Window>

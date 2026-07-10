@@ -150,7 +150,8 @@
                     <TextBlock Text="请选择要清除的内容" FontSize="13" FontWeight="SemiBold" Foreground="#4A1F1F" Margin="0,0,0,10"/>
                     <CheckBox x:Name="PlaylistsCheckBox" Content="歌单" Foreground="#222222" Margin="0,0,0,10"/>
                     <CheckBox x:Name="LoopPointsCheckBox" Content="循环点" Foreground="#222222" Margin="0,0,0,10"/>
-                    <CheckBox x:Name="RatingsCheckBox" Content="评分" Foreground="#222222"/>
+                    <CheckBox x:Name="RatingsCheckBox" Content="评分" Foreground="#222222" Margin="0,0,0,10"/>
+                    <CheckBox x:Name="PlaybackStatisticsCheckBox" Content="播放统计" Foreground="#222222"/>
                 </StackPanel>
             </Border>
 

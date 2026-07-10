@@ -12,12 +12,12 @@
     </UserControl.Resources>
     
     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-        <Button Command="{Binding PrevCommand}" Style="{StaticResource GhostIconButton}" Margin="5">
+        <Button Command="{Binding PrevCommand}" Style="{StaticResource GhostIconButton}" Width="40" Height="40" Margin="5">
              <md:PackIcon Kind="SkipPrevious" Width="{Binding ButtonSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=24}" 
                           Height="{Binding ButtonSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=24}"/>
         </Button>
         
-        <Button Command="{Binding PlayCommand}" 
+        <Button Command="{Binding PlayCommand}" MinWidth="80" MinHeight="44"
                 Style="{StaticResource PrimaryButton}" 
                 Width="{Binding PlayButtonWidth, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=80}" 
                 Height="{Binding PlayButtonHeight, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=40}" 
@@ -26,7 +26,7 @@
                          Width="28" Height="28"/>
         </Button>
 
-        <Button Command="{Binding NextCommand}" Style="{StaticResource GhostIconButton}" Margin="5">
+        <Button Command="{Binding NextCommand}" Style="{StaticResource GhostIconButton}" Width="40" Height="40" Margin="5">
             <md:PackIcon Kind="SkipNext" Width="{Binding ButtonSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=24}" 
                          Height="{Binding ButtonSize, RelativeSource={RelativeSource AncestorType=UserControl}, FallbackValue=24}"/>
         </Button>

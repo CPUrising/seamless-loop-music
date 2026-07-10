@@ -45,11 +45,11 @@ namespace seamless_loop_music.UI.ViewModels
             set 
             {
                 // 设置入口与专辑/艺术家/歌单/文件夹同级；内容显示在右侧 LibraryContentRegion。
-                if (value?.IsSettings == true)
+                if (value?.IsSettings == true || value?.IsStatistics == true)
                 {
                     SetProperty(ref _selectedCategory, value);
                     CategoryItems.Clear();
-                    _regionManager.RequestNavigate("LibraryContentRegion", "SettingsView");
+                    _regionManager.RequestNavigate("LibraryContentRegion", value.IsStatistics ? "PlaybackStatisticsView" : "SettingsView");
                     RaiseNavigationStateProperties();
                     RaisePropertyChanged(nameof(SelectedCategory));
                     return;
@@ -66,7 +66,9 @@ namespace seamless_loop_music.UI.ViewModels
 
         public bool IsPlaylistCategorySelected => SelectedCategory?.Type == CategoryType.Playlist;
         public bool IsSettingsCategorySelected => SelectedCategory?.IsSettings == true;
-        public GridLength MiddleColumnWidth => IsSettingsCategorySelected ? new GridLength(0) : new GridLength(280);
+        public bool IsStatisticsCategorySelected => SelectedCategory?.IsStatistics == true;
+        public bool IsSpecialCategorySelected => IsSettingsCategorySelected || IsStatisticsCategorySelected;
+        public GridLength MiddleColumnWidth => IsSpecialCategorySelected ? new GridLength(0) : new GridLength(280);
 
         private ObservableCollection<CategoryItem> _categoryItems = new ObservableCollection<CategoryItem>();
         public ObservableCollection<CategoryItem> CategoryItems
@@ -211,6 +213,7 @@ namespace seamless_loop_music.UI.ViewModels
                 // 记住当前的选中状态
                 var currentNavType = SelectedCategory?.Type;
                 var wasSettings = SelectedCategory?.IsSettings == true;
+                var wasStatistics = SelectedCategory?.IsStatistics == true;
                 var currentItem = SelectedCategoryItem;
 
                 InitializeNavigationCategories();
@@ -218,6 +221,12 @@ namespace seamless_loop_music.UI.ViewModels
                 if (wasSettings)
                 {
                     SelectedCategory = NavigationCategories.FirstOrDefault(n => n.IsSettings);
+                    return;
+                }
+
+                if (wasStatistics)
+                {
+                    SelectedCategory = NavigationCategories.FirstOrDefault(n => n.IsStatistics);
                     return;
                 }
 
@@ -305,8 +314,12 @@ namespace seamless_loop_music.UI.ViewModels
             }
             else
             {
-                // 默认在右侧区域打开歌曲列表
-                _regionManager.RequestNavigate("LibraryContentRegion", "TrackListView");
+                var targetView = SelectedCategory?.IsStatistics == true
+                    ? "PlaybackStatisticsView"
+                    : SelectedCategory?.IsSettings == true
+                        ? "SettingsView"
+                        : "TrackListView";
+                _regionManager.RequestNavigate("LibraryContentRegion", targetView);
             }
         }
 
@@ -322,6 +335,7 @@ namespace seamless_loop_music.UI.ViewModels
                 new CategoryNavTarget { Name = loc["NavArtist"], Icon = "👤", Type = CategoryType.Artist },
                 new CategoryNavTarget { Name = loc["NavPlaylist"], Icon = "📂", Type = CategoryType.Playlist },
                 new CategoryNavTarget { Name = loc["NavFolder"], Icon = "📁", Type = CategoryType.Folder },
+                new CategoryNavTarget { Name = loc["NavPlaybackStatistics"], Icon = "▥", Type = CategoryType.Playlist, IsStatistics = true },
 
                 // 设置入口与专辑/艺术家/歌单/文件夹同级；内容显示在右侧 LibraryContentRegion。
                 new CategoryNavTarget { Name = loc["Settings"], Icon = "⚙", Type = CategoryType.Playlist, IsSettings = true }
@@ -333,11 +347,15 @@ namespace seamless_loop_music.UI.ViewModels
             RaisePropertyChanged(nameof(IsPlaylistCategorySelected));
             RaisePropertyChanged(nameof(IsFolderCategorySelected));
             RaisePropertyChanged(nameof(IsSettingsCategorySelected));
+            RaisePropertyChanged(nameof(IsStatisticsCategorySelected));
+            RaisePropertyChanged(nameof(IsSpecialCategorySelected));
             RaisePropertyChanged(nameof(MiddleColumnWidth));
         }
 
         private async Task LoadCategoryItems(CategoryItem targetToSelect = null)
         {
+            if (IsSpecialCategorySelected) return;
+
             CategoryItems.Clear();
             var allTracks = await _trackRepository.GetAllAsync();
             

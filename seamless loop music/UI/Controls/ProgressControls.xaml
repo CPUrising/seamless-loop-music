@@ -14,18 +14,19 @@
         <Grid>
             <TextBlock x:Name="TimeText" Text="{Binding TimeDisplay}" 
                        HorizontalAlignment="Right" FontSize="12" Opacity="0.6"
-                       Foreground="{StaticResource BrushTextPrimary}"/>
+                       Foreground="{DynamicResource BrushTextPrimary}"/>
         </Grid>
         <Grid x:Name="ProgressHost" Margin="0,2,0,0">
             <Slider x:Name="ProgressBar" Style="{StaticResource ModernSlider}"
                     Value="{Binding ProgressValue, Mode=TwoWay}" Maximum="1000"
+                    Height="28"
                     IsMoveToPointEnabled="True"
                     Thumb.DragStarted="ProgressBar_DragStarted"
                     Thumb.DragCompleted="ProgressBar_DragCompleted"/>
 
             <Canvas IsHitTestVisible="False" ClipToBounds="True">
-                <Border Width="2" Height="18" Canvas.Top="1" CornerRadius="1"
-                        Background="{StaticResource BrushWarning}"
+                <Border Width="2" Height="18" Canvas.Top="5" CornerRadius="1"
+                        Background="{DynamicResource BrushWarning}"
                         Visibility="{Binding HasLoopStartMarker, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Border.RenderTransform>
                         <TranslateTransform>
@@ -39,8 +40,8 @@
                     </Border.RenderTransform>
                 </Border>
 
-                <Border Width="2" Height="18" Canvas.Top="1" CornerRadius="1"
-                        Background="{StaticResource BrushWarning}"
+                <Border Width="2" Height="18" Canvas.Top="5" CornerRadius="1"
+                        Background="{DynamicResource BrushWarning}"
                         Visibility="{Binding HasLoopEndMarker, Converter={StaticResource BooleanToVisibilityConverter}}">
                     <Border.RenderTransform>
                         <TranslateTransform>

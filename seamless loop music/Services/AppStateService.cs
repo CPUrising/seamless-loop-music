@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using Prism.Events;
 using seamless_loop_music.Models;
@@ -20,7 +21,9 @@ namespace seamless_loop_music.Services
     public interface IAppStateService
     {
         Task SaveCurrentStateAsync();
+        Task SaveThemePreferenceAsync();
         Task RestoreStateAsync();
+        void RestoreTheme();
         
         // 记录当前的分类上下文
         CategoryItem CurrentCategory { get; set; }
@@ -32,6 +35,7 @@ namespace seamless_loop_music.Services
         bool MinimizeToTray { get; set; }
         bool CloseToTray { get; set; }
         bool IsExiting { get; set; }
+        bool IsDarkTheme { get; set; }
     }
 
     public class AppStateService : IAppStateService
@@ -41,6 +45,9 @@ namespace seamless_loop_music.Services
         private readonly ITrackRepository _trackRepository;
         private readonly IEventAggregator _eventAggregator;
         private readonly IPlaylistManager _playlistManager;
+        private readonly IThemeService _themeService;
+        private readonly SemaphoreSlim _themeSaveLock = new SemaphoreSlim(1, 1);
+        private long _themeSaveVersion;
         
         public CategoryItem CurrentCategory { get; set; }
 
@@ -48,19 +55,22 @@ namespace seamless_loop_music.Services
         public bool MinimizeToTray { get; set; }
         public bool CloseToTray { get; set; }
         public bool IsExiting { get; set; }
+        public bool IsDarkTheme { get; set; } = true;
 
         public AppStateService(
             IDatabaseHelper db, 
             IPlaybackService playbackService, 
             ITrackRepository trackRepository, 
             IEventAggregator eventAggregator,
-            IPlaylistManager playlistManager)
+            IPlaylistManager playlistManager,
+            IThemeService themeService)
         {
             _db = db;
             _playbackService = playbackService;
             _trackRepository = trackRepository;
             _eventAggregator = eventAggregator;
             _playlistManager = playlistManager;
+            _themeService = themeService;
 
             // 监听分类选择事件，实时记录上下文
             _eventAggregator.GetEvent<CategoryItemSelectedEvent>().Subscribe(item => 
@@ -105,6 +115,7 @@ namespace seamless_loop_music.Services
 
                     // 7. 保存软件退出行为设置
                     _db.SetSetting("App.ExitBehavior", ((int)ExitBehavior).ToString());
+                    _db.SetSetting("App.IsDarkTheme", IsDarkTheme.ToString());
 
                     // 兼容旧版本设置键，避免升级后旧数据立即失效。
                     _db.SetSetting("App.MinimizeToTray", MinimizeToTray.ToString());
@@ -119,6 +130,40 @@ namespace seamless_loop_music.Services
                     System.Diagnostics.Debug.WriteLine($"[SaveState Error] {ex.Message}");
                 }
             });
+        }
+
+        public async Task SaveThemePreferenceAsync()
+        {
+            var isDarkTheme = IsDarkTheme;
+            var saveVersion = Interlocked.Increment(ref _themeSaveVersion);
+
+            try
+            {
+                await _themeSaveLock.WaitAsync().ConfigureAwait(false);
+                try
+                {
+                    if (saveVersion != Volatile.Read(ref _themeSaveVersion))
+                    {
+                        return;
+                    }
+
+                    await Task.Run(() => _db.SetSetting("App.IsDarkTheme", isDarkTheme.ToString())).ConfigureAwait(false);
+                }
+                finally
+                {
+                    _themeSaveLock.Release();
+                }
+            }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[SaveThemePreference Error] {ex.Message}");
+            }
+        }
+
+        public void RestoreTheme()
+        {
+            IsDarkTheme = string.Equals(_db.GetSetting("App.IsDarkTheme", "True"), "true", StringComparison.OrdinalIgnoreCase);
+            _themeService.ApplyTheme(IsDarkTheme);
         }
 
         public async Task RestoreStateAsync()
