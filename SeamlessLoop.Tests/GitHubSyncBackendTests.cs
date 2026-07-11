@@ -46,7 +46,7 @@ namespace SeamlessLoop.Tests
         {
             return new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "test-device",
                 ExportedAt = 1700000000000,
                 Playlists = new List<SyncPlaylist>
@@ -80,7 +80,8 @@ namespace SeamlessLoop.Tests
                         Song = new SyncSongIdentity { FileName = "c.mp3", DurationMs = 50000 },
                         Rating = new SyncRating { RatingValue = 4, LastModified = 400 }
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
         }
 
@@ -162,7 +163,7 @@ namespace SeamlessLoop.Tests
             Assert.That(result.Exists, Is.True);
             Assert.That(result.Revision, Is.EqualTo(SampleSha));
             Assert.That(result.Snapshot, Is.Not.Null);
-            Assert.That(result.Snapshot.SchemaVersion, Is.EqualTo(1));
+            Assert.That(result.Snapshot.SchemaVersion, Is.EqualTo(2));
             Assert.That(result.Snapshot.DeviceId, Is.EqualTo("test-device"));
             Assert.That(result.Snapshot.ExportedAt, Is.EqualTo(1700000000000));
             Assert.That(result.Snapshot.Playlists, Has.Count.EqualTo(1));
@@ -239,6 +240,23 @@ namespace SeamlessLoop.Tests
             var backend = new GitHubContentsSyncBackend(handler);
             var newRevision = await backend.UploadAsync(MakeConfig(), snapshot, null);
             Assert.That(newRevision, Is.EqualTo(NewSampleSha));
+        }
+
+        [Test]
+        public void Upload_CallerCancellation_RethrowsOperationCanceled()
+        {
+            using (var cancellation = new CancellationTokenSource())
+            {
+                cancellation.Cancel();
+                var handler = new FakeHttpMessageHandler(_ =>
+                    throw new OperationCanceledException(cancellation.Token));
+                var backend = new GitHubContentsSyncBackend(handler);
+
+                var exception = Assert.ThrowsAsync<OperationCanceledException>(async () =>
+                    await backend.UploadAsync(MakeConfig(), MakeTestSnapshot(), null, cancellation.Token));
+
+                Assert.That(exception, Is.Not.TypeOf<SyncBackendException>());
+            }
         }
 
         // ────────────────────────────────────────────────────────
@@ -420,6 +438,38 @@ namespace SeamlessLoop.Tests
                 Status(HttpStatusCode.OK)));
             Assert.ThrowsAsync<ArgumentNullException>(async () =>
                 await backend.UploadAsync(MakeConfig(), null, null));
+        }
+
+        [Test]
+        public void Upload_NonV2Snapshot_RejectsBeforeHttp()
+        {
+            var requestCount = 0;
+            var backend = new GitHubContentsSyncBackend(new FakeHttpMessageHandler(_ =>
+            {
+                requestCount++;
+                return Status(HttpStatusCode.OK);
+            }));
+            var legacy = new SyncSnapshot { SchemaVersion = 1, DeviceId = "legacy", ExportedAt = 1 };
+
+            Assert.ThrowsAsync<FormatException>(async () =>
+                await backend.UploadAsync(MakeConfig(), legacy, null));
+            Assert.That(requestCount, Is.EqualTo(0));
+        }
+
+        [Test]
+        public void Upload_MalformedV2Snapshot_RejectsBeforeHttp()
+        {
+            var requestCount = 0;
+            var backend = new GitHubContentsSyncBackend(new FakeHttpMessageHandler(_ =>
+            {
+                requestCount++;
+                return Status(HttpStatusCode.OK);
+            }));
+            var malformed = new SyncSnapshot { SchemaVersion = 2, DeviceId = "device", ExportedAt = 1 };
+
+            Assert.ThrowsAsync<FormatException>(async () =>
+                await backend.UploadAsync(MakeConfig(), malformed, null));
+            Assert.That(requestCount, Is.EqualTo(0));
         }
 
         // ────────────────────────────────────────────────────────

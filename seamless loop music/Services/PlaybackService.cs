@@ -5,10 +5,12 @@ using System.Threading.Tasks;
 using NAudio.Wave;
 using Prism.Events;
 using Prism.Mvvm;
+using Unity;
 using seamless_loop_music.Models;
 using seamless_loop_music.Events;
 using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.Services;
+using Microsoft.Win32;
 
 namespace seamless_loop_music.Services
 {
@@ -20,19 +22,28 @@ namespace seamless_loop_music.Services
         private readonly IPlaylistManager _playlistManager;
         private readonly IQueueManager _queueManager;
         private readonly TrackMetadataService _metadataService;
-        private readonly IPlaybackStatisticsRepository _playbackStatisticsRepository;
+        private readonly IPlaybackStatisticsLocalService _playbackStatisticsLocalService;
         private readonly PlaybackStatisticsOutbox _playbackStatisticsOutbox;
         private readonly System.Threading.SemaphoreSlim _loadLock = new System.Threading.SemaphoreSlim(1, 1);
+        private readonly System.Threading.SemaphoreSlim _playbackStatisticsMaintenanceLock = new System.Threading.SemaphoreSlim(1, 1);
+        private readonly System.Threading.AsyncLocal<int> _captureDelegateDepth = new System.Threading.AsyncLocal<int>();
         private readonly object _playbackStatisticsLock = new object();
-        private readonly List<PlaybackSegment> _pendingPlaybackSegments = new List<PlaybackSegment>();
+        private readonly List<PlaybackStatisticsSettlement> _pendingPlaybackSettlements = new List<PlaybackStatisticsSettlement>();
         private Task _playbackStatisticsWriteChain = Task.CompletedTask;
         private System.Threading.Timer _playbackCheckpointTimer;
-        private int? _activeSegmentTrackId;
+        private MusicTrack _activeSegmentTrack;
+        private PlaybackStatisticsRecordingContext _activeSegmentContext;
+        private DateTimeOffset _activeSegmentSourceLocalStart;
+        private string _activeSegmentBaseEventId;
         private long _activeSegmentStartedAtUtcMs;
         private long _activeSegmentStopwatchTimestamp;
         private bool _suppressStatisticsStateChanges;
         private bool _statisticsFlushing;
         private bool _statisticsClearing;
+        private bool _statisticsCaptureFenced;
+        private HashSet<string> _captureDrainSettlementIds;
+        private readonly Func<PlaybackState> _statisticsPlaybackStateProvider;
+        private readonly Func<MusicTrack> _statisticsCurrentTrackProvider;
 
         public MusicTrack CurrentTrack { get; private set; }
         public CategoryItem CurrentCategory { get; private set; }
@@ -106,22 +117,27 @@ namespace seamless_loop_music.Services
         public event Action<PlaybackState> StateChanged;
         public event Action QueueChanged;
 
-        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator, IQueueManager queueManager, TrackMetadataService metadataService, IPlaybackStatisticsRepository playbackStatisticsRepository)
+        [InjectionConstructor]
+        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator, IQueueManager queueManager, TrackMetadataService metadataService, IPlaybackStatisticsLocalService playbackStatisticsLocalService)
+            : this(trackRepository, playlistManager, eventAggregator, queueManager, metadataService, playbackStatisticsLocalService, null, null)
+        {
+        }
+
+        public PlaybackService(ITrackRepository trackRepository, IPlaylistManager playlistManager, IEventAggregator eventAggregator, IQueueManager queueManager, TrackMetadataService metadataService, IPlaybackStatisticsLocalService playbackStatisticsLocalService, Func<PlaybackState> statisticsPlaybackStateProvider = null, Func<MusicTrack> statisticsCurrentTrackProvider = null)
         {
             _trackRepository = trackRepository;
             _playlistManager = playlistManager;
             _eventAggregator = eventAggregator;
             _queueManager = queueManager;
             _metadataService = metadataService;
-            _playbackStatisticsRepository = playbackStatisticsRepository;
+            _playbackStatisticsLocalService = playbackStatisticsLocalService;
             _playbackStatisticsOutbox = new PlaybackStatisticsOutbox();
             _audioLooper = new AudioLooper();
+            _statisticsPlaybackStateProvider = statisticsPlaybackStateProvider ?? (() => _audioLooper.PlaybackState);
+            _statisticsCurrentTrackProvider = statisticsCurrentTrackProvider ?? (() => CurrentTrack);
 
-            foreach (var segment in _playbackStatisticsOutbox.Load())
-            {
-                if (!_pendingPlaybackSegments.Any(x => x.SegmentId == segment.SegmentId))
-                    _pendingPlaybackSegments.Add(segment);
-            }
+            foreach (var settlement in _playbackStatisticsOutbox.LoadState().SettlementEvents)
+                if (!_pendingPlaybackSettlements.Any(x => x.SettlementEventId == settlement.SettlementEventId)) _pendingPlaybackSettlements.Add(settlement);
 
             _audioLooper.OnPlayStateChanged += state =>
             {
@@ -142,8 +158,9 @@ namespace seamless_loop_music.Services
 
             _audioLooper.OnTrackEnded += OnTrackEnded;
             _audioLooper.OnPlaybackError += HandlePlaybackError;
+            SystemEvents.TimeChanged += OnSystemTimeChanged;
             _playbackCheckpointTimer = new System.Threading.Timer(_ => CheckpointPlaybackStatistics(), null, 30000, 30000);
-            if (_pendingPlaybackSegments.Count > 0) QueuePlaybackStatisticsWrite();
+            if (_pendingPlaybackSettlements.Count > 0) QueuePlaybackStatisticsWrite();
         }
 
         private void HandlePlaybackStatisticsStateChanged(PlaybackState state)
@@ -152,6 +169,8 @@ namespace seamless_loop_music.Services
             lock (_playbackStatisticsLock)
             {
                 if (_suppressStatisticsStateChanges) return;
+                if (_statisticsClearing) return;
+                RotatePlaybackSegmentForOffsetChangeLocked();
                 if (state == PlaybackState.Playing) StartPlaybackSegmentLocked();
                 else { ClosePlaybackSegmentLocked(); shouldQueue = true; }
             }
@@ -167,18 +186,27 @@ namespace seamless_loop_music.Services
 
         private void StartPlaybackSegmentLocked()
         {
-            if (_statisticsFlushing || _activeSegmentTrackId.HasValue || CurrentTrack == null || CurrentTrack.Id <= 0) return;
-            _activeSegmentTrackId = CurrentTrack.Id;
+            var currentTrack = _statisticsCurrentTrackProvider();
+            if (_statisticsPlaybackStateProvider() != PlaybackState.Playing || _activeSegmentTrack != null || currentTrack == null || currentTrack.Id <= 0) return;
+            _activeSegmentTrack = new MusicTrack { Id = currentTrack.Id, FileName = currentTrack.FileName, DurationMs = currentTrack.DurationMs, TotalSamples = currentTrack.TotalSamples };
+            _activeSegmentContext = _playbackStatisticsLocalService.GetRecordingContext();
+            _activeSegmentSourceLocalStart = DateTimeOffset.Now;
+            _activeSegmentBaseEventId = Guid.NewGuid().ToString("N");
             _activeSegmentStartedAtUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             _activeSegmentStopwatchTimestamp = System.Diagnostics.Stopwatch.GetTimestamp();
         }
 
         private void ClosePlaybackSegmentLocked()
         {
-            if (!_activeSegmentTrackId.HasValue) return;
+            if (_activeSegmentTrack == null) return;
             var durationMs = (long)((System.Diagnostics.Stopwatch.GetTimestamp() - _activeSegmentStopwatchTimestamp) * 1000.0 / System.Diagnostics.Stopwatch.Frequency);
-            if (durationMs > 0) _pendingPlaybackSegments.Add(new PlaybackSegment(Guid.NewGuid().ToString("N"), _activeSegmentTrackId.Value, _activeSegmentStartedAtUtcMs, durationMs));
-            _activeSegmentTrackId = null;
+            if (durationMs > 0)
+            {
+                var track = _activeSegmentTrack;
+                var template = new PlaybackStatisticsSettlement { SettlementEventId = _activeSegmentBaseEventId, FileName = track.FileName, NormalizedFileName = Sync.SyncSnapshotSerializer.NormalizePlaybackSongFileName(track.FileName), TrackDurationMs = track.DurationMs, TotalSamples = track.TotalSamples, LocalTrackId = track.Id, DeviceId = _activeSegmentContext.DeviceId, Generation = _activeSegmentContext.CurrentGeneration, AppliedAtUtcMs = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), SourceKind = "live" };
+                _pendingPlaybackSettlements.AddRange(_playbackStatisticsLocalService.Split(_activeSegmentSourceLocalStart, _activeSegmentStartedAtUtcMs, durationMs, template));
+            }
+            _activeSegmentTrack = null;
         }
 
         private void CheckpointPlaybackStatistics()
@@ -186,40 +214,58 @@ namespace seamless_loop_music.Services
             lock (_playbackStatisticsLock)
             {
                 if (_statisticsFlushing) return;
-                if (_activeSegmentTrackId.HasValue) { ClosePlaybackSegmentLocked(); StartPlaybackSegmentLocked(); }
+                RotatePlaybackSegmentForOffsetChangeLocked();
+                if (_activeSegmentTrack != null) { ClosePlaybackSegmentLocked(); StartPlaybackSegmentLocked(); }
             }
             QueuePlaybackStatisticsWrite();
+        }
+
+        private void RotatePlaybackSegmentForOffsetChangeLocked()
+        {
+            if (_activeSegmentTrack == null || _statisticsPlaybackStateProvider() != PlaybackState.Playing) return;
+            if (!PlaybackStatisticsOffsetHelper.HasOffsetChanged(_activeSegmentSourceLocalStart, DateTimeOffset.Now.Offset)) return;
+            ClosePlaybackSegmentLocked();
+            StartPlaybackSegmentLocked();
         }
 
         private void QueuePlaybackStatisticsWrite()
         {
             lock (_playbackStatisticsLock)
             {
-                if (_statisticsClearing) return;
+                if (_statisticsClearing || _statisticsCaptureFenced) return;
                 _playbackStatisticsWriteChain = _playbackStatisticsWriteChain.ContinueWith(_ => WritePendingPlaybackSegmentsAsync()).Unwrap();
             }
         }
 
-        private async Task WritePendingPlaybackSegmentsAsync()
+        private async Task WritePendingPlaybackSegmentsAsync(bool allowCaptureFencedSettlements = false, ISet<string> settlementIds = null)
         {
-            PlaybackSegment[] segments;
-            lock (_playbackStatisticsLock) segments = _pendingPlaybackSegments.ToArray();
-            foreach (var segment in segments)
+            PlaybackStatisticsSettlement[] settlements;
+            lock (_playbackStatisticsLock)
+            {
+                if (_statisticsCaptureFenced && !allowCaptureFencedSettlements) return;
+                settlements = settlementIds == null
+                    ? _pendingPlaybackSettlements.ToArray()
+                    : _pendingPlaybackSettlements.Where(x => settlementIds.Contains(x.SettlementEventId)).ToArray();
+            }
+            await _playbackStatisticsOutbox.SaveSettlementEventsAsync(settlements);
+            foreach (var settlement in settlements)
             {
                 try
                 {
-                    await _playbackStatisticsRepository.RecordPlaybackSegmentAsync(segment.SegmentId, segment.TrackId, segment.StartedAtUtcMs, segment.DurationMs);
-                    lock (_playbackStatisticsLock) _pendingPlaybackSegments.RemoveAll(x => x.SegmentId == segment.SegmentId);
+                    await _playbackStatisticsLocalService.ApplyAsync(settlement);
+                    lock (_playbackStatisticsLock) _pendingPlaybackSettlements.RemoveAll(x => x.SettlementEventId == settlement.SettlementEventId);
                 }
                 catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Playback statistics] {ex.Message}"); }
             }
-            bool isEmpty;
-            lock (_playbackStatisticsLock) isEmpty = _pendingPlaybackSegments.Count == 0;
-            if (isEmpty)
+            lock (_playbackStatisticsLock)
             {
-                try { await _playbackStatisticsOutbox.SaveAsync(new PlaybackSegment[0]); }
-                catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Playback statistics] Could not clear outbox: {ex.Message}"); }
+                if (_statisticsCaptureFenced && !allowCaptureFencedSettlements) return;
+                settlements = settlementIds == null
+                    ? _pendingPlaybackSettlements.ToArray()
+                    : _pendingPlaybackSettlements.Where(x => settlementIds.Contains(x.SettlementEventId)).ToArray();
             }
+            try { await _playbackStatisticsOutbox.SaveSettlementEventsAsync(settlements); }
+            catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Playback statistics] Could not persist outbox: {ex.Message}"); }
         }
 
         private void OnTrackEnded()
@@ -359,7 +405,8 @@ namespace seamless_loop_music.Services
             lock (_playbackStatisticsLock)
             {
                 _suppressStatisticsStateChanges = false;
-                if (_audioLooper.PlaybackState == PlaybackState.Playing) StartPlaybackSegmentLocked(); else ClosePlaybackSegmentLocked();
+                RotatePlaybackSegmentForOffsetChangeLocked();
+                if (_statisticsPlaybackStateProvider() == PlaybackState.Playing) StartPlaybackSegmentLocked(); else ClosePlaybackSegmentLocked();
             }
         }
 
@@ -476,12 +523,11 @@ namespace seamless_loop_music.Services
 
         public async Task FlushPlaybackStatisticsAsync()
         {
-            _playbackCheckpointTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
-            lock (_playbackStatisticsLock)
+            ThrowIfCaptureDelegateReentry();
+            await _playbackStatisticsMaintenanceLock.WaitAsync().ConfigureAwait(false);
+            try
             {
-                _statisticsFlushing = true;
-                ClosePlaybackSegmentLocked();
-            }
+            _ = BeginPlaybackStatisticsLifecycle(false);
 
             for (var attempt = 0; attempt < 3; attempt++)
             {
@@ -492,20 +538,160 @@ namespace seamless_loop_music.Services
 
                 lock (_playbackStatisticsLock)
                 {
-                    if (_pendingPlaybackSegments.Count == 0) return;
+                    if (_pendingPlaybackSettlements.Count == 0) return;
                 }
 
                 await Task.Delay(100);
             }
 
-            await PersistPendingPlaybackStatisticsAsync();
+            await PersistPendingPlaybackStatisticsUngatedAsync();
+            }
+            finally
+            {
+                _playbackStatisticsMaintenanceLock.Release();
+            }
+        }
+
+        public async Task<T> CapturePlaybackStatisticsCheckpointAsync<T>(Func<Task<T>> captureAsync)
+        {
+            if (captureAsync == null) throw new ArgumentNullException(nameof(captureAsync));
+            ThrowIfCaptureDelegateReentry();
+
+            await _playbackStatisticsMaintenanceLock.WaitAsync().ConfigureAwait(false);
+            var delegateStarted = false;
+            try
+            {
+                var existingWriteChain = BeginPlaybackStatisticsLifecycle(false, startCaptureReplacement: true);
+                HashSet<string> captureDrainSettlementIds;
+                lock (_playbackStatisticsLock)
+                    captureDrainSettlementIds = new HashSet<string>(_captureDrainSettlementIds);
+
+                await existingWriteChain.ConfigureAwait(false);
+                await QueueAndAwaitPlaybackStatisticsWriteAsync(captureDrainSettlementIds).ConfigureAwait(false);
+                await DrainPendingPlaybackStatisticsForCheckpointAsync(captureDrainSettlementIds).ConfigureAwait(false);
+
+                _captureDelegateDepth.Value++;
+                delegateStarted = true;
+                return await captureAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                if (delegateStarted) _captureDelegateDepth.Value--;
+                try
+                {
+                    RestorePlaybackStatisticsLifecycle();
+                }
+                finally
+                {
+                    _playbackStatisticsMaintenanceLock.Release();
+                }
+            }
+        }
+
+        private Task BeginPlaybackStatisticsLifecycle(bool clearing, bool startCaptureReplacement = false)
+        {
+            _playbackCheckpointTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
+            lock (_playbackStatisticsLock)
+            {
+                _statisticsClearing = clearing;
+                _statisticsFlushing = true;
+                ClosePlaybackSegmentLocked();
+                if (startCaptureReplacement)
+                {
+                    _statisticsCaptureFenced = true;
+                    _captureDrainSettlementIds = new HashSet<string>(_pendingPlaybackSettlements.Select(x => x.SettlementEventId));
+                    StartPlaybackSegmentLocked();
+                }
+                return _playbackStatisticsWriteChain;
+            }
+        }
+
+        private async Task QueueAndAwaitPlaybackStatisticsWriteAsync(ISet<string> settlementIds)
+        {
+            Task writeChain;
+            lock (_playbackStatisticsLock)
+            {
+                _playbackStatisticsWriteChain = _playbackStatisticsWriteChain
+                    .ContinueWith(_ => WritePendingPlaybackSegmentsAsync(true, settlementIds)).Unwrap();
+                writeChain = _playbackStatisticsWriteChain;
+            }
+            await writeChain.ConfigureAwait(false);
+        }
+
+        private void RestorePlaybackStatisticsLifecycle()
+        {
+            bool hasPending;
+            lock (_playbackStatisticsLock)
+            {
+                _statisticsCaptureFenced = false;
+                _captureDrainSettlementIds = null;
+                _statisticsClearing = false;
+                _statisticsFlushing = false;
+                var currentTrack = _statisticsCurrentTrackProvider();
+                var isPlaying = _statisticsPlaybackStateProvider() == PlaybackState.Playing;
+                if (_activeSegmentTrack != null && (!isPlaying || currentTrack == null || currentTrack.Id <= 0 || _activeSegmentTrack.Id != currentTrack.Id))
+                    ClosePlaybackSegmentLocked();
+                if (isPlaying && currentTrack != null && currentTrack.Id > 0)
+                    StartPlaybackSegmentLocked();
+                hasPending = _pendingPlaybackSettlements.Count > 0;
+            }
+            _playbackCheckpointTimer?.Change(30000, 30000);
+            if (hasPending) QueuePlaybackStatisticsWrite();
+        }
+
+        private async Task DrainPendingPlaybackStatisticsForCheckpointAsync(ISet<string> settlementIds)
+        {
+            Exception lastError = null;
+            for (var attempt = 0; attempt < 3; attempt++)
+            {
+                PlaybackStatisticsSettlement[] settlements;
+                lock (_playbackStatisticsLock)
+                    settlements = _pendingPlaybackSettlements.Where(x => settlementIds.Contains(x.SettlementEventId)).ToArray();
+                if (settlements.Length == 0) return;
+
+                try { await _playbackStatisticsOutbox.SaveSettlementEventsAsync(settlements).ConfigureAwait(false); }
+                catch (Exception ex) { lastError = ex; }
+
+                foreach (var settlement in settlements)
+                {
+                    try
+                    {
+                        await _playbackStatisticsLocalService.ApplyAsync(settlement).ConfigureAwait(false);
+                        lock (_playbackStatisticsLock) _pendingPlaybackSettlements.RemoveAll(x => x.SettlementEventId == settlement.SettlementEventId);
+                    }
+                    catch (Exception ex) { lastError = ex; }
+                }
+
+                lock (_playbackStatisticsLock)
+                    settlements = _pendingPlaybackSettlements.Where(x => settlementIds.Contains(x.SettlementEventId)).ToArray();
+                try { await _playbackStatisticsOutbox.SaveSettlementEventsAsync(settlements).ConfigureAwait(false); }
+                catch (Exception ex) { lastError = ex; }
+                if (settlements.Length == 0) return;
+                await Task.Delay(100).ConfigureAwait(false);
+            }
+
+            throw new InvalidOperationException("Playback statistics settlements could not be persisted and applied before sync capture.", lastError);
         }
 
         public async Task PersistPendingPlaybackStatisticsAsync()
         {
-            PlaybackSegment[] pending;
-            lock (_playbackStatisticsLock) pending = _pendingPlaybackSegments.ToArray();
-            await _playbackStatisticsOutbox.SaveAsync(pending);
+            ThrowIfCaptureDelegateReentry();
+            await _playbackStatisticsMaintenanceLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+                await PersistPendingPlaybackStatisticsUngatedAsync().ConfigureAwait(false);
+            }
+            finally
+            {
+                _playbackStatisticsMaintenanceLock.Release();
+            }
+        }
+
+        private async Task PersistPendingPlaybackStatisticsUngatedAsync()
+        {
+            PlaybackStatisticsSettlement[] pending;
+            lock (_playbackStatisticsLock) pending = _pendingPlaybackSettlements.ToArray();
+            await _playbackStatisticsOutbox.SaveSettlementEventsAsync(pending).ConfigureAwait(false);
         }
 
         public void ResumePlaybackStatisticsAfterFailedFlush()
@@ -522,32 +708,102 @@ namespace seamless_loop_music.Services
 
         public async Task<int> ClearPlaybackStatisticsAsync()
         {
-            _playbackCheckpointTimer?.Change(System.Threading.Timeout.Infinite, System.Threading.Timeout.Infinite);
-            Task existingWriteChain;
-            lock (_playbackStatisticsLock)
+            ThrowIfCaptureDelegateReentry();
+            await _playbackStatisticsMaintenanceLock.WaitAsync().ConfigureAwait(false);
+            try
             {
-                _statisticsClearing = true;
-                _statisticsFlushing = true;
-                ClosePlaybackSegmentLocked();
-                existingWriteChain = _playbackStatisticsWriteChain;
-            }
+            var existingWriteChain = BeginPlaybackStatisticsLifecycle(true);
 
             var succeeded = false;
+            PlaybackStatisticsSettlement[] discarded = null;
+            PlaybackStatisticsRecordingContext clearingContext = null;
             try
             {
                 await existingWriteChain;
-                await _playbackStatisticsOutbox.SaveAsync(new PlaybackSegment[0]);
-                var affected = await _playbackStatisticsRepository.ClearAllAsync();
+                clearingContext = _playbackStatisticsLocalService.GetRecordingContext();
+                var clearResult = await _playbackStatisticsLocalService.ClearCurrentGenerationAsync();
                 lock (_playbackStatisticsLock)
                 {
-                    _pendingPlaybackSegments.Clear();
+                    discarded = _pendingPlaybackSettlements
+                        .Where(x => x.DeviceId == clearingContext.DeviceId && x.Generation == clearResult.OldGeneration)
+                        .ToArray();
+                    _pendingPlaybackSettlements.RemoveAll(x => x.DeviceId == clearingContext.DeviceId && x.Generation == clearResult.OldGeneration);
+                }
+                PlaybackStatisticsSettlement[] retained;
+                lock (_playbackStatisticsLock) retained = _pendingPlaybackSettlements.ToArray();
+                await _playbackStatisticsOutbox.SaveSettlementEventsAsync(retained);
+                lock (_playbackStatisticsLock)
+                {
                     _statisticsClearing = false;
                     _statisticsFlushing = false;
                     if (_audioLooper.PlaybackState == PlaybackState.Playing && CurrentTrack != null && CurrentTrack.Id > 0)
                         StartPlaybackSegmentLocked();
                 }
                 succeeded = true;
-                return affected;
+                return clearResult.AffectedContributionCount;
+            }
+            finally
+            {
+                bool hasPending;
+                lock (_playbackStatisticsLock)
+                {
+                    if (!succeeded)
+                    {
+                        if (discarded != null) _pendingPlaybackSettlements.AddRange(discarded.Where(x => !_pendingPlaybackSettlements.Any(y => y.SettlementEventId == x.SettlementEventId)));
+                        _statisticsClearing = false;
+                        _statisticsFlushing = false;
+                        if (_audioLooper.PlaybackState == PlaybackState.Playing && CurrentTrack != null && CurrentTrack.Id > 0)
+                            StartPlaybackSegmentLocked();
+                    }
+                    hasPending = _pendingPlaybackSettlements.Count > 0;
+                }
+                _playbackCheckpointTimer?.Change(30000, 30000);
+                if (!succeeded && hasPending) QueuePlaybackStatisticsWrite();
+            }
+            }
+            finally
+            {
+                _playbackStatisticsMaintenanceLock.Release();
+            }
+        }
+
+        public void Dispose()
+        {
+            try { FlushPlaybackStatisticsAsync().GetAwaiter().GetResult(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Playback statistics] {ex.Message}"); }
+            _playbackCheckpointTimer?.Dispose();
+            SystemEvents.TimeChanged -= OnSystemTimeChanged;
+            _audioLooper?.Dispose();
+        }
+
+        public async Task<bool> RotateIfCurrentGenerationTombstonedAsync()
+        {
+            ThrowIfCaptureDelegateReentry();
+            await _playbackStatisticsMaintenanceLock.WaitAsync().ConfigureAwait(false);
+            try
+            {
+            var existingWriteChain = BeginPlaybackStatisticsLifecycle(true);
+
+            var succeeded = false;
+            try
+            {
+                await existingWriteChain;
+                var result = await _playbackStatisticsLocalService.ObserveCurrentGenerationTombstoneAsync();
+                lock (_playbackStatisticsLock)
+                {
+                    if (result.Rotated)
+                    {
+                        var retained = PlaybackStatisticsSettlementFilter.ExcludingGeneration(_pendingPlaybackSettlements, result.DeviceId, result.OldGeneration);
+                        _pendingPlaybackSettlements.Clear();
+                        _pendingPlaybackSettlements.AddRange(retained);
+                    }
+                    _statisticsClearing = false;
+                    _statisticsFlushing = false;
+                    if (_audioLooper.PlaybackState == PlaybackState.Playing && CurrentTrack != null && CurrentTrack.Id > 0)
+                        StartPlaybackSegmentLocked();
+                }
+                await PersistPendingPlaybackStatisticsUngatedAsync();
+                succeeded = true;
+                return result.Rotated;
             }
             finally
             {
@@ -561,18 +817,24 @@ namespace seamless_loop_music.Services
                         if (_audioLooper.PlaybackState == PlaybackState.Playing && CurrentTrack != null && CurrentTrack.Id > 0)
                             StartPlaybackSegmentLocked();
                     }
-                    hasPending = _pendingPlaybackSegments.Count > 0;
+                    hasPending = _pendingPlaybackSettlements.Count > 0;
                 }
                 _playbackCheckpointTimer?.Change(30000, 30000);
                 if (!succeeded && hasPending) QueuePlaybackStatisticsWrite();
             }
+            }
+            finally
+            {
+                _playbackStatisticsMaintenanceLock.Release();
+            }
         }
 
-        public void Dispose()
+        private void OnSystemTimeChanged(object sender, EventArgs e) { CheckpointPlaybackStatistics(); }
+
+        private void ThrowIfCaptureDelegateReentry()
         {
-            try { FlushPlaybackStatisticsAsync().GetAwaiter().GetResult(); } catch (Exception ex) { System.Diagnostics.Debug.WriteLine($"[Playback statistics] {ex.Message}"); }
-            _playbackCheckpointTimer?.Dispose();
-            _audioLooper?.Dispose();
+            if (_captureDelegateDepth.Value > 0)
+                throw new InvalidOperationException("Playback statistics maintenance cannot be re-entered from a capture delegate.");
         }
     }
 }

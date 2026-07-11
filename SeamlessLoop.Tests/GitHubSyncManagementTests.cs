@@ -21,6 +21,7 @@ namespace SeamlessLoop.Tests
         private string _dbPath;
         private DatabaseHelper _dbHelper;
         private SQLiteSyncSnapshotStore _store;
+        private FakeSyncPreparationService _preparation;
         private GitHubSyncManagementService _mgt;
 
         [SetUp]
@@ -30,6 +31,7 @@ namespace SeamlessLoop.Tests
             _dbHelper = new DatabaseHelper(_dbPath);
             _dbHelper.InitializeDatabase();
             _store = new SQLiteSyncSnapshotStore(_dbHelper);
+            _preparation = new FakeSyncPreparationService(_store);
 
             // Save a valid config so management service can use it
             _dbHelper.SetSetting("Sync.GitHub.Owner", "owner");
@@ -38,7 +40,7 @@ namespace SeamlessLoop.Tests
             _dbHelper.SetSetting("Sync.GitHub.Path", "sync.json");
             _dbHelper.SetSetting("Sync.GitHub.Token", "ghp_token");
 
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, new FakeSyncBackend());
+            _mgt = new GitHubSyncManagementService(_dbHelper, new FakeSyncBackend(), _preparation);
         }
 
         [TearDown]
@@ -83,7 +85,7 @@ namespace SeamlessLoop.Tests
             {
                 DownloadResult = new RemoteSyncSnapshot { Exists = false }
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, backend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
 
             var overview = _mgt.RefreshOverviewAsync().Result;
 
@@ -106,7 +108,7 @@ namespace SeamlessLoop.Tests
 
             var remoteSnap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -144,7 +146,8 @@ namespace SeamlessLoop.Tests
                             }
                         }
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             var backend = new FakeSyncBackend
@@ -156,7 +159,7 @@ namespace SeamlessLoop.Tests
                     Revision = "sha123"
                 }
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, backend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
 
             var overview = _mgt.RefreshOverviewAsync().Result;
 
@@ -181,7 +184,7 @@ namespace SeamlessLoop.Tests
 
             var remoteSnap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -202,7 +205,8 @@ namespace SeamlessLoop.Tests
                         Song = new SyncSongIdentity { FileName = "missing_song.flac", DurationMs = 60000 },
                         LoopPoint = new SyncLoopPoint { LoopStart = 300, LoopEnd = 9000, LastModified = 200 }
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             var backend = new FakeSyncBackend
@@ -214,7 +218,7 @@ namespace SeamlessLoop.Tests
                     Revision = "sha123"
                 }
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, backend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
 
             var overview = _mgt.RefreshOverviewAsync().Result;
 
@@ -233,7 +237,7 @@ namespace SeamlessLoop.Tests
 
             var remoteSnap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -243,7 +247,8 @@ namespace SeamlessLoop.Tests
                         Song = new SyncSongIdentity { FileName = "ambiguous.mp3", DurationMs = 5000 },
                         LoopPoint = new SyncLoopPoint { LoopStart = 100, LoopEnd = 5000, LastModified = 100 }
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             var backend = new FakeSyncBackend
@@ -255,7 +260,7 @@ namespace SeamlessLoop.Tests
                     Revision = "sha123"
                 }
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, backend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
 
             var overview = _mgt.RefreshOverviewAsync().Result;
 
@@ -278,7 +283,7 @@ namespace SeamlessLoop.Tests
 
             var remoteSnap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "phone",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -293,7 +298,8 @@ namespace SeamlessLoop.Tests
                         },
                         LoopPoint = new SyncLoopPoint { LoopStart = 100, LoopEnd = 5000, LastModified = 100 }
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             var backend = new FakeSyncBackend
@@ -305,7 +311,7 @@ namespace SeamlessLoop.Tests
                     Revision = "sha123"
                 }
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, backend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
 
             var overview = _mgt.RefreshOverviewAsync().Result;
 
@@ -317,9 +323,53 @@ namespace SeamlessLoop.Tests
         }
 
         [Test]
-        public void ForcePush_DownloadsRevisionThenUploadsLocal()
+        public async Task Overview_CallerCancellation_ReturnsCancelledWithoutBackendError()
+        {
+            var downloadStarted = new TaskCompletionSource<bool>(
+                TaskCreationOptions.RunContinuationsAsynchronously);
+            var backend = new FakeSyncBackend
+            {
+                DownloadFunc = async (config, ct) =>
+                {
+                    downloadStarted.SetResult(true);
+                    await Task.Delay(Timeout.Infinite, ct);
+                    return new RemoteSyncSnapshot { Exists = false };
+                }
+            };
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
+
+            using (var cancellation = new CancellationTokenSource())
+            {
+                var overviewTask = _mgt.RefreshOverviewAsync(cancellation.Token);
+                await downloadStarted.Task;
+                cancellation.Cancel();
+
+                var overview = await overviewTask;
+
+                Assert.That(overview.Status, Is.EqualTo("cancelled"));
+                Assert.That(overview.ErrorMessage, Is.Null);
+            }
+        }
+
+        [Test]
+        public void Overview_NonCallerCancellation_IsNotReportedAsCancelled()
+        {
+            var backend = new FakeSyncBackend
+            {
+                DownloadFunc = async (config, ct) =>
+                    throw new OperationCanceledException("backend timeout")
+            };
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
+
+            Assert.ThrowsAsync<OperationCanceledException>(async () =>
+                await _mgt.RefreshOverviewAsync());
+        }
+
+        [Test]
+        public void ForcePush_RemoteV1_RejectsInsteadOfTreatingItAsAbsent()
         {
             SeedTrack(1, "song.mp3", 441000, 20000);
+            var uploadReached = false;
 
             var fakeBackend = new FakeSyncBackend
             {
@@ -334,25 +384,45 @@ namespace SeamlessLoop.Tests
                     },
                     Revision = "remote_sha"
                 },
-                UploadResult = "new_sha_after_push"
+                UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                {
+                    uploadReached = true;
+                    throw new AssertionException("Backend upload must not be reached for a v1 remote.");
+                }
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, fakeBackend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
+
+            var result = _mgt.ForcePushLocalToCloudAsync().Result;
+
+            Assert.That(result.Success, Is.False);
+            Assert.That(result.Status, Is.EqualTo("preparation_failed"));
+            Assert.That(uploadReached, Is.False);
+        }
+
+        [Test]
+        public void ForcePush_RemoteV2_StillUploadsV2LocalSnapshot()
+        {
+            var fakeBackend = new FakeSyncBackend
+            {
+                DownloadResult = new RemoteSyncSnapshot
+                {
+                    Exists = true,
+                    Snapshot = new SyncSnapshot
+                    {
+                        SchemaVersion = 2,
+                        DeviceId = "remote",
+                        ExportedAt = 1000,
+                        PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
+                    },
+                    Revision = "remote_sha"
+                }
+            };
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
 
             var result = _mgt.ForcePushLocalToCloudAsync().Result;
 
             Assert.That(result.Success, Is.True);
-            Assert.That(result.Status, Is.EqualTo("uploaded"));
-            Assert.That(result.Revision, Is.EqualTo("new_sha_after_push"));
-
-            // Should have used remote SHA as expectedRevision
-            Assert.That(fakeBackend.LastExpectedRevision, Is.EqualTo("remote_sha"));
-
-            // Should have saved metadata
-            var savedSha = _dbHelper.GetSetting("Sync.GitHub.LastRemoteSha");
-            Assert.That(savedSha, Is.EqualTo("new_sha_after_push"));
-
-            var savedTime = _dbHelper.GetSetting("Sync.GitHub.LastSyncTime");
-            Assert.That(savedTime, Is.Not.Null.And.Not.Empty);
+            Assert.That(fakeBackend.LastUploadedSnapshot.SchemaVersion, Is.EqualTo(2));
         }
 
         [Test]
@@ -365,13 +435,40 @@ namespace SeamlessLoop.Tests
                 DownloadResult = new RemoteSyncSnapshot { Exists = false },
                 UploadResult = "new_sha"
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, fakeBackend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
 
             var result = _mgt.ForcePushLocalToCloudAsync().Result;
 
             Assert.That(result.Success, Is.True);
             // expectedRevision should be null when remote doesn't exist
             Assert.That(fakeBackend.LastExpectedRevision, Is.Null);
+        }
+
+        [Test]
+        public async Task ForcePush_CancelledBeforeUpload_ReturnsCancelledWithoutUpload()
+        {
+            var uploadCount = 0;
+            var backend = new FakeSyncBackend
+            {
+                DownloadResult = new RemoteSyncSnapshot { Exists = false },
+                UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                {
+                    uploadCount++;
+                    return Task.FromResult("new_sha");
+                }
+            };
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend,
+                new CancellationTolerantPreparationService());
+
+            using (var cancellation = new CancellationTokenSource())
+            {
+                cancellation.Cancel();
+                var result = await _mgt.ForcePushLocalToCloudAsync(cancellation.Token);
+
+                Assert.That(result.Success, Is.False);
+                Assert.That(result.Status, Is.EqualTo("cancelled"));
+                Assert.That(uploadCount, Is.EqualTo(0));
+            }
         }
 
         [Test]
@@ -382,7 +479,7 @@ namespace SeamlessLoop.Tests
                 DownloadFunc = async (config, ct) =>
                     throw new SyncBackendException(SyncBackendCode.Unauthorized, "bad token")
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, fakeBackend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
 
             var result = _mgt.ForcePushLocalToCloudAsync().Result;
 
@@ -402,7 +499,7 @@ namespace SeamlessLoop.Tests
             _dbHelper.SetSetting("Sync.GitHub.LastSyncTime", "12345");
 
             var fakeBackend = new FakeSyncBackend();
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, fakeBackend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
 
             var result = _mgt.DeleteCloudSnapshotAsync().Result;
 
@@ -422,7 +519,7 @@ namespace SeamlessLoop.Tests
             {
                 DeleteFunc = async (config, ct) => { } // simulates DELETE that doesn't throw
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, fakeBackend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
 
             var result = _mgt.DeleteCloudSnapshotAsync().Result;
             Assert.That(result.Success, Is.True);
@@ -436,12 +533,38 @@ namespace SeamlessLoop.Tests
                 DeleteFunc = async (config, ct) =>
                     throw new SyncBackendException(SyncBackendCode.Unauthorized, "bad token")
             };
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, fakeBackend);
+            _mgt = new GitHubSyncManagementService(_dbHelper, fakeBackend, _preparation);
 
             var result = _mgt.DeleteCloudSnapshotAsync().Result;
 
             Assert.That(result.Success, Is.False);
             Assert.That(result.Status, Is.EqualTo("unauthorized"));
+        }
+
+        [Test]
+        public async Task DeleteCloud_PreCancelled_ReturnsCancelledWithoutBackendOrMetadataMutation()
+        {
+            _dbHelper.SetSetting("Sync.GitHub.LastRemoteSha", "old_sha");
+            _dbHelper.SetSetting("Sync.GitHub.LastSyncTime", "12345");
+
+            var backend = new FakeSyncBackend
+            {
+                DeleteFunc = (config, ct) =>
+                    throw new AssertionException("Backend delete must not be reached when pre-cancelled.")
+            };
+            _mgt = new GitHubSyncManagementService(_dbHelper, backend, _preparation);
+
+            using (var cancellation = new CancellationTokenSource())
+            {
+                cancellation.Cancel();
+                var result = await _mgt.DeleteCloudSnapshotAsync(cancellation.Token);
+
+                Assert.That(result.Success, Is.False);
+                Assert.That(result.Status, Is.EqualTo("cancelled"));
+                Assert.That(backend.DeleteCalled, Is.False);
+                Assert.That(_dbHelper.GetSetting("Sync.GitHub.LastRemoteSha"), Is.EqualTo("old_sha"));
+                Assert.That(_dbHelper.GetSetting("Sync.GitHub.LastSyncTime"), Is.EqualTo("12345"));
+            }
         }
 
         // ────────────────────────────────────────────────
@@ -523,6 +646,47 @@ namespace SeamlessLoop.Tests
         }
 
         [Test]
+        public async Task ClearLocal_PreCancelled_ReturnsCancelledWithoutMutatingDatabase()
+        {
+            SeedTrack(1, "keep.mp3", 441000, 20000);
+            SeedLoopPoint(1, 100, 400000, DateTime.Now);
+            SeedRating(1, 4, DateTime.Now);
+            var playlistId = SeedPlaylist("ToKeep");
+            SeedPlaylistItem(playlistId, 1, 0);
+            _dbHelper.SetSetting("Sync.PlaylistId.1", "some-uuid");
+            _dbHelper.SetSetting("Sync.GitHub.LastRemoteSha", "old_sha");
+            _dbHelper.SetSetting("Sync.GitHub.LastSyncTime", "12345");
+
+            var selection = new ClearLocalSyncDataSelection
+            {
+                ClearPlaylists = true,
+                ClearLoopPoints = true,
+                ClearRatings = true
+            };
+
+            using (var cancellation = new CancellationTokenSource())
+            {
+                cancellation.Cancel();
+                var result = await _mgt.ClearLocalSyncDataAsync(selection, cancellation.Token);
+
+                Assert.That(result.Success, Is.False);
+                Assert.That(result.Status, Is.EqualTo("cancelled"));
+                Assert.That(_dbHelper.GetSetting("Sync.PlaylistId.1"), Is.EqualTo("some-uuid"));
+                Assert.That(_dbHelper.GetSetting("Sync.GitHub.LastRemoteSha"), Is.EqualTo("old_sha"));
+                Assert.That(_dbHelper.GetSetting("Sync.GitHub.LastSyncTime"), Is.EqualTo("12345"));
+
+                using (var conn = new SQLiteConnection($"Data Source={_dbPath};Version=3;"))
+                {
+                    conn.Open();
+                    Assert.That(conn.ExecuteScalar<int>("SELECT COUNT(1) FROM Tracks"), Is.EqualTo(1));
+                    Assert.That(conn.ExecuteScalar<int>("SELECT COUNT(1) FROM Playlists"), Is.EqualTo(1));
+                    Assert.That(conn.ExecuteScalar<int>("SELECT COUNT(1) FROM LoopPoints"), Is.EqualTo(1));
+                    Assert.That(conn.ExecuteScalar<int>("SELECT COUNT(1) FROM UserRatings"), Is.EqualTo(1));
+                }
+            }
+        }
+
+        [Test]
         public void ClearLocal_LoopPointsOnly()
         {
             SeedTrack(1, "keep.mp3", 441000, 20000);
@@ -561,7 +725,7 @@ namespace SeamlessLoop.Tests
             _dbHelper.SetSetting("Sync.GitHub.Token", "");
 
             // Recreate management service (uses current config from DB)
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, new FakeSyncBackend());
+            _mgt = new GitHubSyncManagementService(_dbHelper, new FakeSyncBackend(), _preparation);
 
             var overview = _mgt.RefreshOverviewAsync().Result;
 
@@ -576,7 +740,7 @@ namespace SeamlessLoop.Tests
             // Remove config
             _dbHelper.SetSetting("Sync.GitHub.Owner", "");
             _dbHelper.SetSetting("Sync.GitHub.Token", "");
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, new FakeSyncBackend());
+            _mgt = new GitHubSyncManagementService(_dbHelper, new FakeSyncBackend(), _preparation);
 
             var result = _mgt.ForcePushLocalToCloudAsync().Result;
 
@@ -589,7 +753,7 @@ namespace SeamlessLoop.Tests
         {
             _dbHelper.SetSetting("Sync.GitHub.Owner", "");
             _dbHelper.SetSetting("Sync.GitHub.Token", "");
-            _mgt = new GitHubSyncManagementService(_dbHelper, _store, new FakeSyncBackend());
+            _mgt = new GitHubSyncManagementService(_dbHelper, new FakeSyncBackend(), _preparation);
 
             var result = _mgt.DeleteCloudSnapshotAsync().Result;
 

@@ -88,7 +88,8 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IDatabaseHelper, DatabaseHelper>();
             containerRegistry.RegisterSingleton<ITrackRepository, TrackRepository>();
             containerRegistry.RegisterSingleton<IPlaylistRepository, PlaylistRepository>();
-            containerRegistry.RegisterSingleton<IPlaybackStatisticsRepository, PlaybackStatisticsRepository>();
+            containerRegistry.RegisterSingleton<IPlaybackStatisticsSyncRepository, PlaybackStatisticsSyncRepository>();
+            containerRegistry.RegisterSingleton<IPlaybackStatisticsLocalService, PlaybackStatisticsLocalService>();
 
             containerRegistry.RegisterSingleton<IPlaybackService, PlaybackService>();
             containerRegistry.RegisterSingleton<IPlaylistManager, PlaylistManager>();
@@ -101,6 +102,8 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IFoldersService, FoldersService>();
             containerRegistry.RegisterSingleton<ISyncSnapshotStore, SQLiteSyncSnapshotStore>();
             containerRegistry.RegisterSingleton<ISyncBackend, GitHubContentsSyncBackend>();
+            containerRegistry.RegisterSingleton<IGitHubSyncPreparationService, GitHubSyncPreparationService>();
+            containerRegistry.RegisterSingleton<GitHubSyncCoordinator>();
             containerRegistry.RegisterSingleton<IGitHubSyncService, GitHubSyncService>();
             containerRegistry.RegisterSingleton<IGitHubSyncManagementService, GitHubSyncManagementService>();
 

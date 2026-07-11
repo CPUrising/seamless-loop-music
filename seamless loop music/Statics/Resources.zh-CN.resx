@@ -280,6 +280,93 @@
   <data name="StatisticsDurationHoursMinutes" xml:space="preserve">
     <value>{0}小时{1}分</value>
   </data>
+  <data name="PlaybackStatisticsSourceDevicesHeader" xml:space="preserve">
+    <value>播放统计来源设备</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesDescription" xml:space="preserve">
+    <value>可重命名设备或删除其他设备的播放历史；当前设备会保留。</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesRefreshToolTip" xml:space="preserve">
+    <value>刷新设备列表</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesLoading" xml:space="preserve">
+    <value>正在加载设备历史...</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesUpdated" xml:space="preserve">
+    <value>设备历史已更新。</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesEmpty" xml:space="preserve">
+    <value>暂无设备历史</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesLoadError" xml:space="preserve">
+    <value>无法加载设备历史。</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesLoadErrorDetail" xml:space="preserve">
+    <value>无法加载设备历史：{0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteSelected" xml:space="preserve">
+    <value>删除所选历史</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteConfirmTitle" xml:space="preserve">
+    <value>删除设备历史</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteConfirmMessage" xml:space="preserve">
+    <value>确定删除所选 {0} 台设备的播放历史吗？这些设备以后重新同步新历史时仍会再次出现。</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleting" xml:space="preserve">
+    <value>正在删除所选设备历史...</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleted" xml:space="preserve">
+    <value>已删除所选设备历史。</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteError" xml:space="preserve">
+    <value>删除所选设备历史失败：{0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenameTitle" xml:space="preserve">
+    <value>重命名设备</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenamePrompt" xml:space="preserve">
+    <value>请输入这个设备的显示名称：</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenaming" xml:space="preserve">
+    <value>正在保存设备名称...</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenameError" xml:space="preserve">
+    <value>重命名设备失败：{0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenameToolTip" xml:space="preserve">
+    <value>重命名设备</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceLocalBadge" xml:space="preserve">
+    <value>当前设备</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicePlatformWindows" xml:space="preserve">
+    <value>Windows</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicePlatformAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicePlatformUnknown" xml:space="preserve">
+    <value>设备</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceFallbackWindows" xml:space="preserve">
+    <value>Windows 设备 {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceFallbackAndroid" xml:space="preserve">
+    <value>Android 设备 {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceFallbackGeneric" xml:space="preserve">
+    <value>设备 {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceSecondaryFormat" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeletedDataSummaryTitle" xml:space="preserve">
+    <value>已删除的播放历史</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeletedDataSummaryCount" xml:space="preserve">
+    <value>来自 {0} 个来源</value>
+  </data>
   <data name="PlaylistAll" xml:space="preserve">
     <value>全部歌曲</value>
   </data>

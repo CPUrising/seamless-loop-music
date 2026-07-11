@@ -13,10 +13,17 @@ namespace seamless_loop_music.Services.Sync
     public class SQLiteSyncSnapshotStore : ISyncSnapshotStore
     {
         private readonly IDatabaseHelper _db;
+        private readonly IPlaybackStatisticsSyncSnapshotAdapter _playbackStatisticsAdapter;
 
         public SQLiteSyncSnapshotStore(IDatabaseHelper db)
+            : this(db, null)
+        {
+        }
+
+        public SQLiteSyncSnapshotStore(IDatabaseHelper db, IPlaybackStatisticsSyncSnapshotAdapter playbackStatisticsAdapter = null)
         {
             _db = db ?? throw new ArgumentNullException(nameof(db));
+            _playbackStatisticsAdapter = playbackStatisticsAdapter ?? new PlaybackStatisticsSyncSnapshotAdapter(_db);
         }
 
         // ──────────────────────────────────────────
@@ -128,15 +135,20 @@ namespace seamless_loop_music.Services.Sync
                     });
                 }
 
-                return new SyncSnapshot
+                var snapshot = new SyncSnapshot
                 {
-                    SchemaVersion = 1,
                     DeviceId = deviceId,
                     ExportedAt = exportedAt,
                     Playlists = syncPlaylists,
                     LoopPoints = loopPoints,
                     Ratings = ratings
                 };
+
+                snapshot.SchemaVersion = 2;
+                snapshot.PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Canonicalize(
+                    _playbackStatisticsAdapter.Export(conn));
+
+                return snapshot;
             });
         }
 
@@ -146,6 +158,11 @@ namespace seamless_loop_music.Services.Sync
 
         public async Task<SyncApplyResult> ApplySnapshotAsync(SyncSnapshot snapshot)
         {
+            if (snapshot == null)
+                throw new ArgumentNullException(nameof(snapshot));
+            if (snapshot.SchemaVersion != 2)
+                throw new FormatException($"Unsupported schemaVersion: {snapshot.SchemaVersion}. Expected: 2.");
+
             return await Task.Run(() =>
             {
                 var result = new SyncApplyResult();
@@ -329,6 +346,25 @@ namespace seamless_loop_music.Services.Sync
                     }
 
                     result.AppliedPlaylists++;
+                }
+
+                if (snapshot.PlaybackStatistics != null)
+                {
+                    using (var statisticsTransaction = conn.BeginTransaction())
+                    {
+                        try
+                        {
+                            _playbackStatisticsAdapter.Apply(conn, statisticsTransaction, snapshot.PlaybackStatistics);
+                            statisticsTransaction.Commit();
+                        }
+                        catch
+                        {
+                            try { statisticsTransaction.Rollback(); } catch { }
+                            throw;
+                        }
+                    }
+
+                    _playbackStatisticsAdapter.RelinkExactAndUniqueFuzzy();
                 }
 
                 return result;

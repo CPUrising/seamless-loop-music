@@ -9,25 +9,22 @@ using seamless_loop_music.Services.Sync.Models;
 namespace seamless_loop_music.Services.Sync
 {
     /// <summary>
-    /// Orchestrates a full GitHub sync cycle: export local → download remote →
-    /// merge → apply → upload with conflict retry.
+    /// Orchestrates a full GitHub sync cycle: download remote, prepare a fenced
+    /// v2 outbound snapshot, then upload with conflict retry.
     /// </summary>
     public class GitHubSyncCoordinator
     {
-        private readonly ISyncSnapshotStore _store;
         private readonly ISyncBackend _backend;
         private readonly IDatabaseHelper _db;
+        private readonly IGitHubSyncPreparationService _preparation;
 
-        public GitHubSyncCoordinator(ISyncSnapshotStore store, ISyncBackend backend, IDatabaseHelper db)
+        public GitHubSyncCoordinator(ISyncBackend backend, IDatabaseHelper db, IGitHubSyncPreparationService preparation)
         {
-            _store = store ?? throw new ArgumentNullException(nameof(store));
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
             _db = db ?? throw new ArgumentNullException(nameof(db));
+            _preparation = preparation ?? throw new ArgumentNullException(nameof(preparation));
         }
 
-        /// <summary>
-        /// Run a full sync cycle. Returns a detailed report.
-        /// </summary>
         public async Task<GitHubSyncReport> SyncNowAsync(GitHubSyncConfig config,
             int maxConflictRetries = 3, CancellationToken ct = default)
         {
@@ -36,7 +33,6 @@ namespace seamless_loop_music.Services.Sync
                 LastSyncTime = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
             };
 
-            // ── 1. Validate config ──
             if (config == null || !config.IsConfigured)
             {
                 report.Success = false;
@@ -47,10 +43,6 @@ namespace seamless_loop_music.Services.Sync
 
             try
             {
-                // ── 2. Export local snapshot ──
-                var localSnapshot = await _store.ExportSnapshotAsync().ConfigureAwait(false);
-
-                // ── 3. Download remote snapshot ──
                 RemoteSyncSnapshot remote;
                 try
                 {
@@ -64,54 +56,32 @@ namespace seamless_loop_music.Services.Sync
                     return report;
                 }
 
-                // ── 4. Remote doesn't exist → initial upload ──
+                SyncSnapshot outbound;
+                SyncApplyResult applyResult = null;
                 if (!remote.Exists)
                 {
-                    try
-                    {
-                        var newSha = await _backend.UploadAsync(config, localSnapshot, null, ct).ConfigureAwait(false);
-                        report.Success = true;
-                        report.Status = "uploaded";
-                        report.Uploaded = CountSnapshotEntities(localSnapshot);
-
-                        SaveSyncState(newSha, report.LastSyncTime);
-                        return report;
-                    }
-                    catch (SyncBackendException ex)
-                    {
-                        report.Success = false;
-                        report.Status = "upload_failed";
-                        report.ErrorMessage = ex.Message;
-                        return report;
-                    }
+                    outbound = await _preparation.CaptureFreshLocalSnapshotAsync(ct).ConfigureAwait(false);
+                }
+                else
+                {
+                    var prepared = await _preparation.PrepareNormalSyncAsync(remote.Snapshot, ct).ConfigureAwait(false);
+                    outbound = prepared.Outbound;
+                    applyResult = prepared.ApplyResult;
+                    ApplyReport(report, applyResult, prepared.Conflicts);
+                    report.Downloaded = CountSnapshotEntities(remote.Snapshot);
                 }
 
-                // ── 5. Remote exists → merge ──
-                var mergeResult = SyncMergeEngine.Merge(localSnapshot, remote.Snapshot);
-                var mergedSnapshot = mergeResult.Merged;
-                report.Conflicts = mergeResult.Conflicts.Select(c => $"[{c.Field}] {c.Description}").ToList();
-
-                // ── 6. Apply merged to local ──
-                var applyResult = await _store.ApplySnapshotAsync(mergedSnapshot).ConfigureAwait(false);
-                report.ApplyResult = applyResult;
-                report.Applied = applyResult.AppliedLoopPoints + applyResult.AppliedRatings + applyResult.AppliedPlaylists;
-                report.Downloaded = CountSnapshotEntities(remote.Snapshot);
-
-                // ── 7. Upload merged with expectedRevision, handle conflicts ──
-                string sha = remote.Revision;
-                int retries = 0;
-                SyncSnapshot currentLocal = localSnapshot;
-
+                string sha = remote.Exists ? remote.Revision : null;
+                var retries = 0;
                 while (retries <= maxConflictRetries)
                 {
                     try
                     {
-                        sha = await _backend.UploadAsync(config, mergedSnapshot, sha, ct).ConfigureAwait(false);
-                        // Upload succeeded
+                        ct.ThrowIfCancellationRequested();
+                        sha = await _backend.UploadAsync(config, outbound, sha, ct).ConfigureAwait(false);
                         report.Success = true;
-                        report.Status = retries > 0 ? "conflict_resolved" : "applied";
-                        report.Uploaded = CountSnapshotEntities(mergedSnapshot);
-
+                        report.Status = retries > 0 ? "conflict_resolved" : (remote.Exists ? "applied" : "uploaded");
+                        report.Uploaded = CountSnapshotEntities(outbound);
                         SaveSyncState(sha, report.LastSyncTime);
                         return report;
                     }
@@ -119,7 +89,6 @@ namespace seamless_loop_music.Services.Sync
                     {
                         retries++;
 
-                        // Re-download fresh remote
                         try
                         {
                             remote = await _backend.DownloadAsync(config, ct).ConfigureAwait(false);
@@ -134,25 +103,19 @@ namespace seamless_loop_music.Services.Sync
 
                         if (!remote.Exists)
                         {
-                            // Remote was deleted between retries → upload without expectedRevision
+                            outbound = await _preparation.CaptureFreshLocalSnapshotAsync(ct).ConfigureAwait(false);
                             sha = null;
-                            mergedSnapshot = currentLocal;
                             continue;
                         }
 
-                        // Re-merge original local with new remote
-                        mergeResult = SyncMergeEngine.Merge(currentLocal, remote.Snapshot);
-                        mergedSnapshot = mergeResult.Merged;
+                        var prepared = await _preparation.PrepareNormalSyncAsync(remote.Snapshot, ct).ConfigureAwait(false);
+                        outbound = prepared.Outbound;
                         sha = remote.Revision;
-
-                        // Re-apply
-                        applyResult = await _store.ApplySnapshotAsync(mergedSnapshot).ConfigureAwait(false);
-                        report.ApplyResult = applyResult;
-                        report.Applied += applyResult.AppliedLoopPoints + applyResult.AppliedRatings + applyResult.AppliedPlaylists;
+                        ApplyReport(report, prepared.ApplyResult, prepared.Conflicts);
+                        report.Downloaded = CountSnapshotEntities(remote.Snapshot);
                     }
                     catch (SyncBackendException ex) when (ex.Code == SyncBackendCode.Conflict)
                     {
-                        // Exhausted retries
                         report.Success = false;
                         report.Status = "conflict_max_retries";
                         report.ErrorMessage = $"Upload conflict persisted after {maxConflictRetries} retries: {ex.Message}";
@@ -160,15 +123,28 @@ namespace seamless_loop_music.Services.Sync
                     }
                 }
 
-                // Should not reach here
                 report.Success = false;
                 report.Status = "unknown";
+                return report;
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                report.Success = false;
+                report.Status = "cancelled";
+                report.ErrorMessage = "GitHub sync was cancelled.";
                 return report;
             }
             catch (SyncBackendException ex)
             {
                 report.Success = false;
                 report.Status = "backend_error";
+                report.ErrorMessage = ex.Message;
+                return report;
+            }
+            catch (InvalidOperationException ex)
+            {
+                report.Success = false;
+                report.Status = "preparation_failed";
                 report.ErrorMessage = ex.Message;
                 return report;
             }
@@ -181,10 +157,6 @@ namespace seamless_loop_music.Services.Sync
             }
         }
 
-        // ──────────────────────────────────────────────
-        //  Private helpers
-        // ──────────────────────────────────────────────
-
         private void SaveSyncState(string sha, long syncTimeMs)
         {
             if (!string.IsNullOrEmpty(sha))
@@ -192,12 +164,28 @@ namespace seamless_loop_music.Services.Sync
             _db.SetSetting("Sync.GitHub.LastSyncTime", syncTimeMs.ToString());
         }
 
+        private static void ApplyReport(GitHubSyncReport report, SyncApplyResult applyResult,
+            System.Collections.Generic.IEnumerable<SyncMergeConflict> conflicts)
+        {
+            if (applyResult != null)
+            {
+                report.ApplyResult = applyResult;
+                report.Applied += applyResult.AppliedLoopPoints + applyResult.AppliedRatings + applyResult.AppliedPlaylists;
+            }
+            if (conflicts != null)
+                report.Conflicts = conflicts.Select(c => $"[{c.Field}] {c.Description}").ToList();
+        }
+
         private static int CountSnapshotEntities(SyncSnapshot snap)
         {
             if (snap == null) return 0;
+            var statistics = snap.PlaybackStatistics;
             return (snap.LoopPoints?.Count ?? 0) +
                    (snap.Ratings?.Count ?? 0) +
-                   (snap.Playlists?.Count ?? 0);
+                   (snap.Playlists?.Count ?? 0) +
+                   (statistics?.Devices?.Count ?? 0) +
+                   (statistics?.Songs?.Count ?? 0) +
+                   (statistics?.Tombstones?.Count ?? 0);
         }
     }
 }

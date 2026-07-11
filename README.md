@@ -56,7 +56,7 @@
 
 - **音频指纹系统**：基于“文件名 + 总采样数”生成指纹。即使移动文件位置或重命名，其循环配置、别名和歌单信息也能自动找回。
 - **数据库同步**：支持同步其他设备的数据库文件。系统会以指纹为依据，自动覆盖或更新本机的循环点及元数据。
-- **GitHub 同步与管理**：支持将歌单、循环点和评分同步到 GitHub `sync.json`，并提供本机覆盖云端、删除云端同步文件、按项清除本机同步数据等管理操作，且支持与Android端同步https://github.com/CPUrising/SeamlessLoopMobile
+- **GitHub 同步与管理**：支持将歌单、循环点、评分和播放统计同步到 GitHub `sync.json`，并支持 Android 互操作（[SeamlessLoopMobile](https://github.com/CPUrising/SeamlessLoopMobile)）。
 - **别名系统**：支持在不修改物理文件名的前提下自定义 UI 显示名称。
 
 ### 5. 一致的桌面交互
@@ -86,6 +86,15 @@
 1. **分析**：在单曲编辑界面或批量选择歌曲后选择“自动寻环”，引擎将计算最佳循环位置。
 2. **选择**：在自动寻环的“排行榜”界面双击不同方案进行试听，确认后保存。
    *注意：自动寻环结果受算法限制，可能仍需手动微调。*
+
+### 4. GitHub 同步与播放统计
+
+1. 在“设置”中填写 GitHub **Owner**、**Repository**、**Branch**、**Path** 和 **Token**。Token 需要目标仓库 Contents 的读写权限；Path 可保留默认的 `seamless-loop/sync.json`。保存后点击“立即同步”。
+2. 播放音乐即可累计播放统计；打开“播放统计”查看时段排行。
+3. 在设置中管理来源设备。删除来源数据会创建永久 tombstone；完全删除的历史来源会合并为一条汇总，不再逐台显示。
+4. 其他设备使用同一个 GitHub 仓库和 Path 即可同步。强制覆盖云端和删除云端 snapshot 都是管理操作，请确认后再执行。
+
+技术细节和维护不变量见 [`docs/Playback_Statistics_Sync_v2.md`](docs/Playback_Statistics_Sync_v2.md)。
 
 ---
 

@@ -56,6 +56,10 @@ namespace seamless_loop_music.Services.Sync.Backend
             {
                 response = await _http.SendAsync(request, ct).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
+            }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
                 throw new SyncBackendException(SyncBackendCode.Network,
@@ -165,14 +169,15 @@ namespace seamless_loop_music.Services.Sync.Backend
             if (snapshot == null)
                 throw new ArgumentNullException(nameof(snapshot));
 
+            // Validate and canonicalize before creating the request or contacting GitHub.
+            var contentJson = SyncSnapshotSerializer.Serialize(snapshot);
+            var contentB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(contentJson));
+
             var url = BuildUploadUrl(config);
             using var request = new HttpRequestMessage(HttpMethod.Put, url);
             ApplyHeaders(request, config);
 
             // Build body
-            var contentJson = SyncSnapshotSerializer.Serialize(snapshot);
-            var contentB64 = Convert.ToBase64String(Encoding.UTF8.GetBytes(contentJson));
-
             var bodyObj = new JObject
             {
                 ["message"] = $"Sync snapshot from {snapshot.DeviceId} at {DateTime.UtcNow:O}",
@@ -194,6 +199,10 @@ namespace seamless_loop_music.Services.Sync.Backend
             try
             {
                 response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {
@@ -307,6 +316,10 @@ namespace seamless_loop_music.Services.Sync.Backend
             try
             {
                 response = await _http.SendAsync(request, ct).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                throw new OperationCanceledException(ct);
             }
             catch (Exception ex) when (ex is HttpRequestException || ex is TaskCanceledException)
             {

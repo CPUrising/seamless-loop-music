@@ -280,6 +280,93 @@
   <data name="StatisticsDurationHoursMinutes" xml:space="preserve">
     <value>{0}h {1}m</value>
   </data>
+  <data name="PlaybackStatisticsSourceDevicesHeader" xml:space="preserve">
+    <value>Playback statistics source devices</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesDescription" xml:space="preserve">
+    <value>Rename a device or delete its synced playback history. This device is retained.</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesRefreshToolTip" xml:space="preserve">
+    <value>Refresh device list</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesLoading" xml:space="preserve">
+    <value>Loading device history...</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesUpdated" xml:space="preserve">
+    <value>Device history updated.</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesEmpty" xml:space="preserve">
+    <value>No device history yet</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesLoadError" xml:space="preserve">
+    <value>Could not load device history.</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicesLoadErrorDetail" xml:space="preserve">
+    <value>Could not load device history: {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteSelected" xml:space="preserve">
+    <value>Delete selected history</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteConfirmTitle" xml:space="preserve">
+    <value>Delete device history</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteConfirmMessage" xml:space="preserve">
+    <value>Delete the playback history from the selected {0} device(s)? They can appear again later if they sync new history.</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleting" xml:space="preserve">
+    <value>Deleting selected device history...</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleted" xml:space="preserve">
+    <value>Selected device history deleted.</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeleteError" xml:space="preserve">
+    <value>Could not delete selected device history: {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenameTitle" xml:space="preserve">
+    <value>Rename device</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenamePrompt" xml:space="preserve">
+    <value>Enter a display name for this device:</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenaming" xml:space="preserve">
+    <value>Saving device name...</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenameError" xml:space="preserve">
+    <value>Could not rename device: {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceRenameToolTip" xml:space="preserve">
+    <value>Rename device</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceLocalBadge" xml:space="preserve">
+    <value>This device</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicePlatformWindows" xml:space="preserve">
+    <value>Windows</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicePlatformAndroid" xml:space="preserve">
+    <value>Android</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDevicePlatformUnknown" xml:space="preserve">
+    <value>Device</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceFallbackWindows" xml:space="preserve">
+    <value>Windows device {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceFallbackAndroid" xml:space="preserve">
+    <value>Android device {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceFallbackGeneric" xml:space="preserve">
+    <value>Device {0}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceSecondaryFormat" xml:space="preserve">
+    <value>{0} · {1}</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeletedDataSummaryTitle" xml:space="preserve">
+    <value>Deleted playback history</value>
+  </data>
+  <data name="PlaybackStatisticsSourceDeviceDeletedDataSummaryCount" xml:space="preserve">
+    <value>Deleted history from {0} sources</value>
+  </data>
   <data name="PlaylistAll" xml:space="preserve">
     <value>All Tracks</value>
   </data>

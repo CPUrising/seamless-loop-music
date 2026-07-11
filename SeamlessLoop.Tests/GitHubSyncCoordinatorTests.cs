@@ -18,6 +18,7 @@ namespace SeamlessLoop.Tests
         private string _dbPath;
         private DatabaseHelper _dbHelper;
         private SQLiteSyncSnapshotStore _store;
+        private FakeSyncPreparationService _preparation;
         private const string RemoteSha = "remotesha001";
         private const string UploadedSha = "uploadedsha002";
 
@@ -25,7 +26,7 @@ namespace SeamlessLoop.Tests
         {
             return new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "local-device",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>(),
@@ -38,7 +39,8 @@ namespace SeamlessLoop.Tests
                         CreatedAt = 100, ModifiedAt = 100,
                         Items = new List<SyncPlaylistItem>()
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
         }
 
@@ -46,7 +48,7 @@ namespace SeamlessLoop.Tests
         {
             return new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote-device",
                 ExportedAt = 2000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -58,7 +60,8 @@ namespace SeamlessLoop.Tests
                     }
                 },
                 Ratings = new List<SyncRatingEntry>(),
-                Playlists = new List<SyncPlaylist>()
+                Playlists = new List<SyncPlaylist>(),
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
         }
 
@@ -81,6 +84,7 @@ namespace SeamlessLoop.Tests
             _dbHelper = new DatabaseHelper(_dbPath);
             _dbHelper.InitializeDatabase();
             _store = new SQLiteSyncSnapshotStore(_dbHelper);
+            _preparation = new FakeSyncPreparationService(_store);
         }
 
         [TearDown]
@@ -107,7 +111,7 @@ namespace SeamlessLoop.Tests
                 UploadResult = UploadedSha
             };
 
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
             var config = MakeConfig();
 
             var report = await coordinator.SyncNowAsync(config);
@@ -145,7 +149,7 @@ namespace SeamlessLoop.Tests
                 UploadResult = UploadedSha
             };
 
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
             var config = MakeConfig();
 
             var report = await coordinator.SyncNowAsync(config);
@@ -159,6 +163,76 @@ namespace SeamlessLoop.Tests
             // State saved
             var savedSha = _dbHelper.GetSetting("Sync.GitHub.LastRemoteSha");
             Assert.That(savedSha, Is.EqualTo(UploadedSha));
+        }
+
+        [Test]
+        public async Task Coordinator_RemoteV2_UpgradesOutboundToV2()
+        {
+            var fakeBackend = new FakeSyncBackend
+            {
+                DownloadResult = new RemoteSyncSnapshot
+                {
+                    Exists = true,
+                    Revision = RemoteSha,
+                    Snapshot = new SyncSnapshot { SchemaVersion = 2, DeviceId = "remote", ExportedAt = 1,
+                        PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty() }
+                }
+            };
+
+            var report = await new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation).SyncNowAsync(MakeConfig());
+
+            Assert.That(report.Success, Is.True);
+            Assert.That(fakeBackend.LastUploadedSnapshot.SchemaVersion, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Coordinator_ConflictThenRedownloadsV2_ContinuesWithV2Upload()
+        {
+            var localSnapshot = MakeLocalSnapshot();
+            await _store.ApplySnapshotAsync(localSnapshot);
+
+            var v1Remote = MakeRemoteSnapshot();
+            var downloadCount = 0;
+            var uploadCount = 0;
+
+            var fakeBackend = new FakeSyncBackend
+            {
+                DownloadFunc = (config, ct) =>
+                {
+                    downloadCount++;
+                    return Task.FromResult(downloadCount == 1
+                        ? new RemoteSyncSnapshot
+                        {
+                            Exists = true,
+                            Snapshot = v1Remote,
+                            Revision = RemoteSha
+                        }
+                        : new RemoteSyncSnapshot
+                        {
+                            Exists = true,
+                            Snapshot = new SyncSnapshot { SchemaVersion = 2, DeviceId = "remote-v2", ExportedAt = 2,
+                                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty() },
+                            Revision = "remotev2sha"
+                        });
+                },
+                UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                {
+                    uploadCount++;
+                    if (uploadCount == 1)
+                    {
+                        throw new SyncBackendException(SyncBackendCode.Conflict, "sha mismatch");
+                    }
+
+                    return Task.FromResult(UploadedSha);
+                }
+            };
+
+            var report = await new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation).SyncNowAsync(MakeConfig(), maxConflictRetries: 2);
+
+            Assert.That(report.Success, Is.True);
+            Assert.That(uploadCount, Is.EqualTo(2));
+            Assert.That(fakeBackend.LastUploadedSnapshot?.SchemaVersion, Is.EqualTo(2));
+            Assert.That(_dbHelper.GetSetting("Sync.GitHub.LastRemoteSha"), Is.EqualTo(UploadedSha));
         }
 
         // ────────────────────────────────────────────────────────
@@ -205,7 +279,7 @@ namespace SeamlessLoop.Tests
                 }
             };
 
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
             var config = MakeConfig();
 
             var report = await coordinator.SyncNowAsync(config, maxConflictRetries: 3);
@@ -213,6 +287,143 @@ namespace SeamlessLoop.Tests
             Assert.That(report.Success, Is.True);
             Assert.That(report.Status, Is.EqualTo("conflict_resolved"));
             Assert.That(callCount, Is.EqualTo(2), "Should have retried once");
+            Assert.That(_preparation.CaptureCount, Is.EqualTo(4), "Conflict retry must prepare from a fresh local capture.");
+        }
+
+        [Test]
+        public async Task Coordinator_RemoteDeletedDuringConflict_CapturesFreshLocalBeforeRetry()
+        {
+            var downloadCount = 0;
+            var uploadCount = 0;
+            _preparation.CaptureFunc = count => Task.FromResult(new SyncSnapshot
+            {
+                SchemaVersion = 2,
+                DeviceId = "capture-" + count,
+                ExportedAt = count,
+                Playlists = new List<SyncPlaylist>(),
+                LoopPoints = new List<SyncLoopPointEntry>(),
+                Ratings = new List<SyncRatingEntry>(),
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
+            });
+
+            var fakeBackend = new FakeSyncBackend
+            {
+                DownloadFunc = (config, ct) =>
+                {
+                    downloadCount++;
+                    return Task.FromResult(downloadCount == 1
+                        ? new RemoteSyncSnapshot { Exists = true, Revision = RemoteSha, Snapshot = new SyncSnapshot { SchemaVersion = 2, DeviceId = "remote", ExportedAt = 1,
+                            PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty() } }
+                        : new RemoteSyncSnapshot { Exists = false });
+                },
+                UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                {
+                    uploadCount++;
+                    if (uploadCount == 1) throw new SyncBackendException(SyncBackendCode.Conflict, "sha mismatch");
+                    Assert.That(expectedRevision, Is.Null);
+                    Assert.That(snapshot.DeviceId, Is.EqualTo("capture-3"));
+                    return Task.FromResult(UploadedSha);
+                }
+            };
+
+            var report = await new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation)
+                .SyncNowAsync(MakeConfig(), maxConflictRetries: 1);
+
+            Assert.That(report.Success, Is.True);
+            Assert.That(_preparation.CaptureCount, Is.EqualTo(3), "The deleted-remote retry must not reuse the first local snapshot.");
+            Assert.That(uploadCount, Is.EqualTo(2));
+        }
+
+        [Test]
+        public async Task Coordinator_CancelledBeforeInitialUpload_ReturnsCancelledWithoutUpload()
+        {
+            var uploadCount = 0;
+            var backend = new FakeSyncBackend
+            {
+                DownloadResult = new RemoteSyncSnapshot { Exists = false },
+                UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                {
+                    uploadCount++;
+                    return Task.FromResult(UploadedSha);
+                }
+            };
+            using (var cancellation = new CancellationTokenSource())
+            {
+                cancellation.Cancel();
+                var report = await new GitHubSyncCoordinator(backend, _dbHelper,
+                    new CancellationTolerantPreparationService()).SyncNowAsync(MakeConfig(), ct: cancellation.Token);
+
+                Assert.That(report.Success, Is.False);
+                Assert.That(report.Status, Is.EqualTo("cancelled"));
+                Assert.That(uploadCount, Is.EqualTo(0));
+            }
+        }
+
+        [Test]
+        public async Task Coordinator_CancelledBeforeNormalUpload_ReturnsCancelledWithoutUpload()
+        {
+            var uploadCount = 0;
+            var backend = new FakeSyncBackend
+            {
+                DownloadResult = new RemoteSyncSnapshot
+                {
+                    Exists = true,
+                    Revision = RemoteSha,
+                    Snapshot = MakeRemoteSnapshot()
+                },
+                UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                {
+                    uploadCount++;
+                    return Task.FromResult(UploadedSha);
+                }
+            };
+            using (var cancellation = new CancellationTokenSource())
+            {
+                cancellation.Cancel();
+                var report = await new GitHubSyncCoordinator(backend, _dbHelper,
+                    new CancellationTolerantPreparationService()).SyncNowAsync(MakeConfig(), ct: cancellation.Token);
+
+                Assert.That(report.Success, Is.False);
+                Assert.That(report.Status, Is.EqualTo("cancelled"));
+                Assert.That(uploadCount, Is.EqualTo(0));
+            }
+        }
+
+        [Test]
+        public async Task Coordinator_CancelledBeforeRetryUpload_ReturnsCancelledAfterInitialUpload()
+        {
+            var uploadCount = 0;
+            using (var cancellation = new CancellationTokenSource())
+            {
+                var backend = new FakeSyncBackend
+                {
+                    DownloadFunc = (config, ct) => Task.FromResult(new RemoteSyncSnapshot
+                    {
+                        Exists = true,
+                        Revision = RemoteSha,
+                        Snapshot = MakeRemoteSnapshot()
+                    }),
+                    UploadFunc = (config, snapshot, expectedRevision, ct) =>
+                    {
+                        uploadCount++;
+                        if (uploadCount == 1)
+                        {
+                            cancellation.Cancel();
+                            throw new SyncBackendException(SyncBackendCode.Conflict, "sha mismatch");
+                        }
+
+                        return Task.FromResult(UploadedSha);
+                    }
+                };
+
+                var report = await new GitHubSyncCoordinator(backend, _dbHelper,
+                    new CancellationTolerantPreparationService()).SyncNowAsync(
+                        MakeConfig(), maxConflictRetries: 1, ct: cancellation.Token);
+
+                Assert.That(report.Success, Is.False);
+                Assert.That(report.Status, Is.EqualTo("cancelled"));
+                Assert.That(uploadCount, Is.EqualTo(1));
+            }
         }
 
         // ────────────────────────────────────────────────────────
@@ -239,7 +450,7 @@ namespace SeamlessLoop.Tests
                 }
             };
 
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
             var config = MakeConfig();
 
             var report = await coordinator.SyncNowAsync(config, maxConflictRetries: 2);
@@ -263,7 +474,7 @@ namespace SeamlessLoop.Tests
                 }
             };
 
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
             var config = MakeConfig();
 
             var report = await coordinator.SyncNowAsync(config);
@@ -281,7 +492,7 @@ namespace SeamlessLoop.Tests
         public async Task Coordinator_ConfigMissing_ReturnsFailure()
         {
             var fakeBackend = new FakeSyncBackend();
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
 
             var config = new GitHubSyncConfig
             {
@@ -300,7 +511,7 @@ namespace SeamlessLoop.Tests
         public async Task Coordinator_NullConfig_ReturnsNotConfigured()
         {
             var fakeBackend = new FakeSyncBackend();
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
 
             var report = await coordinator.SyncNowAsync(null);
 
@@ -323,7 +534,7 @@ namespace SeamlessLoop.Tests
                 }
             };
 
-            var coordinator = new GitHubSyncCoordinator(_store, fakeBackend, _dbHelper);
+            var coordinator = new GitHubSyncCoordinator(fakeBackend, _dbHelper, _preparation);
             var report = await coordinator.SyncNowAsync(MakeConfig());
 
             Assert.That(report.Success, Is.False);
@@ -378,5 +589,43 @@ namespace SeamlessLoop.Tests
 
             return Task.CompletedTask;
         }
+    }
+
+    internal sealed class CancellationTolerantPreparationService : IGitHubSyncPreparationService
+    {
+        private static SyncSnapshot Outbound()
+        {
+            return new SyncSnapshot
+            {
+                SchemaVersion = 2,
+                DeviceId = "test-device",
+                ExportedAt = 1,
+                Playlists = new List<SyncPlaylist>(),
+                LoopPoints = new List<SyncLoopPointEntry>(),
+                Ratings = new List<SyncRatingEntry>(),
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
+            };
+        }
+
+        public Task<SyncSnapshot> CaptureFreshLocalSnapshotAsync(CancellationToken ct = default)
+            => Task.FromResult(Outbound());
+
+        public Task<PreparedSyncSnapshot> PrepareNormalSyncAsync(SyncSnapshot remoteSnapshot,
+            CancellationToken ct = default)
+            => Task.FromResult(new PreparedSyncSnapshot
+            {
+                Outbound = Outbound(),
+                ApplyResult = new SyncApplyResult(),
+                Conflicts = new List<SyncMergeConflict>()
+            });
+
+        public Task<PreparedSyncSnapshot> PrepareForcePushAsync(SyncSnapshot remoteSnapshot,
+            CancellationToken ct = default)
+            => Task.FromResult(new PreparedSyncSnapshot
+            {
+                Outbound = Outbound(),
+                ApplyResult = new SyncApplyResult(),
+                Conflicts = new List<SyncMergeConflict>()
+            });
     }
 }

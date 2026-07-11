@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:prism="http://prismlibrary.com/"
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d"
@@ -82,6 +83,201 @@
                             <TextBlock Text="{Binding GitHubStatusText}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
                         </StackPanel>
                     </Border>
+
+                    <Separator Margin="0,18,0,16" Background="{DynamicResource BrushSeparator}"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding [PlaybackStatisticsSourceDevicesHeader], Source={StaticResource Loc}}" Style="{StaticResource SectionHeaderText}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding [PlaybackStatisticsSourceDevicesDescription], Source={StaticResource Loc}}" Style="{StaticResource SectionDescriptionText}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <WrapPanel Grid.Row="1" Margin="0,10,0,0">
+                            <Button Command="{Binding RefreshSourceDeviceCommand}"
+                                    Style="{StaticResource GhostIconButton}"
+                                    ToolTip="{Binding SourceDevicesRefreshButtonToolTip}"
+                                    Margin="0,0,8,0">
+                                <md:PackIcon Kind="Refresh" Width="18" Height="18"/>
+                            </Button>
+                            <Button Command="{Binding DeleteSelectedSourceDevicesCommand}"
+                                    Style="{StaticResource SecondaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="DeleteOutline" Width="16" Height="16" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding [PlaybackStatisticsSourceDeviceDeleteSelected], Source={StaticResource Loc}}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </Grid>
+
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="3"
+                                 Margin="0,0,0,10"
+                                 Visibility="{Binding IsSourceDevicesBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <TextBlock Text="{Binding SourceDevicesStatusText}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,10"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding IsSourceDevicesBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding SourceDevicesStatusText}"
+                               Foreground="{DynamicResource BrushDanger}"
+                               Margin="0,0,0,10"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding HasSourceDevicesError, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <TextBlock Text="{Binding [PlaybackStatisticsSourceDevicesEmpty], Source={StaticResource Loc}}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,10"
+                               Visibility="{Binding HasNoSourceDevices, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <ItemsControl ItemsSource="{Binding SourceDevices}"
+                                  Visibility="{Binding HasSourceDevices, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="0,0,0,1" Padding="0,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDeletedDataSummary}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="28"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      IsEnabled="{Binding CanSelect}">
+                                                <CheckBox.Style>
+                                                    <Style TargetType="CheckBox">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanSelect}" Value="False">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </CheckBox.Style>
+                                            </CheckBox>
+
+                                            <md:PackIcon Grid.Column="1"
+                                                         Kind="{Binding PlatformIconKind}"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Foreground="{DynamicResource BrushTextSecondary}"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,12,0"/>
+
+                                            <Grid Grid.Column="2" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid Grid.Row="0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding DisplayName}"
+                                                               VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="1"
+                                                            Background="{DynamicResource BrushPrimaryContainer}"
+                                                            BorderBrush="{DynamicResource BrushOutlineVariant}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="6,2"
+                                                            Margin="8,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            Visibility="{Binding IsLocalDevice, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <TextBlock Text="{Binding LocalBadgeText}" Foreground="{DynamicResource BrushAccent}" FontSize="11" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                </Grid>
+                                                <Grid Grid.Row="1" Margin="0,4,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding SecondaryText}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                                               FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding EffectiveListeningDurationText}"
+                                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                                               FontSize="12"
+                                                               Margin="12,0,0,0"/>
+                                                </Grid>
+                                            </Grid>
+
+                                            <Button Grid.Column="3"
+                                                    Command="{Binding DataContext.RenameSourceDeviceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource GhostIconButton}"
+                                                    ToolTip="{Binding [PlaybackStatisticsSourceDeviceRenameToolTip], Source={StaticResource Loc}}">
+                                                <md:PackIcon Kind="PencilOutline" Width="16" Height="16"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDeletedDataSummary}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <md:PackIcon Kind="{Binding PlatformIconKind}"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Foreground="{DynamicResource BrushTextSecondary}"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,12,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding SecondaryText}"
+                                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                                           FontSize="12"
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
                 </StackPanel>
             </Border>
 

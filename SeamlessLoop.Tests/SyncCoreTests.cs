@@ -21,7 +21,7 @@ namespace SeamlessLoop.Tests
         // ────────────────────────────────────────────────────────
 
         [Test]
-        public void Serializer_ParsesMinimalValidSnapshot()
+        public void Serializer_RejectsLegacySchemaV1()
         {
             var json = @"{
                 ""schemaVersion"": 1,
@@ -29,17 +29,13 @@ namespace SeamlessLoop.Tests
                 ""exportedAt"": 1700000000000
             }";
 
-            var snap = SyncSnapshotSerializer.Deserialize(json);
-
-            Assert.That(snap.SchemaVersion, Is.EqualTo(1));
-            Assert.That(snap.DeviceId, Is.EqualTo("abc-123"));
-            Assert.That(snap.ExportedAt, Is.EqualTo(1700000000000));
+            var exception = Assert.Throws<FormatException>(() => SyncSnapshotSerializer.Deserialize(json));
+            Assert.That(exception.Message, Does.Contain("Expected: 2"));
         }
 
         [Test]
-        public void Serializer_ParsesMobileSampleShape()
+        public void Serializer_RejectsLegacyMobileShape()
         {
-            // Inline shape matching temp/sync.json
             var json = @"{
                 ""schemaVersion"": 1,
                 ""deviceId"": ""3f76252c-2c35-4951-902e-55bfaee18e07"",
@@ -69,31 +65,7 @@ namespace SeamlessLoop.Tests
                 ]
             }";
 
-            var snap = SyncSnapshotSerializer.Deserialize(json);
-
-            Assert.That(snap.SchemaVersion, Is.EqualTo(1));
-            Assert.That(snap.DeviceId, Is.EqualTo("3f76252c-2c35-4951-902e-55bfaee18e07"));
-            Assert.That(snap.ExportedAt, Is.EqualTo(1783427596608));
-            Assert.That(snap.LoopPoints, Has.Count.EqualTo(1));
-            Assert.That(snap.Playlists, Has.Count.EqualTo(1));
-            Assert.That(snap.Ratings, Has.Count.EqualTo(1));
-
-            var lp = snap.LoopPoints[0];
-            Assert.That(lp.Song.FileName, Is.EqualTo("1-02. Summer Pockets.flac"));
-            Assert.That(lp.Song.DurationMs, Is.EqualTo(239987));
-            Assert.That(lp.Song.TotalSamples, Is.EqualTo(10583412));
-            Assert.That(lp.LoopPoint.LoopStart, Is.EqualTo(3368943));
-            Assert.That(lp.LoopPoint.LoopEnd, Is.EqualTo(10583412));
-            Assert.That(lp.LoopPoint.LastModified, Is.EqualTo(1783427596608));
-
-            var pl = snap.Playlists[0];
-            Assert.That(pl.Id, Is.EqualTo("8455d95d-59e1-438e-9269-42573cb80fef"));
-            Assert.That(pl.Name, Is.EqualTo("3"));
-            Assert.That(pl.Items, Has.Count.EqualTo(1));
-
-            var rating = snap.Ratings[0];
-            Assert.That(rating.Rating.RatingValue, Is.EqualTo(4));
-            Assert.That(rating.Rating.LastModified, Is.EqualTo(1783343165165));
+            Assert.Throws<FormatException>(() => SyncSnapshotSerializer.Deserialize(json));
         }
 
         [Test]
@@ -103,15 +75,19 @@ namespace SeamlessLoop.Tests
                 SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":0,""deviceId"":""x"",""exportedAt"":1}"));
             Assert.That(ex0.Message, Does.Contain("schemaVersion"));
 
+            var ex1 = Assert.Throws<FormatException>(() =>
+                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":1,""deviceId"":""x"",""exportedAt"":1}"));
+            Assert.That(ex1.Message, Does.Contain("Expected: 2"));
+
             var ex2 = Assert.Throws<FormatException>(() =>
-                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":2,""deviceId"":""x"",""exportedAt"":1}"));
-            Assert.That(ex2.Message, Does.Contain("schemaVersion"));
+                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":3,""deviceId"":""x"",""exportedAt"":1}"));
+            Assert.That(ex2.Message, Does.Contain("Expected: 2"));
         }
 
         [Test]
         public void Serializer_NullListsBecomeEmpty()
         {
-            var json = @"{""schemaVersion"":1,""deviceId"":""d"",""exportedAt"":0}";
+            var json = @"{""schemaVersion"":2,""deviceId"":""d"",""exportedAt"":0,""playbackStatistics"":{""dateBucketBasis"":""sourceLocal"",""devices"":[],""songs"":[],""tombstones"":[]}}";
             var snap = SyncSnapshotSerializer.Deserialize(json);
 
             Assert.That(snap.Playlists, Is.Not.Null);
@@ -126,7 +102,7 @@ namespace SeamlessLoop.Tests
         public void Serializer_RejectsMissingDeviceId()
         {
             var ex = Assert.Throws<FormatException>(() =>
-                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":1,""exportedAt"":0}"));
+                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":2,""exportedAt"":0,""playbackStatistics"":{""dateBucketBasis"":""sourceLocal"",""devices"":[],""songs"":[],""tombstones"":[]}}"));
             Assert.That(ex.Message, Does.Contain("deviceId"));
         }
 
@@ -134,16 +110,16 @@ namespace SeamlessLoop.Tests
         public void Serializer_RejectsNegativeExportedAt()
         {
             var ex = Assert.Throws<FormatException>(() =>
-                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":1,""deviceId"":""d"",""exportedAt"":-1}"));
+                SyncSnapshotSerializer.Deserialize(@"{""schemaVersion"":2,""deviceId"":""d"",""exportedAt"":-1,""playbackStatistics"":{""dateBucketBasis"":""sourceLocal"",""devices"":[],""songs"":[],""tombstones"":[]}}"));
             Assert.That(ex.Message, Does.Contain("exportedAt"));
         }
 
         [Test]
         public void Serializer_ParsesOneLineJson()
         {
-            var json = "{\"schemaVersion\":1,\"deviceId\":\"d\",\"exportedAt\":1}";
+            var json = "{\"schemaVersion\":2,\"deviceId\":\"d\",\"exportedAt\":1,\"playbackStatistics\":{\"dateBucketBasis\":\"sourceLocal\",\"devices\":[],\"songs\":[],\"tombstones\":[]}}";
             var snap = SyncSnapshotSerializer.Deserialize(json);
-            Assert.That(snap.SchemaVersion, Is.EqualTo(1));
+            Assert.That(snap.SchemaVersion, Is.EqualTo(2));
             Assert.That(snap.DeviceId, Is.EqualTo("d"));
         }
 
@@ -152,7 +128,7 @@ namespace SeamlessLoop.Tests
         {
             var original = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "roundtrip-device",
                 ExportedAt = 999888777,
                 Playlists = new List<SyncPlaylist>
@@ -193,13 +169,14 @@ namespace SeamlessLoop.Tests
                         Song = new SyncSongIdentity { FileName = "rt.mp3", DurationMs = 25000 },
                         Rating = new SyncRating { RatingValue = 5, LastModified = 400 }
                     }
-                }
+                },
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             var json = SyncSnapshotSerializer.Serialize(original);
             var deserialized = SyncSnapshotSerializer.Deserialize(json);
 
-            Assert.That(deserialized.SchemaVersion, Is.EqualTo(1));
+            Assert.That(deserialized.SchemaVersion, Is.EqualTo(2));
             Assert.That(deserialized.DeviceId, Is.EqualTo("roundtrip-device"));
             Assert.That(deserialized.ExportedAt, Is.EqualTo(999888777));
             Assert.That(deserialized.Playlists, Has.Count.EqualTo(1));
@@ -217,12 +194,13 @@ namespace SeamlessLoop.Tests
         {
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "d",
                 ExportedAt = 0,
                 Playlists = new List<SyncPlaylist>(),
                 LoopPoints = new List<SyncLoopPointEntry>(),
-                Ratings = new List<SyncRatingEntry>()
+                Ratings = new List<SyncRatingEntry>(),
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             var json = SyncSnapshotSerializer.Serialize(snap);
@@ -243,7 +221,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "base",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -258,7 +236,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "incoming",
                 ExportedAt = 2000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -284,7 +262,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -297,7 +275,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 2000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -320,7 +298,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 2000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -333,7 +311,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -357,7 +335,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 1000,
                 Ratings = new List<SyncRatingEntry>
                 {
                     new SyncRatingEntry
@@ -370,7 +348,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 2000,
                 Ratings = new List<SyncRatingEntry>
                 {
                     new SyncRatingEntry
@@ -392,7 +370,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 1000,
                 Ratings = new List<SyncRatingEntry>
                 {
                     new SyncRatingEntry
@@ -405,7 +383,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 2000,
                 Ratings = new List<SyncRatingEntry>
                 {
                     new SyncRatingEntry
@@ -427,7 +405,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 1000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist { Id = "pl-a", Name = "A", CreatedAt = 100, ModifiedAt = 100 }
@@ -436,7 +414,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 2000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist { Id = "pl-b", Name = "B", CreatedAt = 200, ModifiedAt = 200 }
@@ -453,7 +431,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 1000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist
@@ -473,7 +451,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 2000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist
@@ -513,7 +491,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 2000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist
@@ -538,7 +516,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 1000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist
@@ -612,12 +590,30 @@ namespace SeamlessLoop.Tests
         {
             var snap = _store.ExportSnapshotAsync().Result;
 
-            Assert.That(snap.SchemaVersion, Is.EqualTo(1));
+            Assert.That(snap.SchemaVersion, Is.EqualTo(2));
             Assert.That(snap.DeviceId, Is.Not.Null.And.Not.Empty);
             Assert.That(snap.ExportedAt, Is.GreaterThan(0));
             Assert.That(snap.Playlists, Is.Empty);
             Assert.That(snap.LoopPoints, Is.Empty);
             Assert.That(snap.Ratings, Is.Empty);
+            Assert.That(snap.PlaybackStatistics, Is.Not.Null);
+            Assert.That(snap.PlaybackStatistics.Devices, Is.Empty);
+            Assert.That(snap.PlaybackStatistics.Songs, Is.Empty);
+            Assert.That(snap.PlaybackStatistics.Tombstones, Is.Empty);
+        }
+
+        [Test]
+        public void StoreExport_AlwaysEmitsCanonicalV2PlaybackStatistics()
+        {
+            using (var connection = _storeDbHelper.GetConnection())
+            {
+                PlaybackStatisticsSyncSchema.EnsureSchema(connection);
+                connection.Execute("INSERT INTO PlaybackSyncDevices VALUES ('device-a',0,'Desktop',1,'windows',1,1)");
+            }
+
+            var snap = _store.ExportSnapshotAsync().Result;
+            Assert.That(snap.SchemaVersion, Is.EqualTo(2));
+            Assert.That(snap.PlaybackStatistics, Is.Not.Null);
         }
 
         [Test]
@@ -719,11 +715,24 @@ namespace SeamlessLoop.Tests
         // ────────────────────────────────────────────────────────
 
         [Test]
+        public void StoreApply_RejectsNonV2Snapshot()
+        {
+            var legacy = new SyncSnapshot
+            {
+                SchemaVersion = 1,
+                DeviceId = "legacy",
+                ExportedAt = 1
+            };
+
+            Assert.Throws<FormatException>(() => _store.ApplySnapshotAsync(legacy).GetAwaiter().GetResult());
+        }
+
+        [Test]
         public void StoreApply_UnknownSongSkipped()
         {
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -750,7 +759,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -775,7 +784,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -810,7 +819,7 @@ namespace SeamlessLoop.Tests
             // remote with older timestamp
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -840,7 +849,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 Ratings = new List<SyncRatingEntry>
@@ -873,7 +882,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 Ratings = new List<SyncRatingEntry>
@@ -903,7 +912,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 Playlists = new List<SyncPlaylist>
@@ -953,7 +962,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 Playlists = new List<SyncPlaylist>
@@ -1006,7 +1015,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -1033,7 +1042,7 @@ namespace SeamlessLoop.Tests
             // Remote has durationMs=10000, should match track 2 exactly (Tier 1)
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -1078,7 +1087,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -1114,7 +1123,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "remote",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -1147,7 +1156,7 @@ namespace SeamlessLoop.Tests
             // base has a real loop; incoming has 0→totalSamples → base should survive
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "base", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 2000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -1160,7 +1169,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "inc", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "inc", ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -1186,7 +1195,7 @@ namespace SeamlessLoop.Tests
             long totalSamples = 220500;
             var earlier = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "earlier", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "earlier", ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -1199,7 +1208,7 @@ namespace SeamlessLoop.Tests
 
             var later = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "later", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "later", ExportedAt = 2000,
                 LoopPoints = new List<SyncLoopPointEntry>
                 {
                     new SyncLoopPointEntry
@@ -1231,7 +1240,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "desktop", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "desktop", ExportedAt = 1000,
                 Ratings = new List<SyncRatingEntry>
                 {
                     new SyncRatingEntry
@@ -1248,7 +1257,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "phone", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "phone", ExportedAt = 2000,
                 Ratings = new List<SyncRatingEntry>
                 {
                     new SyncRatingEntry
@@ -1278,7 +1287,7 @@ namespace SeamlessLoop.Tests
         {
             var baseSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "desktop", ExportedAt = 1000,
+                SchemaVersion = 2, DeviceId = "desktop", ExportedAt = 1000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist
@@ -1302,7 +1311,7 @@ namespace SeamlessLoop.Tests
 
             var incomingSnap = new SyncSnapshot
             {
-                SchemaVersion = 1, DeviceId = "phone", ExportedAt = 2000,
+                SchemaVersion = 2, DeviceId = "phone", ExportedAt = 2000,
                 Playlists = new List<SyncPlaylist>
                 {
                     new SyncPlaylist
@@ -1334,6 +1343,99 @@ namespace SeamlessLoop.Tests
         }
 
         [Test]
+        public void Merge_V1Snapshots_AreRejected()
+        {
+            Assert.Throws<FormatException>(() => SyncMergeEngine.Merge(
+                new SyncSnapshot { SchemaVersion = 1, DeviceId = "base", ExportedAt = 1 },
+                new SyncSnapshot { SchemaVersion = 2, DeviceId = "incoming", ExportedAt = 2 }));
+        }
+
+        [Test]
+        public void Merge_ResultIsDetachedAndPlaylistNormalizationDoesNotMutateInputs()
+        {
+            var baseSnapshot = new SyncSnapshot
+            {
+                SchemaVersion = 2, DeviceId = "base", ExportedAt = 1,
+                LoopPoints = new List<SyncLoopPointEntry>
+                {
+                    new SyncLoopPointEntry
+                    {
+                        Song = new SyncSongIdentity { FileName = "loop-base.mp3", DurationMs = 10 },
+                        LoopPoint = new SyncLoopPoint { LoopStart = 1, LoopEnd = 9, LastModified = 1 }
+                    }
+                },
+                Playlists = new List<SyncPlaylist>
+                {
+                    new SyncPlaylist
+                    {
+                        Id = "shared", Name = "Base", CreatedAt = 1, ModifiedAt = 2,
+                        Items = new List<SyncPlaylistItem>
+                        {
+                            new SyncPlaylistItem { Song = new SyncSongIdentity { FileName = "base-item.mp3", DurationMs = 10 }, SortOrder = 7 }
+                        }
+                    }
+                }
+            };
+            var incomingSnapshot = new SyncSnapshot
+            {
+                SchemaVersion = 2, DeviceId = "incoming", ExportedAt = 2,
+                Ratings = new List<SyncRatingEntry>
+                {
+                    new SyncRatingEntry
+                    {
+                        Song = new SyncSongIdentity { FileName = "rating-incoming.mp3", DurationMs = 20 },
+                        Rating = new SyncRating { RatingValue = 4, LastModified = 2 }
+                    }
+                },
+                Playlists = new List<SyncPlaylist>
+                {
+                    new SyncPlaylist
+                    {
+                        Id = "shared", Name = "Incoming", CreatedAt = 1, ModifiedAt = 1,
+                        Items = new List<SyncPlaylistItem>
+                        {
+                            new SyncPlaylistItem { Song = new SyncSongIdentity { FileName = "incoming-item.mp3", DurationMs = 20 }, SortOrder = 9 }
+                        }
+                    }
+                }
+            };
+
+            var merged = SyncMergeEngine.Merge(baseSnapshot, incomingSnapshot).Merged;
+            var mergedLoop = merged.LoopPoints.Single();
+            var mergedRating = merged.Ratings.Single();
+            var mergedPlaylist = merged.Playlists.Single();
+
+            Assert.That(mergedLoop, Is.Not.SameAs(baseSnapshot.LoopPoints[0]));
+            Assert.That(mergedLoop.Song, Is.Not.SameAs(baseSnapshot.LoopPoints[0].Song));
+            Assert.That(mergedRating, Is.Not.SameAs(incomingSnapshot.Ratings[0]));
+            Assert.That(mergedRating.Rating, Is.Not.SameAs(incomingSnapshot.Ratings[0].Rating));
+            Assert.That(mergedPlaylist, Is.Not.SameAs(baseSnapshot.Playlists[0]));
+            Assert.That(mergedPlaylist.Items[0], Is.Not.SameAs(baseSnapshot.Playlists[0].Items[0]));
+            Assert.That(mergedPlaylist.Items[0].Song, Is.Not.SameAs(baseSnapshot.Playlists[0].Items[0].Song));
+            Assert.That(mergedPlaylist.Items.Select(x => x.SortOrder), Is.EqualTo(new[] { 0, 1 }));
+            Assert.That(baseSnapshot.Playlists[0].Items[0].SortOrder, Is.EqualTo(7));
+            Assert.That(incomingSnapshot.Playlists[0].Items[0].SortOrder, Is.EqualTo(9));
+
+            mergedLoop.Song.FileName = "mutated-loop.mp3";
+            mergedLoop.LoopPoint.LoopStart = 99;
+            mergedRating.Song.FileName = "mutated-rating.mp3";
+            mergedRating.Rating.RatingValue = 1;
+            mergedPlaylist.Name = "mutated-playlist";
+            mergedPlaylist.Items[0].Song.FileName = "mutated-item.mp3";
+            mergedPlaylist.Items[0].SortOrder = 42;
+
+            Assert.That(baseSnapshot.LoopPoints[0].Song.FileName, Is.EqualTo("loop-base.mp3"));
+            Assert.That(baseSnapshot.LoopPoints[0].LoopPoint.LoopStart, Is.EqualTo(1));
+            Assert.That(incomingSnapshot.Ratings[0].Song.FileName, Is.EqualTo("rating-incoming.mp3"));
+            Assert.That(incomingSnapshot.Ratings[0].Rating.RatingValue, Is.EqualTo(4));
+            Assert.That(baseSnapshot.Playlists[0].Name, Is.EqualTo("Base"));
+            Assert.That(baseSnapshot.Playlists[0].Items[0].Song.FileName, Is.EqualTo("base-item.mp3"));
+            Assert.That(baseSnapshot.Playlists[0].Items[0].SortOrder, Is.EqualTo(7));
+            Assert.That(incomingSnapshot.Playlists[0].Items[0].Song.FileName, Is.EqualTo("incoming-item.mp3"));
+            Assert.That(incomingSnapshot.Playlists[0].Items[0].SortOrder, Is.EqualTo(9));
+        }
+
+        [Test]
         public void StoreApply_MicroDiffTotalSamples_SameDuration_MatchesByTier1()
         {
             // Local track: TotalSamples=10583426 (desktop)
@@ -1343,7 +1445,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "phone",
                 ExportedAt = 1000,
                 Ratings = new List<SyncRatingEntry>
@@ -1375,7 +1477,7 @@ namespace SeamlessLoop.Tests
 
             var snap = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = "phone",
                 ExportedAt = 1000,
                 LoopPoints = new List<SyncLoopPointEntry>
@@ -1396,6 +1498,127 @@ namespace SeamlessLoop.Tests
             var result = _store.ApplySnapshotAsync(snap).Result;
             Assert.That(result.AppliedLoopPoints, Is.EqualTo(1),
                 "Tier 2 should match with ±10000 tolerance on totalSamples");
+        }
+
+        [Test]
+        public void StoreApply_Schema2PlaybackStatistics_AppliesAndExportRemainsV2()
+        {
+            InsertPlaybackTrack(1, "Café.mp3", 123456);
+
+            var snapshot = SyncSnapshotSerializer.Deserialize(@"{
+  ""schemaVersion"": 2,
+  ""deviceId"": ""android-pixel-8"",
+  ""exportedAt"": 1783779600000,
+  ""playlists"": [],
+  ""loopPoints"": [],
+  ""ratings"": [],
+  ""playbackStatistics"": {
+    ""dateBucketBasis"": ""sourceLocal"",
+    ""devices"": [
+      {
+        ""deviceId"": ""android-pixel-8"",
+        ""displayName"": ""Google Pixel 8"",
+        ""firstSeenAtUtcMs"": 1783588500000,
+        ""lastSeenAtUtcMs"": 1783779600000,
+        ""currentGeneration"": 2,
+        ""platform"": ""android"",
+        ""displayNameUpdatedAtUtcMs"": 1783588500000
+      }
+    ],
+    ""songs"": [
+      {
+        ""song"": {
+          ""fileName"": ""  CAFÉ.MP3  "",
+          ""durationMs"": 123456,
+          ""totalSamples"": 5444400,
+          ""normalizedFileName"": ""café.mp3""
+        },
+        ""contributions"": [
+          {
+            ""deviceId"": ""android-pixel-8"",
+            ""generation"": 2,
+            ""datedListenMs"": { ""2026-07-10"": 60000 },
+            ""undatedListenMs"": 12000,
+            ""firstPlayedAtUtcMs"": 1783717800000,
+            ""lastPlayedAtUtcMs"": 1783779600000,
+            ""updatedAtUtcMs"": 1783779600000
+          }
+        ]
+      }
+    ],
+    ""tombstones"": []
+  }
+}");
+
+            var result = _store.ApplySnapshotAsync(snapshot).Result;
+            Assert.That(result.AppliedLoopPoints + result.AppliedRatings + result.AppliedPlaylists, Is.EqualTo(0));
+
+            using (var connection = _storeDbHelper.GetConnection())
+            {
+                PlaybackStatisticsSyncSchema.EnsureSchema(connection);
+                Assert.That(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaybackSyncContributions"), Is.EqualTo(1));
+                Assert.That(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaybackSyncSongs WHERE LocalTrackId IS NOT NULL"), Is.EqualTo(1));
+            }
+
+            var exported = _store.ExportSnapshotAsync().Result;
+            Assert.That(exported.SchemaVersion, Is.EqualTo(2));
+            Assert.That(exported.PlaybackStatistics, Is.Not.Null);
+        }
+
+        [Test]
+        public void StoreApply_Schema2PlatformConflict_RollsBackStatisticsTransaction()
+        {
+            using (var connection = _storeDbHelper.GetConnection())
+            {
+                PlaybackStatisticsSyncSchema.EnsureSchema(connection);
+                connection.Execute("INSERT INTO PlaybackSyncDevices VALUES ('device-a',0,'Desktop',1,'windows',1,1)");
+            }
+
+            var snapshot = SyncSnapshotSerializer.Deserialize(@"{
+  ""schemaVersion"": 2,
+  ""deviceId"": ""device-a"",
+  ""exportedAt"": 1,
+  ""playlists"": [],
+  ""loopPoints"": [],
+  ""ratings"": [],
+  ""playbackStatistics"": {
+    ""dateBucketBasis"": ""sourceLocal"",
+    ""devices"": [
+      {
+        ""deviceId"": ""device-a"",
+        ""displayName"": ""Phone"",
+        ""firstSeenAtUtcMs"": 0,
+        ""lastSeenAtUtcMs"": 1,
+        ""currentGeneration"": 1,
+        ""platform"": ""android"",
+        ""displayNameUpdatedAtUtcMs"": 1
+      }
+    ],
+    ""songs"": [
+      {
+        ""song"": {
+          ""fileName"": ""rollback.mp3"",
+          ""durationMs"": 1000,
+          ""normalizedFileName"": ""rollback.mp3""
+        },
+        ""contributions"": []
+      }
+    ],
+    ""tombstones"": []
+  }
+}");
+
+            Assert.Throws<AggregateException>(() =>
+            {
+                var _ = _store.ApplySnapshotAsync(snapshot).Result;
+            });
+
+            using (var connection = _storeDbHelper.GetConnection())
+            {
+                PlaybackStatisticsSyncSchema.EnsureSchema(connection);
+                Assert.That(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaybackSyncSongs"), Is.EqualTo(0));
+                Assert.That(connection.ExecuteScalar<int>("SELECT COUNT(1) FROM PlaybackSyncDevices WHERE DeviceId='device-a' AND Platform='windows'"), Is.EqualTo(1));
+            }
         }
 
         // ────────────────────────────────────────────────────────
@@ -1457,6 +1680,16 @@ namespace SeamlessLoop.Tests
                 conn.Execute(
                     "INSERT OR IGNORE INTO PlaylistItems (PlaylistId, SongId, SortOrder) VALUES (@Pid, @Sid, @Order)",
                     new { Pid = playlistId, Sid = songId, Order = sortOrder });
+            }
+        }
+
+        private void InsertPlaybackTrack(int id, string fileName, long durationMs)
+        {
+            using (var conn = new SQLiteConnection($"Data Source={_storeDbPath};Version=3;"))
+            {
+                conn.Open();
+                conn.Execute("INSERT OR REPLACE INTO Tracks (Id, FileName, FilePath, TotalSamples, DurationMs, LastModified) VALUES (@Id, @FileName, @FilePath, 1, @DurationMs, @Now)",
+                    new { Id = id, FileName = fileName, FilePath = @"C:\Music\" + fileName, DurationMs = durationMs, Now = DateTime.Now });
             }
         }
     }

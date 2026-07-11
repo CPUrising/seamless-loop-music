@@ -13,14 +13,14 @@ namespace seamless_loop_music.Services.Sync
     public class GitHubSyncManagementService : IGitHubSyncManagementService
     {
         private readonly IDatabaseHelper _db;
-        private readonly ISyncSnapshotStore _store;
         private readonly ISyncBackend _backend;
+        private readonly IGitHubSyncPreparationService _preparation;
 
-        public GitHubSyncManagementService(IDatabaseHelper db, ISyncSnapshotStore store, ISyncBackend backend)
+        public GitHubSyncManagementService(IDatabaseHelper db, ISyncBackend backend, IGitHubSyncPreparationService preparation)
         {
             _db = db ?? throw new ArgumentNullException(nameof(db));
-            _store = store ?? throw new ArgumentNullException(nameof(store));
             _backend = backend ?? throw new ArgumentNullException(nameof(backend));
+            _preparation = preparation ?? throw new ArgumentNullException(nameof(preparation));
         }
 
         // ──────────────────────────────────────────
@@ -29,59 +29,71 @@ namespace seamless_loop_music.Services.Sync
 
         public async Task<SyncDataOverview> RefreshOverviewAsync(CancellationToken ct = default)
         {
-            return await Task.Run(async () =>
+            try
             {
-                var overview = new SyncDataOverview();
-
-                // ── Local summary ──
-                overview.Local = BuildLocalSummary();
-
-                // ── Cloud ──
-                var config = GetConfig();
-                if (!config.IsConfigured)
+                return await Task.Run(async () =>
                 {
-                    overview.Status = "not_configured";
+                    ct.ThrowIfCancellationRequested();
+
+                    var overview = new SyncDataOverview();
+
+                    // ── Local summary ──
+                    overview.Local = BuildLocalSummary();
+
+                    // ── Cloud ──
+                    var config = GetConfig();
+                    if (!config.IsConfigured)
+                    {
+                        overview.Status = "not_configured";
+                        return overview;
+                    }
+
+                    RemoteSyncSnapshot remote;
+                    try
+                    {
+                        remote = await _backend.DownloadAsync(config, ct).ConfigureAwait(false);
+                    }
+                    catch (SyncBackendException ex)
+                    {
+                        overview.Status = "backend_error";
+                        overview.ErrorMessage = ex.Message;
+                        return overview;
+                    }
+
+                    if (!remote.Exists || remote.Snapshot == null)
+                    {
+                        overview.CloudExists = false;
+                        return overview;
+                    }
+
+                    overview.CloudExists = true;
+                    var snap = remote.Snapshot;
+
+                    // ── Cloud summary ──
+                    overview.Cloud = new CloudSyncDataSummary
+                    {
+                        PlaylistCount = snap.Playlists?.Count ?? 0,
+                        LoopPointCount = snap.LoopPoints?.Count ?? 0,
+                        RatingCount = snap.Ratings?.Count ?? 0
+                    };
+
+                    // ── Distinct cloud song references ──
+                    var cloudRefs = CollectCloudSongReferences(snap);
+                    overview.Cloud.SongReferenceCount = cloudRefs.Count;
+
+                    // ── Match local tracks ──
+                    MatchCloudReferences(cloudRefs, overview);
+
                     return overview;
-                }
-
-                RemoteSyncSnapshot remote;
-                try
+                }).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return new SyncDataOverview
                 {
-                    remote = await _backend.DownloadAsync(config, ct).ConfigureAwait(false);
-                }
-                catch (SyncBackendException ex)
-                {
-                    overview.Status = "backend_error";
-                    overview.ErrorMessage = ex.Message;
-                    return overview;
-                }
-
-                if (!remote.Exists || remote.Snapshot == null)
-                {
-                    overview.CloudExists = false;
-                    return overview;
-                }
-
-                overview.CloudExists = true;
-                var snap = remote.Snapshot;
-
-                // ── Cloud summary ──
-                overview.Cloud = new CloudSyncDataSummary
-                {
-                    PlaylistCount = snap.Playlists?.Count ?? 0,
-                    LoopPointCount = snap.LoopPoints?.Count ?? 0,
-                    RatingCount = snap.Ratings?.Count ?? 0
+                    Status = "cancelled"
                 };
-
-                // ── Distinct cloud song references ──
-                var cloudRefs = CollectCloudSongReferences(snap);
-                overview.Cloud.SongReferenceCount = cloudRefs.Count;
-
-                // ── Match local tracks ──
-                MatchCloudReferences(cloudRefs, overview);
-
-                return overview;
-            }).ConfigureAwait(false);
+            }
         }
 
         // ──────────────────────────────────────────
@@ -101,27 +113,12 @@ namespace seamless_loop_music.Services.Sync
                 };
             }
 
-            // Export local snapshot
-            SyncSnapshot localSnapshot;
-            try
-            {
-                localSnapshot = await _store.ExportSnapshotAsync().ConfigureAwait(false);
-            }
-            catch (Exception ex)
-            {
-                return new SyncManagementOperationResult
-                {
-                    Success = false,
-                    Status = "export_failed",
-                    ErrorMessage = $"Failed to export local snapshot: {ex.Message}"
-                };
-            }
-
             // Download remote to get current SHA (404 → sha=null)
             string expectedRevision = null;
+            RemoteSyncSnapshot remote = null;
             try
             {
-                var remote = await _backend.DownloadAsync(config, ct).ConfigureAwait(false);
+                remote = await _backend.DownloadAsync(config, ct).ConfigureAwait(false);
                 if (remote.Exists)
                     expectedRevision = remote.Revision;
             }
@@ -143,11 +140,34 @@ namespace seamless_loop_music.Services.Sync
                     ErrorMessage = ex.Message
                 };
             }
+            catch (SyncBackendException ex)
+            {
+                return new SyncManagementOperationResult
+                {
+                    Success = false,
+                    Status = "backend_error",
+                    ErrorMessage = ex.Message
+                };
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return new SyncManagementOperationResult
+                {
+                    Success = false,
+                    Status = "cancelled",
+                    ErrorMessage = "GitHub sync was cancelled."
+                };
+            }
 
-            // Upload local snapshot with expectedRevision
             try
             {
-                var newSha = await _backend.UploadAsync(config, localSnapshot, expectedRevision, ct)
+                if (remote != null && remote.Exists)
+                    SyncSnapshotSerializer.ValidateV2Snapshot(remote.Snapshot);
+
+                var prepared = await _preparation.PrepareForcePushAsync(
+                    remote != null && remote.Exists ? remote.Snapshot : null, ct).ConfigureAwait(false);
+                ct.ThrowIfCancellationRequested();
+                var newSha = await _backend.UploadAsync(config, prepared.Outbound, expectedRevision, ct)
                     .ConfigureAwait(false);
 
                 // Save metadata
@@ -189,6 +209,33 @@ namespace seamless_loop_music.Services.Sync
                     ErrorMessage = ex.Message
                 };
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return new SyncManagementOperationResult
+                {
+                    Success = false,
+                    Status = "cancelled",
+                    ErrorMessage = "GitHub sync was cancelled."
+                };
+            }
+            catch (InvalidOperationException ex)
+            {
+                return new SyncManagementOperationResult
+                {
+                    Success = false,
+                    Status = "preparation_failed",
+                    ErrorMessage = ex.Message
+                };
+            }
+            catch (Exception ex)
+            {
+                return new SyncManagementOperationResult
+                {
+                    Success = false,
+                    Status = "preparation_failed",
+                    ErrorMessage = ex.Message
+                };
+            }
         }
 
         // ──────────────────────────────────────────
@@ -197,19 +244,21 @@ namespace seamless_loop_music.Services.Sync
 
         public async Task<SyncManagementOperationResult> DeleteCloudSnapshotAsync(CancellationToken ct = default)
         {
-            var config = GetConfig();
-            if (!config.IsConfigured)
-            {
-                return new SyncManagementOperationResult
-                {
-                    Success = false,
-                    Status = "not_configured",
-                    ErrorMessage = "GitHub sync is not configured."
-                };
-            }
-
             try
             {
+                ct.ThrowIfCancellationRequested();
+
+                var config = GetConfig();
+                if (!config.IsConfigured)
+                {
+                    return new SyncManagementOperationResult
+                    {
+                        Success = false,
+                        Status = "not_configured",
+                        ErrorMessage = "GitHub sync is not configured."
+                    };
+                }
+
                 await _backend.DeleteAsync(config, ct).ConfigureAwait(false);
 
                 // Clear saved sync metadata
@@ -249,6 +298,14 @@ namespace seamless_loop_music.Services.Sync
                     ErrorMessage = ex.Message
                 };
             }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
+                return new SyncManagementOperationResult
+                {
+                    Success = false,
+                    Status = "cancelled"
+                };
+            }
         }
 
         // ──────────────────────────────────────────
@@ -258,62 +315,83 @@ namespace seamless_loop_music.Services.Sync
         public async Task<SyncManagementOperationResult> ClearLocalSyncDataAsync(
             ClearLocalSyncDataSelection selection, CancellationToken ct = default)
         {
-            return await Task.Run(() =>
+            try
             {
-                if (selection == null || !selection.HasAny)
+                return await Task.Run(() =>
                 {
+                    ct.ThrowIfCancellationRequested();
+
+                    if (selection == null || !selection.HasAny)
+                    {
+                        return new SyncManagementOperationResult
+                        {
+                            Success = false,
+                            Status = "no_selection",
+                            ErrorMessage = "No data categories selected to clear."
+                        };
+                    }
+
+                    ct.ThrowIfCancellationRequested();
+                    int affected = 0;
+
+                    using (var conn = _db.GetConnection())
+                    using (var trans = conn.BeginTransaction())
+                    {
+                        if (selection.ClearPlaylists)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            // Delete playlist items first (though cascade should handle it)
+                            conn.Execute("DELETE FROM PlaylistItems", transaction: trans);
+                            ct.ThrowIfCancellationRequested();
+                            int plCount = conn.Execute("DELETE FROM Playlists", transaction: trans);
+                            affected += plCount;
+
+                            ct.ThrowIfCancellationRequested();
+                            // Clean playlist sync-id mappings from AppSettings
+                            conn.Execute(
+                                "DELETE FROM AppSettings WHERE Key LIKE 'Sync.PlaylistId.%' OR Key LIKE 'Sync.PlaylistLocalId.%'",
+                                transaction: trans);
+                        }
+
+                        if (selection.ClearLoopPoints)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            int lpCount = conn.Execute("DELETE FROM LoopPoints", transaction: trans);
+                            affected += lpCount;
+                        }
+
+                        if (selection.ClearRatings)
+                        {
+                            ct.ThrowIfCancellationRequested();
+                            int rtCount = conn.Execute("DELETE FROM UserRatings", transaction: trans);
+                            affected += rtCount;
+                        }
+
+                        ct.ThrowIfCancellationRequested();
+                        trans.Commit();
+                    }
+
+                    // Complete metadata cleanup after the transaction commits so cancellation
+                    // cannot leave the database domains in a partially-cleared state.
+                    _db.SetSetting("Sync.GitHub.LastRemoteSha", "");
+                    _db.SetSetting("Sync.GitHub.LastSyncTime", "");
+
                     return new SyncManagementOperationResult
                     {
-                        Success = false,
-                        Status = "no_selection",
-                        ErrorMessage = "No data categories selected to clear."
+                        Success = true,
+                        Status = "cleared",
+                        AffectedCount = affected
                     };
-                }
-
-                int affected = 0;
-
-                using (var conn = _db.GetConnection())
-                using (var trans = conn.BeginTransaction())
-                {
-                    if (selection.ClearPlaylists)
-                    {
-                        // Delete playlist items first (though cascade should handle it)
-                        conn.Execute("DELETE FROM PlaylistItems", transaction: trans);
-                        int plCount = conn.Execute("DELETE FROM Playlists", transaction: trans);
-                        affected += plCount;
-
-                        // Clean playlist sync-id mappings from AppSettings
-                        conn.Execute(
-                            "DELETE FROM AppSettings WHERE Key LIKE 'Sync.PlaylistId.%' OR Key LIKE 'Sync.PlaylistLocalId.%'",
-                            transaction: trans);
-                    }
-
-                    if (selection.ClearLoopPoints)
-                    {
-                        int lpCount = conn.Execute("DELETE FROM LoopPoints", transaction: trans);
-                        affected += lpCount;
-                    }
-
-                    if (selection.ClearRatings)
-                    {
-                        int rtCount = conn.Execute("DELETE FROM UserRatings", transaction: trans);
-                        affected += rtCount;
-                    }
-
-                    trans.Commit();
-                }
-
-                // Clear sync metadata
-                _db.SetSetting("Sync.GitHub.LastRemoteSha", "");
-                _db.SetSetting("Sync.GitHub.LastSyncTime", "");
-
+                }).ConfigureAwait(false);
+            }
+            catch (OperationCanceledException) when (ct.IsCancellationRequested)
+            {
                 return new SyncManagementOperationResult
                 {
-                    Success = true,
-                    Status = "cleared",
-                    AffectedCount = affected
+                    Success = false,
+                    Status = "cancelled"
                 };
-            }).ConfigureAwait(false);
+            }
         }
 
         // ──────────────────────────────────────────

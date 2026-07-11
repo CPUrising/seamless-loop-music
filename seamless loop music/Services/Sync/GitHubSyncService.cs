@@ -14,27 +14,12 @@ namespace seamless_loop_music.Services.Sync
     public class GitHubSyncService : IGitHubSyncService
     {
         private readonly IDatabaseHelper _db;
-        private readonly ISyncSnapshotStore _store;
-        private readonly ISyncBackend _backend;
         private readonly GitHubSyncCoordinator _coordinator;
 
-        public GitHubSyncService(IDatabaseHelper db, ISyncSnapshotStore store, ISyncBackend backend)
-        {
-            _db = db ?? throw new ArgumentNullException(nameof(db));
-            _store = store ?? throw new ArgumentNullException(nameof(store));
-            _backend = backend ?? throw new ArgumentNullException(nameof(backend));
-            _coordinator = new GitHubSyncCoordinator(_store, _backend, _db);
-        }
-
-        /// <summary>
-        /// Constructor that takes an already-built coordinator (for DI or test convenience).
-        /// </summary>
         public GitHubSyncService(IDatabaseHelper db, GitHubSyncCoordinator coordinator)
         {
             _db = db ?? throw new ArgumentNullException(nameof(db));
             _coordinator = coordinator ?? throw new ArgumentNullException(nameof(coordinator));
-            _store = null; // not used directly
-            _backend = null;
         }
 
         /// <inheritdoc />

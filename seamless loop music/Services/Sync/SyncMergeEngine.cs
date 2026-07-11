@@ -16,15 +16,26 @@ namespace seamless_loop_music.Services.Sync
         /// </summary>
         public static SyncMergeResult Merge(SyncSnapshot baseSnapshot, SyncSnapshot incomingSnapshot)
         {
+            if (baseSnapshot == null)
+                throw new ArgumentNullException(nameof(baseSnapshot));
+            if (incomingSnapshot == null)
+                throw new ArgumentNullException(nameof(incomingSnapshot));
+
+            if (baseSnapshot.SchemaVersion != 2)
+                throw new FormatException($"Unsupported schemaVersion: {baseSnapshot.SchemaVersion}. Expected: 2.");
+            if (incomingSnapshot.SchemaVersion != 2)
+                throw new FormatException($"Unsupported schemaVersion: {incomingSnapshot.SchemaVersion}. Expected: 2.");
+
             var conflicts = new List<SyncMergeConflict>();
             var merged = new SyncSnapshot
             {
-                SchemaVersion = 1,
+                SchemaVersion = 2,
                 DeviceId = baseSnapshot.DeviceId ?? incomingSnapshot.DeviceId,
                 ExportedAt = Math.Max(baseSnapshot.ExportedAt, incomingSnapshot.ExportedAt),
                 Playlists = new List<SyncPlaylist>(),
                 LoopPoints = new List<SyncLoopPointEntry>(),
-                Ratings = new List<SyncRatingEntry>()
+                Ratings = new List<SyncRatingEntry>(),
+                PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Empty()
             };
 
             // ── 1. Merge loop points ────────────────────────────────────────
@@ -35,6 +46,10 @@ namespace seamless_loop_music.Services.Sync
 
             // ── 3. Merge playlists ──────────────────────────────────────────
             MergePlaylists(baseSnapshot.Playlists, incomingSnapshot.Playlists, merged.Playlists, conflicts);
+
+            merged.PlaybackStatistics = PlaybackStatisticsSyncCanonicalizer.Merge(
+                baseSnapshot.PlaybackStatistics,
+                incomingSnapshot.PlaybackStatistics);
 
             return new SyncMergeResult { Merged = merged, Conflicts = conflicts };
         }
@@ -62,7 +77,7 @@ namespace seamless_loop_music.Services.Sync
                 if (!baseById.TryGetValue(key, out var baseEntry))
                 {
                     // New entry from incoming
-                    result.Add(incoming);
+                    result.Add(Clone(incoming));
                     continue;
                 }
 
@@ -72,8 +87,8 @@ namespace seamless_loop_music.Services.Sync
                 if (resolved != null)
                     result.Add(new SyncLoopPointEntry
                     {
-                        Song = incoming.Song,
-                        LoopPoint = resolved
+                        Song = Clone(incoming.Song),
+                        LoopPoint = Clone(resolved)
                     });
             }
 
@@ -81,7 +96,7 @@ namespace seamless_loop_music.Services.Sync
             foreach (var kvp in baseById)
             {
                 if (!seen.Contains(kvp.Key))
-                    result.Add(kvp.Value);
+                    result.Add(Clone(kvp.Value));
             }
         }
 
@@ -135,7 +150,7 @@ namespace seamless_loop_music.Services.Sync
 
                 if (!baseById.TryGetValue(key, out var baseEntry))
                 {
-                    result.Add(incoming);
+                    result.Add(Clone(incoming));
                     continue;
                 }
 
@@ -143,15 +158,15 @@ namespace seamless_loop_music.Services.Sync
                 if (resolved != null)
                     result.Add(new SyncRatingEntry
                     {
-                        Song = incoming.Song,
-                        Rating = resolved
+                        Song = Clone(incoming.Song),
+                        Rating = Clone(resolved)
                     });
             }
 
             foreach (var kvp in baseById)
             {
                 if (!seen.Contains(kvp.Key))
-                    result.Add(kvp.Value);
+                    result.Add(Clone(kvp.Value));
             }
         }
 
@@ -210,7 +225,7 @@ namespace seamless_loop_music.Services.Sync
                 if (!baseById.TryGetValue(incoming.Id, out var basePl))
                 {
                     // New playlist from incoming
-                    result.Add(incoming);
+                    result.Add(Clone(incoming));
                     continue;
                 }
 
@@ -223,7 +238,7 @@ namespace seamless_loop_music.Services.Sync
             foreach (var kvp in baseById)
             {
                 if (!seenIds.Contains(kvp.Key))
-                    result.Add(kvp.Value);
+                    result.Add(Clone(kvp.Value));
             }
         }
 
@@ -255,7 +270,7 @@ namespace seamless_loop_music.Services.Sync
                 if (item.Song != null)
                     winnerKeys.Add(GetIdentityKey(item.Song));
 
-            var mergedItems = new List<SyncPlaylistItem>(winner.Items ?? new List<SyncPlaylistItem>());
+            var mergedItems = (winner.Items ?? new List<SyncPlaylistItem>()).Select(Clone).ToList();
 
             if (loser.Items != null)
             {
@@ -265,7 +280,7 @@ namespace seamless_loop_music.Services.Sync
                     {
                         mergedItems.Add(new SyncPlaylistItem
                         {
-                            Song = item.Song,
+                            Song = Clone(item.Song),
                             SortOrder = mergedItems.Count // appended
                         });
                     }
@@ -288,7 +303,7 @@ namespace seamless_loop_music.Services.Sync
                         // Keep incoming totalSamples, use merged item's sortOrder
                         mergedItems[i] = new SyncPlaylistItem
                         {
-                            Song = incomingSong,
+                            Song = Clone(incomingSong),
                             SortOrder = mergedItems[i].SortOrder
                         };
                     }
@@ -341,6 +356,74 @@ namespace seamless_loop_music.Services.Sync
             if (song.TotalSamples.HasValue && song.TotalSamples.Value > 0)
                 return $"{fn}|smp:{song.TotalSamples.Value}";
             return fn;
+        }
+
+        private static SyncLoopPointEntry Clone(SyncLoopPointEntry value)
+        {
+            return value == null ? null : new SyncLoopPointEntry
+            {
+                Song = Clone(value.Song),
+                LoopPoint = Clone(value.LoopPoint)
+            };
+        }
+
+        private static SyncRatingEntry Clone(SyncRatingEntry value)
+        {
+            return value == null ? null : new SyncRatingEntry
+            {
+                Song = Clone(value.Song),
+                Rating = Clone(value.Rating)
+            };
+        }
+
+        private static SyncPlaylist Clone(SyncPlaylist value)
+        {
+            return value == null ? null : new SyncPlaylist
+            {
+                Id = value.Id,
+                Name = value.Name,
+                CreatedAt = value.CreatedAt,
+                ModifiedAt = value.ModifiedAt,
+                Items = (value.Items ?? new List<SyncPlaylistItem>()).Select(Clone).ToList()
+            };
+        }
+
+        private static SyncPlaylistItem Clone(SyncPlaylistItem value)
+        {
+            return value == null ? null : new SyncPlaylistItem
+            {
+                Song = Clone(value.Song),
+                SortOrder = value.SortOrder
+            };
+        }
+
+        private static SyncSongIdentity Clone(SyncSongIdentity value)
+        {
+            return value == null ? null : new SyncSongIdentity
+            {
+                FileName = value.FileName,
+                DurationMs = value.DurationMs,
+                TotalSamples = value.TotalSamples
+            };
+        }
+
+        private static SyncLoopPoint Clone(SyncLoopPoint value)
+        {
+            return value == null ? null : new SyncLoopPoint
+            {
+                LoopStart = value.LoopStart,
+                LoopEnd = value.LoopEnd,
+                LastModified = value.LastModified
+            };
+        }
+
+        private static SyncRating Clone(SyncRating value)
+        {
+            return value == null ? null : new SyncRating
+            {
+                RatingValue = value.RatingValue,
+                LastModified = value.LastModified
+            };
         }
     }
 }

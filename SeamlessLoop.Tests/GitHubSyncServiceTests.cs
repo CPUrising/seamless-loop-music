@@ -16,6 +16,7 @@ namespace SeamlessLoop.Tests
         private string _dbPath;
         private DatabaseHelper _dbHelper;
         private SQLiteSyncSnapshotStore _store;
+        private FakeSyncPreparationService _preparation;
 
         [SetUp]
         public void SetUp()
@@ -24,6 +25,7 @@ namespace SeamlessLoop.Tests
             _dbHelper = new DatabaseHelper(_dbPath);
             _dbHelper.InitializeDatabase();
             _store = new SQLiteSyncSnapshotStore(_dbHelper);
+            _preparation = new FakeSyncPreparationService(_store);
         }
 
         [TearDown]
@@ -45,7 +47,7 @@ namespace SeamlessLoop.Tests
         public void GetConfig_ReturnsDefaults_WhenNothingSaved()
         {
             var backend = new FakeSyncBackend();
-            var service = new GitHubSyncService(_dbHelper, _store, backend);
+            var service = CreateService(backend);
 
             var config = service.GetConfig();
 
@@ -65,7 +67,7 @@ namespace SeamlessLoop.Tests
         public void SaveConfig_RoundTrips()
         {
             var backend = new FakeSyncBackend();
-            var service = new GitHubSyncService(_dbHelper, _store, backend);
+            var service = CreateService(backend);
 
             var input = new GitHubSyncConfig
             {
@@ -95,7 +97,7 @@ namespace SeamlessLoop.Tests
         public void SaveConfig_NullFields_FallsBackToDefaults()
         {
             var backend = new FakeSyncBackend();
-            var service = new GitHubSyncService(_dbHelper, _store, backend);
+            var service = CreateService(backend);
 
             service.SaveConfig(new GitHubSyncConfig
             {
@@ -119,7 +121,7 @@ namespace SeamlessLoop.Tests
         public void GetLastSyncTimeDisplay_ReturnsNever_WhenNeverSynced()
         {
             var backend = new FakeSyncBackend();
-            var service = new GitHubSyncService(_dbHelper, _store, backend);
+            var service = CreateService(backend);
 
             Assert.That(service.GetLastSyncTimeDisplay(), Is.EqualTo("Never"));
         }
@@ -128,7 +130,7 @@ namespace SeamlessLoop.Tests
         public void GetLastSyncTimeDisplay_ReturnsFormatted_WhenSynced()
         {
             var backend = new FakeSyncBackend();
-            var service = new GitHubSyncService(_dbHelper, _store, backend);
+            var service = CreateService(backend);
 
             var epochMs = new DateTimeOffset(2026, 6, 15, 10, 30, 0, TimeSpan.Zero)
                 .ToUnixTimeMilliseconds();
@@ -153,7 +155,7 @@ namespace SeamlessLoop.Tests
                 UploadResult = "some_sha"
             };
 
-            var service = new GitHubSyncService(_dbHelper, _store, fakeBackend);
+            var service = CreateService(fakeBackend);
 
             // Save a valid config
             service.SaveConfig(new GitHubSyncConfig
@@ -173,12 +175,18 @@ namespace SeamlessLoop.Tests
         public async Task SyncNowAsync_NotConfigured_ReturnsFailure()
         {
             var fakeBackend = new FakeSyncBackend();
-            var service = new GitHubSyncService(_dbHelper, _store, fakeBackend);
+            var service = CreateService(fakeBackend);
 
             var report = await service.SyncNowAsync();
 
             Assert.That(report.Success, Is.False);
             Assert.That(report.Status, Is.EqualTo("not_configured"));
+        }
+
+        private GitHubSyncService CreateService(ISyncBackend backend)
+        {
+            return new GitHubSyncService(_dbHelper,
+                new GitHubSyncCoordinator(backend, _dbHelper, _preparation));
         }
     }
 }

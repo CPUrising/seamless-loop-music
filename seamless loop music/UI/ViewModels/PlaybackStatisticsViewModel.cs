@@ -7,7 +7,6 @@ using Prism.Commands;
 using Prism.Events;
 using Prism.Mvvm;
 using Prism.Regions;
-using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.Events;
 using seamless_loop_music.Models;
 using seamless_loop_music.Services;
@@ -16,7 +15,7 @@ namespace seamless_loop_music.UI.ViewModels
 {
     public class PlaybackStatisticsViewModel : BindableBase, INavigationAware
     {
-        private readonly IPlaybackStatisticsRepository _statisticsRepository;
+        private readonly IPlaybackStatisticsLocalService _statisticsService;
         private int _loadVersion;
         private PlaybackStatisticsPeriod _selectedPeriod = PlaybackStatisticsPeriod.Day;
         private bool _isLoading;
@@ -66,9 +65,9 @@ namespace seamless_loop_music.UI.ViewModels
         public bool IsYearSelected => SelectedPeriod == PlaybackStatisticsPeriod.Year;
         public bool IsAllSelected => SelectedPeriod == PlaybackStatisticsPeriod.All;
 
-        public PlaybackStatisticsViewModel(IPlaybackStatisticsRepository statisticsRepository, IEventAggregator eventAggregator)
+        public PlaybackStatisticsViewModel(IPlaybackStatisticsLocalService statisticsService, IEventAggregator eventAggregator)
         {
-            _statisticsRepository = statisticsRepository;
+            _statisticsService = statisticsService;
             SelectPeriodCommand = new DelegateCommand<PlaybackStatisticsPeriod?>(SelectPeriod);
             eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(_ =>
             {
@@ -103,7 +102,7 @@ namespace seamless_loop_music.UI.ViewModels
 
             try
             {
-                var results = await _statisticsRepository.GetTopTracksAsync(SelectedPeriod, int.MaxValue);
+                var results = await _statisticsService.GetTopTracksAsync(SelectedPeriod, int.MaxValue);
                 if (requestVersion != _loadVersion) return;
 
                 PopulateTracks(CreateRankedTracks(results));

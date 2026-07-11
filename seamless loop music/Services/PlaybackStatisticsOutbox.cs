@@ -6,6 +6,7 @@ using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
 using Newtonsoft.Json;
+using Newtonsoft.Json.Linq;
 using seamless_loop_music.Models;
 
 namespace seamless_loop_music.Services
@@ -16,7 +17,7 @@ namespace seamless_loop_music.Services
         private readonly string _backupPath;
         private readonly object _fileLock = new object();
 
-        public PlaybackStatisticsOutbox() : this(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "PlaybackSegments.pending.json")) { }
+        public PlaybackStatisticsOutbox() : this(Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "Data", "PlaybackStatistics.pending.json")) { }
 
         public PlaybackStatisticsOutbox(string path)
         {
@@ -25,18 +26,18 @@ namespace seamless_loop_music.Services
             _backupPath = path + ".bak";
         }
 
-        public IReadOnlyList<PlaybackSegment> Load()
+        public PlaybackStatisticsOutboxState LoadState()
         {
             lock (_fileLock)
             {
-                List<PlaybackSegment> primary;
+                PlaybackStatisticsOutboxState primary;
                 if (TryRead(_path, out primary))
                 {
                     TryDelete(_backupPath);
                     return primary;
                 }
 
-                List<PlaybackSegment> backup;
+                PlaybackStatisticsOutboxState backup;
                 if (TryRead(_backupPath, out backup))
                 {
                     RestoreBackup();
@@ -45,34 +46,33 @@ namespace seamless_loop_music.Services
 
                 if (File.Exists(_path)) IsolateCorrupt(_path);
                 if (File.Exists(_backupPath)) IsolateCorrupt(_backupPath);
-                return new List<PlaybackSegment>();
+                var empty = new PlaybackStatisticsOutboxState();
+                SaveEnvelopeCore(empty);
+                return empty;
             }
         }
 
-        public Task SaveAsync(IEnumerable<PlaybackSegment> segments)
+        public Task SaveSettlementEventsAsync(IEnumerable<PlaybackStatisticsSettlement> settlements)
         {
-            return Task.Run(() => SaveCore(segments));
+            return Task.Run(() => SaveSettlementEvents(settlements));
         }
 
-        private void SaveCore(IEnumerable<PlaybackSegment> segments)
+        public void SaveSettlementEvents(IEnumerable<PlaybackStatisticsSettlement> settlements)
+        {
+            if (settlements == null) throw new ArgumentNullException(nameof(settlements));
+            SaveEnvelopeCore(new PlaybackStatisticsOutboxState { SettlementEvents = settlements.ToList() });
+        }
+
+        private void SaveJsonCore(string json)
         {
             lock (_fileLock)
             {
-                var valid = (segments ?? Enumerable.Empty<PlaybackSegment>()).Where(IsValid).ToList();
                 var directory = Path.GetDirectoryName(_path);
                 if (!string.IsNullOrEmpty(directory)) Directory.CreateDirectory(directory);
-                if (valid.Count == 0)
-                {
-                    DeleteIfExists(_path);
-                    DeleteIfExists(_backupPath);
-                    CleanupTempFiles();
-                    return;
-                }
-
                 var tempPath = _path + "." + Guid.NewGuid().ToString("N") + ".tmp";
                 try
                 {
-                    WriteTemp(tempPath, JsonConvert.SerializeObject(valid, Formatting.None));
+                    WriteTemp(tempPath, json);
                     if (!File.Exists(_path))
                     {
                         File.Move(tempPath, _path);
@@ -111,16 +111,22 @@ namespace seamless_loop_music.Services
             }
         }
 
-        private bool TryRead(string path, out List<PlaybackSegment> segments)
+        private bool TryRead(string path, out PlaybackStatisticsOutboxState state)
         {
-            segments = null;
+            state = null;
             if (!File.Exists(path)) return false;
             try
             {
-                var deserialized = JsonConvert.DeserializeObject<List<PlaybackSegment>>(File.ReadAllText(path)) ?? new List<PlaybackSegment>();
-                if (deserialized.Any(segment => !IsValid(segment))) return false;
-
-                segments = deserialized;
+                var json = File.ReadAllText(path);
+                var root = JObject.Parse(json, new JsonLoadSettings
+                {
+                    DuplicatePropertyNameHandling = DuplicatePropertyNameHandling.Error
+                });
+                var allowed = new HashSet<string>(StringComparer.Ordinal) { "Version", "SettlementEvents" };
+                if (root.Properties().Any(property => !allowed.Contains(property.Name))) return false;
+                var envelope = root.ToObject<PlaybackStatisticsOutboxState>();
+                if (envelope == null || root["Version"] == null || root["SettlementEvents"] == null || envelope.Version != 2 || envelope.SettlementEvents == null || envelope.SettlementEvents.Any(x => !IsValid(x))) return false;
+                state = envelope;
                 return true;
             }
             catch (Exception ex)
@@ -128,6 +134,12 @@ namespace seamless_loop_music.Services
                 Debug.WriteLine($"[Playback statistics] Invalid outbox file {path}: {ex.Message}");
                 return false;
             }
+        }
+
+        private void SaveEnvelopeCore(PlaybackStatisticsOutboxState state)
+        {
+            if (state == null || state.Version != 2 || state.SettlementEvents == null || state.SettlementEvents.Any(x => !IsValid(x))) throw new ArgumentException("Invalid settlement outbox state.");
+            SaveJsonCore(JsonConvert.SerializeObject(state, Formatting.None));
         }
 
         private void RestoreBackup()
@@ -178,10 +190,9 @@ namespace seamless_loop_music.Services
             catch (Exception ex) { Debug.WriteLine($"[Playback statistics] Could not delete stale outbox file: {ex.Message}"); }
         }
 
-        private static bool IsValid(PlaybackSegment segment)
+        private static bool IsValid(PlaybackStatisticsSettlement settlement)
         {
-            return segment != null && !string.IsNullOrWhiteSpace(segment.SegmentId) && segment.TrackId > 0 &&
-                segment.StartedAtUtcMs >= 0 && segment.DurationMs > 0 && segment.DurationMs <= long.MaxValue - segment.StartedAtUtcMs;
+            try { settlement?.Validate(); return settlement != null; } catch { return false; }
         }
     }
 }

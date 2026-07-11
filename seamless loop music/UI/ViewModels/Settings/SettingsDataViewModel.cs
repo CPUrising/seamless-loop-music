@@ -1,3 +1,8 @@
+using System;
+using System.Collections.ObjectModel;
+using System.ComponentModel;
+using System.Linq;
+using System.Threading.Tasks;
 using System.Windows;
 using Microsoft.Win32;
 using Prism.Commands;
@@ -7,6 +12,7 @@ using seamless_loop_music.Events;
 using seamless_loop_music.Services;
 using seamless_loop_music.Services.Sync;
 using seamless_loop_music.Services.Sync.Models;
+using seamless_loop_music.UI.Views;
 using seamless_loop_music.UI.Views.Settings;
 
 namespace seamless_loop_music.UI.ViewModels.Settings
@@ -17,7 +23,9 @@ namespace seamless_loop_music.UI.ViewModels.Settings
         private readonly IGitHubSyncService _githubSyncService;
         private readonly IGitHubSyncManagementService _gitHubSyncManagementService;
         private readonly IPlaybackService _playbackService;
+        private readonly IPlaybackStatisticsLocalService _playbackStatisticsLocalService;
         private readonly IEventAggregator _eventAggregator;
+        private int _sourceDevicesLoadVersion;
         private bool _isSyncing;
         private string _gitHubOwner;
         private string _gitHubRepository;
@@ -44,6 +52,9 @@ namespace seamless_loop_music.UI.ViewModels.Settings
         private bool _clearLocalLoopPoints;
         private bool _clearLocalRatings;
         private bool _clearLocalPlaybackStatistics;
+        private bool _isSourceDevicesBusy;
+        private string _sourceDevicesStatusText;
+        private bool _sourceDevicesHasError;
 
         public bool IsSyncing
         {
@@ -232,6 +243,57 @@ namespace seamless_loop_music.UI.ViewModels.Settings
 
         public string RefreshOverviewButtonText => IsManagementBusy ? "正在刷新概览..." : "刷新数据概览";
 
+        public ObservableCollection<PlaybackStatisticsSourceDeviceRow> SourceDevices { get; } = new ObservableCollection<PlaybackStatisticsSourceDeviceRow>();
+
+        public bool IsSourceDevicesBusy
+        {
+            get => _isSourceDevicesBusy;
+            set
+            {
+                if (SetProperty(ref _isSourceDevicesBusy, value))
+                {
+                    RaisePropertyChanged(nameof(SourceDevicesRefreshButtonToolTip));
+                    RaisePropertyChanged(nameof(HasNoSourceDevices));
+                    RaisePropertyChanged(nameof(HasSourceDevicesError));
+                    RefreshSourceDeviceCommand.RaiseCanExecuteChanged();
+                    DeleteSelectedSourceDevicesCommand.RaiseCanExecuteChanged();
+                    RenameSourceDeviceCommand.RaiseCanExecuteChanged();
+                }
+            }
+        }
+
+        public string SourceDevicesStatusText
+        {
+            get => _sourceDevicesStatusText;
+            set
+            {
+                if (SetProperty(ref _sourceDevicesStatusText, value))
+                {
+                    RaisePropertyChanged(nameof(HasSourceDevicesError));
+                    RaisePropertyChanged(nameof(HasNoSourceDevices));
+                }
+            }
+        }
+
+        public bool SourceDevicesHasError
+        {
+            get => _sourceDevicesHasError;
+            set
+            {
+                if (SetProperty(ref _sourceDevicesHasError, value))
+                {
+                    RaisePropertyChanged(nameof(HasSourceDevicesError));
+                    RaisePropertyChanged(nameof(HasNoSourceDevices));
+                }
+            }
+        }
+
+        public bool HasSourceDevices => SourceDevices.Count > 0;
+        public bool HasNoSourceDevices => !IsSourceDevicesBusy && !SourceDevicesHasError && SourceDevices.Count == 0;
+        public bool HasSourceDevicesError => !IsSourceDevicesBusy && SourceDevicesHasError;
+        public bool HasSelectedSourceDevices => SourceDevices.Any(x => x.IsSelected);
+        public string SourceDevicesRefreshButtonToolTip => LocalizationService.Instance["PlaybackStatisticsSourceDevicesRefreshToolTip"];
+
         public DelegateCommand SyncCommand { get; }
         public DelegateCommand SaveGitHubConfigCommand { get; }
         public DelegateCommand GitHubSyncNowCommand { get; }
@@ -239,18 +301,23 @@ namespace seamless_loop_music.UI.ViewModels.Settings
         public DelegateCommand ForcePushLocalToCloudCommand { get; }
         public DelegateCommand DeleteCloudSnapshotCommand { get; }
         public DelegateCommand ClearLocalSyncDataCommand { get; }
+        public DelegateCommand RefreshSourceDeviceCommand { get; }
+        public DelegateCommand DeleteSelectedSourceDevicesCommand { get; }
+        public DelegateCommand<PlaybackStatisticsSourceDeviceRow> RenameSourceDeviceCommand { get; }
 
-        public SettingsDataViewModel(IPlayerService playerService, IGitHubSyncService githubSyncService, IGitHubSyncManagementService gitHubSyncManagementService, IPlaybackService playbackService, IEventAggregator eventAggregator)
+        public SettingsDataViewModel(IPlayerService playerService, IGitHubSyncService githubSyncService, IGitHubSyncManagementService gitHubSyncManagementService, IPlaybackService playbackService, IPlaybackStatisticsLocalService playbackStatisticsLocalService, IEventAggregator eventAggregator)
         {
             _playerService = playerService;
             _githubSyncService = githubSyncService;
             _gitHubSyncManagementService = gitHubSyncManagementService;
             _playbackService = playbackService;
+            _playbackStatisticsLocalService = playbackStatisticsLocalService;
             _eventAggregator = eventAggregator;
 
             LoadGitHubConfig();
             ManagementStatusText = "点击“刷新数据概览”查看本机与云端同步数据。";
             CloudStatusText = "尚未读取云端状态";
+            SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDevicesLoading"];
 
             SyncCommand = new DelegateCommand(OnSync, () => !IsSyncing);
             SaveGitHubConfigCommand = new DelegateCommand(OnSaveGitHubConfig, () => !IsGitHubSyncing);
@@ -259,7 +326,18 @@ namespace seamless_loop_music.UI.ViewModels.Settings
             ForcePushLocalToCloudCommand = new DelegateCommand(OnForcePushLocalToCloud, () => !IsManagementBusy);
             DeleteCloudSnapshotCommand = new DelegateCommand(OnDeleteCloudSnapshot, () => !IsManagementBusy);
             ClearLocalSyncDataCommand = new DelegateCommand(OnClearLocalSyncData, () => !IsManagementBusy);
-            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(_ => RaisePropertyChanged(nameof(SyncButtonText)), ThreadOption.UIThread);
+            RefreshSourceDeviceCommand = new DelegateCommand(OnRefreshSourceDevices, () => !IsSourceDevicesBusy);
+            DeleteSelectedSourceDevicesCommand = new DelegateCommand(OnDeleteSelectedSourceDevices, () => !IsSourceDevicesBusy && HasSelectedSourceDevices);
+            RenameSourceDeviceCommand = new DelegateCommand<PlaybackStatisticsSourceDeviceRow>(OnRenameSourceDevice, row => !IsSourceDevicesBusy && row != null && row.CanRename);
+            SourceDevices.CollectionChanged += (s, e) =>
+            {
+                RaisePropertyChanged(nameof(HasSourceDevices));
+                RaisePropertyChanged(nameof(HasNoSourceDevices));
+                RaisePropertyChanged(nameof(HasSelectedSourceDevices));
+                DeleteSelectedSourceDevicesCommand.RaiseCanExecuteChanged();
+            };
+            _eventAggregator.GetEvent<LanguageChangedEvent>().Subscribe(_ => OnLanguageChanged(), ThreadOption.UIThread);
+            _ = RefreshSourceDevicesAsync(false);
         }
 
         private void LoadGitHubConfig()
@@ -562,6 +640,177 @@ namespace seamless_loop_music.UI.ViewModels.Settings
             finally
             {
                 IsSyncing = false;
+            }
+        }
+
+        private void OnLanguageChanged()
+        {
+            RaisePropertyChanged(nameof(SyncButtonText));
+            RaisePropertyChanged(nameof(SourceDevicesRefreshButtonToolTip));
+            foreach (var row in SourceDevices)
+            {
+                row.RefreshLocalizedText();
+            }
+
+            if (IsSourceDevicesBusy)
+            {
+                SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDevicesLoading"];
+            }
+            else if (HasSourceDevicesError)
+            {
+                SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDevicesLoadError"];
+            }
+            else if (!HasSourceDevices)
+            {
+                SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDevicesEmpty"];
+            }
+        }
+
+        private async void OnRefreshSourceDevices()
+        {
+            await RefreshSourceDevicesAsync(true);
+        }
+
+        private async Task RefreshSourceDevicesAsync(bool announceRefresh)
+        {
+            var requestVersion = ++_sourceDevicesLoadVersion;
+            IsSourceDevicesBusy = true;
+            SourceDevicesHasError = false;
+            SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDevicesLoading"];
+
+            try
+            {
+                var devices = await _playbackStatisticsLocalService.GetSourceDevicesAsync();
+                if (requestVersion != _sourceDevicesLoadVersion)
+                    return;
+
+                ReplaceSourceDevices(PlaybackStatisticsSourceDeviceRow.CreateRows(devices));
+
+                SourceDevicesStatusText = SourceDevices.Count == 0
+                    ? LocalizationService.Instance["PlaybackStatisticsSourceDevicesEmpty"]
+                    : announceRefresh
+                        ? LocalizationService.Instance["PlaybackStatisticsSourceDevicesUpdated"]
+                        : string.Empty;
+            }
+            catch (Exception ex)
+            {
+                if (requestVersion != _sourceDevicesLoadVersion)
+                    return;
+
+                ReplaceSourceDevices(Array.Empty<PlaybackStatisticsSourceDeviceRow>());
+                SourceDevicesHasError = true;
+                SourceDevicesStatusText = string.Format(LocalizationService.Instance["PlaybackStatisticsSourceDevicesLoadErrorDetail"], ex.Message);
+            }
+            finally
+            {
+                if (requestVersion == _sourceDevicesLoadVersion)
+                {
+                    IsSourceDevicesBusy = false;
+                }
+            }
+        }
+
+        private void ReplaceSourceDevices(System.Collections.Generic.IEnumerable<PlaybackStatisticsSourceDeviceRow> rows)
+        {
+            foreach (var row in SourceDevices)
+            {
+                row.PropertyChanged -= OnSourceDeviceRowPropertyChanged;
+            }
+
+            SourceDevices.Clear();
+
+            foreach (var row in rows)
+            {
+                row.PropertyChanged += OnSourceDeviceRowPropertyChanged;
+                SourceDevices.Add(row);
+            }
+
+            RaisePropertyChanged(nameof(HasSourceDevices));
+            RaisePropertyChanged(nameof(HasNoSourceDevices));
+            RaisePropertyChanged(nameof(HasSelectedSourceDevices));
+            DeleteSelectedSourceDevicesCommand.RaiseCanExecuteChanged();
+        }
+
+        private void OnSourceDeviceRowPropertyChanged(object sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(PlaybackStatisticsSourceDeviceRow.IsSelected))
+            {
+                RaisePropertyChanged(nameof(HasSelectedSourceDevices));
+                DeleteSelectedSourceDevicesCommand.RaiseCanExecuteChanged();
+            }
+        }
+
+        private void OnRenameSourceDevice(PlaybackStatisticsSourceDeviceRow row)
+        {
+            if (row == null || !row.CanRename || IsSourceDevicesBusy)
+                return;
+
+            var loc = LocalizationService.Instance;
+            var dialog = new InputDialog(loc["PlaybackStatisticsSourceDeviceRenameTitle"], loc["PlaybackStatisticsSourceDeviceRenamePrompt"], row.RenameSeedText)
+            {
+                Owner = Application.Current?.MainWindow
+            };
+
+            if (dialog.ShowDialog() != true)
+                return;
+
+            var name = dialog.InputText?.Trim();
+            if (string.IsNullOrWhiteSpace(name))
+                return;
+
+            _ = RenameSourceDeviceAsync(row.DeviceId, name);
+        }
+
+        private async Task RenameSourceDeviceAsync(string deviceId, string name)
+        {
+            IsSourceDevicesBusy = true;
+            SourceDevicesHasError = false;
+            SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDeviceRenaming"];
+
+            try
+            {
+                await _playbackStatisticsLocalService.RenameDeviceAsync(deviceId, name, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                await RefreshSourceDevicesAsync(true);
+            }
+            catch (Exception ex)
+            {
+                SourceDevicesHasError = true;
+                SourceDevicesStatusText = string.Format(LocalizationService.Instance["PlaybackStatisticsSourceDeviceRenameError"], ex.Message);
+                IsSourceDevicesBusy = false;
+            }
+        }
+
+        private async void OnDeleteSelectedSourceDevices()
+        {
+            var selectedIds = SourceDevices.Where(x => x.IsSelected && x.CanSelect).Select(x => x.DeviceId).ToList();
+            if (selectedIds.Count == 0)
+                return;
+
+            var loc = LocalizationService.Instance;
+            var message = string.Format(loc["PlaybackStatisticsSourceDeviceDeleteConfirmMessage"], selectedIds.Count);
+            var confirmed = AppDialogService.Show(message, loc["PlaybackStatisticsSourceDeviceDeleteConfirmTitle"], MessageBoxButton.YesNo, MessageBoxImage.Warning);
+            if (confirmed != MessageBoxResult.Yes)
+                return;
+
+            IsSourceDevicesBusy = true;
+            SourceDevicesHasError = false;
+            SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDeviceDeleting"];
+
+            try
+            {
+                var context = _playbackStatisticsLocalService.GetRecordingContext();
+                await _playbackStatisticsLocalService.TombstoneKnownActiveGenerationsAsync(selectedIds, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds(), context.DeviceId, "userDelete");
+                await RefreshSourceDevicesAsync(true);
+                if (SourceDevices.Count > 0)
+                {
+                    SourceDevicesStatusText = LocalizationService.Instance["PlaybackStatisticsSourceDeviceDeleted"];
+                }
+            }
+            catch (Exception ex)
+            {
+                SourceDevicesHasError = true;
+                SourceDevicesStatusText = string.Format(LocalizationService.Instance["PlaybackStatisticsSourceDeviceDeleteError"], ex.Message);
+                IsSourceDevicesBusy = false;
             }
         }
     }
