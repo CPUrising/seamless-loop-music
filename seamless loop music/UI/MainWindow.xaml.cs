@@ -2,6 +2,7 @@ using System;
 using System.Diagnostics;
 using System.Linq;
 using System.Windows;
+using System.Windows.Shell;
 using System.Windows.Threading;
 using Prism.Events;
 using seamless_loop_music.Events;
@@ -16,9 +17,12 @@ namespace seamless_loop_music
         private readonly IAppStateService _appState;
         private readonly INotifyIconService _notifyIconService;
         private readonly IPlayerService _playerService;
+        private readonly IPlaybackService _playbackService;
         private readonly IEventAggregator _eventAggregator;
         private bool _onboardingShownThisSession;
         private bool _closeDialogOpen;
+        private bool _finalCloseInProgress;
+        private const double NormalWindowCornerRadius = 16;
 
         public static readonly DependencyProperty MaximizedPaddingProperty =
             DependencyProperty.Register("MaximizedPadding", typeof(Thickness), typeof(MainWindow), new PropertyMetadata(new Thickness(0)));
@@ -28,6 +32,7 @@ namespace seamless_loop_music
             get { return (Thickness)GetValue(MaximizedPaddingProperty); }
             set { SetValue(MaximizedPaddingProperty, value);}
         }
+
         private void CalculateMaximizedPadding()
         {
             double screenHeight = SystemParameters.PrimaryScreenHeight;
@@ -43,13 +48,16 @@ namespace seamless_loop_music
             IAppStateService appState,
             INotifyIconService notifyIconService, 
             IPlayerService playerService,
+            IPlaybackService playbackService,
             IEventAggregator eventAggregator)
         {
             InitializeComponent();
             DataContext = this;
+            UpdateWindowFrame(WindowState);
             _appState = appState;
             _notifyIconService = notifyIconService;
             _playerService = playerService;
+            _playbackService = playbackService;
             _eventAggregator = eventAggregator;
 
             taskbarService.Initialize(this.MainTaskbarItemInfo, this);
@@ -126,11 +134,40 @@ namespace seamless_loop_music
             if (this.WindowState == WindowState.Maximized)
             {
                 CalculateMaximizedPadding();
+                UpdateWindowCornerRadius(0);
+            }
+            else if (this.WindowState == WindowState.Normal)
+            {
+                MaximizedPadding = new Thickness(0);
+                UpdateWindowCornerRadius(NormalWindowCornerRadius);
+            }
+        }
+
+        private void UpdateWindowFrame(WindowState state)
+        {
+            if (state == WindowState.Maximized)
+            {
+                CalculateMaximizedPadding();
+                UpdateWindowCornerRadius(0);
+                return;
+            }
+
+            MaximizedPadding = new Thickness(0);
+            UpdateWindowCornerRadius(NormalWindowCornerRadius);
+        }
+
+        private void UpdateWindowCornerRadius(double radius)
+        {
+            var windowChrome = WindowChrome.GetWindowChrome(this);
+            if (windowChrome != null)
+            {
+                windowChrome.CornerRadius = new CornerRadius(radius);
             }
         }
 
         private async void MainWindow_Closing(object sender, System.ComponentModel.CancelEventArgs e)
         {
+            if (_finalCloseInProgress) return;
             if (!_appState.IsExiting)
             {
                 if (_appState.ExitBehavior == AppExitBehavior.MinimizeToTray)
@@ -148,8 +185,37 @@ namespace seamless_loop_music
                 }
             }
 
+            e.Cancel = true;
+            _finalCloseInProgress = true;
+            var flushTask = _playbackService.FlushPlaybackStatisticsAsync();
+            var requiresFallback = false;
+            if (await System.Threading.Tasks.Task.WhenAny(flushTask, System.Threading.Tasks.Task.Delay(2000)) == flushTask)
+            {
+                try { await flushTask; }
+                catch (Exception ex) { Debug.WriteLine($"[Playback statistics] Flush failed during exit: {ex.Message}"); requiresFallback = true; }
+            }
+            else
+            {
+                Debug.WriteLine("[Playback statistics] Flush timed out during exit.");
+                _ = flushTask.ContinueWith(task => Debug.WriteLine($"[Playback statistics] Late flush failed: {task.Exception?.GetBaseException().Message}"), System.Threading.Tasks.TaskContinuationOptions.OnlyOnFaulted);
+                requiresFallback = true;
+            }
+            if (requiresFallback)
+            {
+                try { await _playbackService.PersistPendingPlaybackStatisticsAsync(); }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[Playback statistics] Outbox save failed during exit: {ex.Message}");
+                    _finalCloseInProgress = false;
+                    try { _playbackService.ResumePlaybackStatisticsAfterFailedFlush(); }
+                    catch (Exception resumeEx) { Debug.WriteLine($"[Playback statistics] Could not resume after failed flush: {resumeEx.Message}"); }
+                    AppDialogService.Show(LocalizationService.Instance["PlaybackStatisticsSaveErrorMessage"], LocalizationService.Instance["PlaybackStatisticsSaveErrorTitle"]);
+                    return;
+                }
+            }
             await _appState.SaveCurrentStateAsync();
             _notifyIconService.Dispose();
+            Close();
         }
 
         private void BtnMinimize_Click(object sender, RoutedEventArgs e)

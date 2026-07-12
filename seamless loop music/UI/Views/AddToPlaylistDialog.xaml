@@ -5,8 +5,8 @@
         Width="360" SizeToContent="Height"
         WindowStartupLocation="CenterOwner"
         ResizeMode="NoResize"
-        Background="{StaticResource BrushBackground}"
-        Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushBackground}"
+        Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="Microsoft YaHei">
 
     <Window.Resources>
@@ -16,30 +16,30 @@
     <StackPanel Margin="24">
         <!-- Header -->
         <TextBlock Text="{Binding [DialogSelectPlaylist], Source={StaticResource Loc}}" FontSize="18" FontWeight="Bold"
-                   Foreground="{StaticResource BrushTextPrimary}" Margin="0,0,0,6"/>
-        <TextBlock x:Name="TxtSubtitle" FontSize="12" Foreground="{StaticResource BrushTextSecondary}" Margin="0,0,0,16"/>
+                   Foreground="{DynamicResource BrushTextPrimary}" Margin="0,0,0,6"/>
+        <TextBlock x:Name="TxtSubtitle" FontSize="12" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,16"/>
 
         <!-- 现有歌单列表 -->
-        <Border Background="{StaticResource BrushSurfaceDark}" CornerRadius="8" MaxHeight="260">
+        <Border Background="{DynamicResource BrushSurfaceDark}" CornerRadius="8" MaxHeight="260">
             <ListBox x:Name="PlaylistListBox"
                      Background="Transparent" BorderThickness="0"
                      Padding="4" ScrollViewer.HorizontalScrollBarVisibility="Disabled">
                 <ListBox.ItemContainerStyle>
                     <Style TargetType="ListBoxItem" BasedOn="{StaticResource ModernListBoxItem}">
                         <Setter Property="Padding" Value="12,10"/>
-                        <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                        <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                     </Style>
                 </ListBox.ItemContainerStyle>
             </ListBox>
         </Border>
 
         <!-- 新建歌单区 -->
-        <Expander x:Name="NewPlaylistExpander" Header="{Binding [PromptNewPlaylist], Source={StaticResource Loc}}" Foreground="{StaticResource BrushAccent}" Margin="0,14,0,0"
+        <Expander x:Name="NewPlaylistExpander" Header="{Binding [PromptNewPlaylist], Source={StaticResource Loc}}" Foreground="{DynamicResource BrushAccent}" Margin="0,14,0,0"
                   BorderThickness="0">
             <StackPanel Margin="0,8,0,0">
                 <TextBox x:Name="TxtNewPlaylistName"
                          Style="{StaticResource ModernTextBox}"/>
-                <TextBlock Text="{Binding [PromptEnterNameToCreate], Source={StaticResource Loc}}" Foreground="{StaticResource BrushTextMuted}" FontSize="11" Margin="4,6,0,0"/>
+                <TextBlock Text="{Binding [PromptEnterNameToCreate], Source={StaticResource Loc}}" Foreground="{DynamicResource BrushTextMuted}" FontSize="11" Margin="4,6,0,0"/>
             </StackPanel>
         </Expander>
 

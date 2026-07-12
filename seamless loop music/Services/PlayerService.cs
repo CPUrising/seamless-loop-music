@@ -234,6 +234,32 @@ namespace seamless_loop_music.Services
                     }
                 }
 
+                // 🌟 对已有曲目中 DurationMs <= 0 的文件进行回填扫描（非阻塞，在当前扫描批次内完成）
+                var zeroDurationTracks = existingTracks.Values
+                    .Where(t => t.DurationMs <= 0 && System.IO.File.Exists(t.FilePath))
+                    .ToList();
+                if (zeroDurationTracks.Count > 0)
+                {
+                    await Task.Run(() =>
+                    {
+                        foreach (var t in zeroDurationTracks)
+                        {
+                            try
+                            {
+                                using var tf = TagLib.File.Create(t.FilePath);
+                                long ms = (long)tf.Properties.Duration.TotalMilliseconds;
+                                if (ms > 0)
+                                {
+                                    t.DurationMs = ms;
+                                    _databaseHelper.SaveTrack(t);
+                                }
+                            }
+                            catch { /* 跳过无法读取的文件 */ }
+                        }
+                    });
+                    dbChanged = true;
+                }
+
                 // 🌟 如果数据库有了新增、更新或删除变动，发布全局库刷新事件，通知 UI 重新加载
                 if (dbChanged)
                 {
@@ -251,8 +277,10 @@ namespace seamless_loop_music.Services
             try
             {
                 using var audioFile = TagLib.File.Create(filePath);
+                long durationMsA = (long)audioFile.Properties.Duration.TotalMilliseconds;
                 long samplesA = (long)(audioFile.Properties.AudioSampleRate * audioFile.Properties.Duration.TotalSeconds);
                 long totalSamples = samplesA;
+                long durationMs = durationMsA;
                 long loopStart = 0;
 
                 if (!string.IsNullOrEmpty(partBPath) && System.IO.File.Exists(partBPath))
@@ -270,6 +298,11 @@ namespace seamless_loop_music.Services
                                 samplesA = readerA.Length / readerA.WaveFormat.BlockAlign;
                                 long samplesB = readerB.Length / readerB.WaveFormat.BlockAlign;
                                 totalSamples = samplesA + samplesB;
+
+                                // A/B 拼接时长 = A 文件 + B 文件各自的毫秒数
+                                double totalSecondsA = (double)readerA.Length / readerA.WaveFormat.AverageBytesPerSecond;
+                                double totalSecondsB = (double)readerB.Length / readerB.WaveFormat.AverageBytesPerSecond;
+                                durationMs = (long)((totalSecondsA + totalSecondsB) * 1000);
                             }
                             else
                             {
@@ -277,6 +310,7 @@ namespace seamless_loop_music.Services
                                 using var partBFile = TagLib.File.Create(partBPath);
                                 long samplesB = (long)(partBFile.Properties.AudioSampleRate * partBFile.Properties.Duration.TotalSeconds);
                                 totalSamples += samplesB;
+                                durationMs = durationMsA + (long)partBFile.Properties.Duration.TotalMilliseconds;
                             }
                         }
                     }
@@ -286,6 +320,7 @@ namespace seamless_loop_music.Services
                         using var partBFile = TagLib.File.Create(partBPath);
                         long samplesB = (long)(partBFile.Properties.AudioSampleRate * partBFile.Properties.Duration.TotalSeconds);
                         totalSamples = samplesA + samplesB;
+                        durationMs = durationMsA + (long)partBFile.Properties.Duration.TotalMilliseconds;
                     }
                     loopStart = samplesA; // 默认循环起点设在衔接处
                 }
@@ -299,6 +334,7 @@ namespace seamless_loop_music.Services
                     Album = audioFile.Tag.Album,
                     AlbumArtist = audioFile.Tag.FirstAlbumArtist,
                     TotalSamples = totalSamples,
+                    DurationMs = durationMs,
                     LoopStart = loopStart,
                     LoopEnd = totalSamples,
                     LastModified = System.IO.File.GetLastWriteTime(filePath)

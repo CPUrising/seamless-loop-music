@@ -43,12 +43,18 @@ Supports logically concatenating two independent tracks (e.g., `Intro.wav` + `Lo
 
 ### 3. Seamless Playback System
 - **Seamless Loop Mode**: When enabled, the player performs sample-level jumps when reaching the loop end.
+- **Loop Marker Visualization**: The playback progress bar marks the current loop start and end with yellow vertical lines, making the active loop range easy to inspect.
 - **Mode Switching**: Quickly toggle between seamless looping and standard playback to suit your listening needs.
 
 ### 4. Robust Data Management
 - **Audio Fingerprinting**: Generates fingerprints based on "Filename + Total Samples." Loop configurations, aliases, and playlist info are automatically recovered even if files are moved or renamed.
 - **Database Sync**: Supports syncing database files from other devices. The system identifies tracks via fingerprints and automatically updates local loop points and metadata.
+- **GitHub Sync and Management**: Sync playlists, loop points, ratings, and playback statistics to GitHub, with Android interoperability via [SeamlessLoopMobile](https://github.com/CPUrising/SeamlessLoopMobile).
 - **Alias System**: Customize display names in the UI without modifying physical filenames.
+
+### 5. Consistent Desktop UI
+- Confirmation, warning, error, and information prompts use custom in-app dialogs instead of default system message boxes.
+- List context menus, data-management confirmations, and close prompts share rounded card-style visuals.
 
 ---
 
@@ -68,6 +74,15 @@ Click the **Loop Icon (∞-shaped)** on the right side of a track in the list:
 1. **Analysis**: Select tracks in batch and choose "Auto Search." The engine will calculate the best loop positions.
 2. **Selection**: Double-click candidates in the "Ranking List" to audition and save the best one.
 *Note: Results are algorithm-dependent; manual fine-tuning may still be required for complex tracks.
+
+### 4. GitHub Sync and Playback Statistics
+
+1. In **Settings**, enter the GitHub **Owner**, **Repository**, **Branch**, **Path**, and **Token**. The token needs repository Contents read/write permission, and Path may keep the default `seamless-loop/sync.json`. Save the settings, then click **Sync Now**.
+2. Play music to accumulate playback statistics, then open **Playback Statistics** to view period-based rankings.
+3. Manage source devices in Settings. Deleting source data creates permanent tombstones; fully deleted historical sources are collapsed into one summary instead of remaining as individual device rows.
+4. Sync another device by using the same repository and Path. Force-pushing local data and deleting the cloud snapshot are management operations; confirm them carefully.
+
+See [`docs/Playback_Statistics_Sync_v2.md`](docs/Playback_Statistics_Sync_v2.md) for technical details and maintainer invariants.
 
 ---
 

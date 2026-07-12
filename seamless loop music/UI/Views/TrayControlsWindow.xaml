@@ -16,7 +16,7 @@
 
             <Style x:Key="TrayMenuButton" TargetType="Button">
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Height" Value="34"/>
@@ -29,10 +29,10 @@
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="buttonBorder" Property="Background" Value="{StaticResource BrushOverlayHover}"/>
+                                    <Setter TargetName="buttonBorder" Property="Background" Value="{DynamicResource BrushOverlayHover}"/>
                                 </Trigger>
                                 <Trigger Property="IsPressed" Value="True">
-                                    <Setter TargetName="buttonBorder" Property="Background" Value="{StaticResource BrushOverlayPressed}"/>
+                                    <Setter TargetName="buttonBorder" Property="Background" Value="{DynamicResource BrushOverlayPressed}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -41,7 +41,7 @@
             </Style>
 
             <Style x:Key="TrayModeRadio" TargetType="RadioButton">
-                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                 <Setter Property="Background" Value="Transparent"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
@@ -55,17 +55,17 @@
                                         <ColumnDefinition Width="24"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="checkMark" Text="○" Foreground="{StaticResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="checkMark" Text="○" Foreground="{DynamicResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
                                     <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="radioBorder" Property="Background" Value="{StaticResource BrushOverlayHover}"/>
+                                    <Setter TargetName="radioBorder" Property="Background" Value="{DynamicResource BrushOverlayHover}"/>
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="checkMark" Property="Text" Value="●"/>
-                                    <Setter TargetName="checkMark" Property="Foreground" Value="{StaticResource BrushAccent}"/>
+                                    <Setter TargetName="checkMark" Property="Foreground" Value="{DynamicResource BrushAccent}"/>
                                 </Trigger>
                             </ControlTemplate.Triggers>
                         </ControlTemplate>
@@ -75,7 +75,7 @@
 
             <Style x:Key="TrayCheckToggle" TargetType="ToggleButton">
                 <Setter Property="Background" Value="Transparent"/>
-                <Setter Property="Foreground" Value="{StaticResource BrushTextPrimary}"/>
+                <Setter Property="Foreground" Value="{DynamicResource BrushTextPrimary}"/>
                 <Setter Property="BorderThickness" Value="0"/>
                 <Setter Property="Cursor" Value="Hand"/>
                 <Setter Property="Height" Value="34"/>
@@ -89,13 +89,13 @@
                                         <ColumnDefinition Width="24"/>
                                         <ColumnDefinition Width="*"/>
                                     </Grid.ColumnDefinitions>
-                                    <TextBlock x:Name="checkMark" Text="" Foreground="{StaticResource BrushAccent}" FontSize="14" VerticalAlignment="Center"/>
+                                    <TextBlock x:Name="checkMark" Text="" Foreground="{DynamicResource BrushAccent}" FontSize="14" VerticalAlignment="Center"/>
                                     <ContentPresenter Grid.Column="1" VerticalAlignment="Center"/>
                                 </Grid>
                             </Border>
                             <ControlTemplate.Triggers>
                                 <Trigger Property="IsMouseOver" Value="True">
-                                    <Setter TargetName="toggleBorder" Property="Background" Value="{StaticResource BrushOverlayHover}"/>
+                                    <Setter TargetName="toggleBorder" Property="Background" Value="{DynamicResource BrushOverlayHover}"/>
                                 </Trigger>
                                 <Trigger Property="IsChecked" Value="True">
                                     <Setter TargetName="checkMark" Property="Text" Value="✓"/>
@@ -109,7 +109,7 @@
     </Window.Resources>
 
     <Grid Margin="10">
-        <Border Background="{StaticResource BrushBackground}" CornerRadius="12" BorderThickness="1" BorderBrush="{StaticResource BrushBorder}" Padding="10">
+        <Border Background="{DynamicResource BrushBackground}" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource BrushBorder}" Padding="10">
             <Border.Effect>
                 <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="Black" Opacity="0.48"/>
             </Border.Effect>
@@ -120,7 +120,7 @@
                             <ColumnDefinition Width="28"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="⏯" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Text="⏯" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{Binding PlayPauseText}" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
@@ -130,7 +130,7 @@
                             <ColumnDefinition Width="28"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="←" Foreground="{StaticResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="←" Foreground="{DynamicResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{Binding PreviousText}" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
@@ -140,12 +140,12 @@
                             <ColumnDefinition Width="28"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="→" Foreground="{StaticResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="→" Foreground="{DynamicResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{Binding NextText}" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
 
-                <Border Height="1" Background="{StaticResource BrushSeparator}" Opacity="0.55" Margin="0,6"/>
+                <Border Height="1" Background="{DynamicResource BrushSeparator}" Opacity="0.55" Margin="0,6"/>
 
                 <Button x:Name="LoopPlaybackButton" Style="{StaticResource TrayMenuButton}" Command="{Binding TogglePlayModeMenuCommand}">
                     <Grid>
@@ -154,15 +154,15 @@
                             <ColumnDefinition Width="*"/>
                             <ColumnDefinition Width="16"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="↻" Foreground="{StaticResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="↻" Foreground="{DynamicResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
                         <TextBlock Grid.Column="1" Text="{Binding PlayModeText}" FontSize="13" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="2" Text=">" Foreground="{StaticResource BrushTextSecondary}" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="2" Text=">" Foreground="{DynamicResource BrushTextSecondary}" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
 
                 <ToggleButton Content="{Binding SeamlessLoopText}" IsChecked="{Binding IsSeamlessLoopEnabled}" Style="{StaticResource TrayCheckToggle}"/>
 
-                <Border Height="1" Background="{StaticResource BrushSeparator}" Opacity="0.55" Margin="0,6"/>
+                <Border Height="1" Background="{DynamicResource BrushSeparator}" Opacity="0.55" Margin="0,6"/>
 
                 <Button Style="{StaticResource TrayMenuButton}" Command="{Binding ExitCommand}">
                     <Grid>
@@ -170,8 +170,8 @@
                             <ColumnDefinition Width="28"/>
                             <ColumnDefinition Width="*"/>
                         </Grid.ColumnDefinitions>
-                        <TextBlock Text="↩" Foreground="{StaticResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
-                        <TextBlock Grid.Column="1" Text="{Binding ExitText}" Foreground="{StaticResource BrushTextPrimary}" FontSize="13" VerticalAlignment="Center"/>
+                        <TextBlock Text="↩" Foreground="{DynamicResource BrushTextSecondary}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Grid.Column="1" Text="{Binding ExitText}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="13" VerticalAlignment="Center"/>
                     </Grid>
                 </Button>
             </StackPanel>
@@ -184,7 +184,7 @@
                AllowsTransparency="True"
                HorizontalOffset="-14"
                VerticalOffset="-4">
-            <Border Background="{StaticResource BrushBackground}" CornerRadius="12" BorderThickness="1" BorderBrush="{StaticResource BrushBorder}" Padding="10" MinWidth="130">
+            <Border Background="{DynamicResource BrushBackground}" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource BrushBorder}" Padding="10" MinWidth="130">
                 <Border.Effect>
                     <DropShadowEffect BlurRadius="16" ShadowDepth="0" Color="Black" Opacity="0.48"/>
                 </Border.Effect>

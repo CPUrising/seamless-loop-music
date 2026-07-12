@@ -11,9 +11,11 @@ namespace seamless_loop_music.UI.ViewModels.Settings
     public class SettingsGeneralViewModel : BindableBase
     {
         private readonly IAppStateService _appState;
+        private readonly IThemeService _themeService;
         private bool _isInitializing = true;
         private CultureInfo _selectedCulture;
         private ExitBehaviorOption _selectedExitBehavior;
+        private bool _isDarkTheme;
 
         public CultureInfo[] SupportedCultures => LocalizationService.Instance.SupportedCultures;
         public IReadOnlyList<ExitBehaviorOption> ExitBehaviorOptions { get; private set; }
@@ -44,12 +46,28 @@ namespace seamless_loop_music.UI.ViewModels.Settings
             }
         }
 
-        public SettingsGeneralViewModel(IAppStateService appState, IEventAggregator eventAggregator)
+        public bool IsDarkTheme
+        {
+            get => _isDarkTheme;
+            set
+            {
+                if (SetProperty(ref _isDarkTheme, value) && !_isInitializing)
+                {
+                    _themeService.ApplyTheme(value);
+                    _appState.IsDarkTheme = value;
+                    _ = _appState.SaveThemePreferenceAsync();
+                }
+            }
+        }
+
+        public SettingsGeneralViewModel(IAppStateService appState, IThemeService themeService, IEventAggregator eventAggregator)
         {
             _appState = appState;
+            _themeService = themeService;
 
             var current = LocalizationService.Instance.CurrentCulture;
             _selectedCulture = SupportedCultures.FirstOrDefault(c => c.Name == current.Name) ?? SupportedCultures[0];
+            _isDarkTheme = _appState.IsDarkTheme;
             BuildExitBehaviorOptions();
             _isInitializing = false;
 

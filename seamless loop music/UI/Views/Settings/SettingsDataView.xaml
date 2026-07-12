@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:prism="http://prismlibrary.com/"
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d"
@@ -10,14 +11,389 @@
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
             <!-- Data page header. -->
-            <TextBlock Text="{Binding [SettingsData], Source={StaticResource Loc}}" FontSize="26" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}"/>
-            <TextBlock Text="{Binding [SettingsDataSub], Source={StaticResource Loc}}" FontSize="13" Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,22"/>
+            <TextBlock Text="{Binding [SettingsData], Source={StaticResource Loc}}" FontSize="26" FontWeight="Bold" Foreground="{DynamicResource BrushTextPrimary}"/>
+            <TextBlock Text="{Binding [SettingsDataSub], Source={StaticResource Loc}}" FontSize="13" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,6,0,22"/>
 
             <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
                 <StackPanel>
                     <TextBlock Text="{Binding [DataManagementHeader], Source={StaticResource Loc}}" Style="{StaticResource SectionHeaderText}"/>
                     <TextBlock Text="{Binding [DataManagementSub], Source={StaticResource Loc}}" Style="{StaticResource SectionDescriptionText}" Margin="0,0,0,16" TextWrapping="Wrap"/>
                     <Button Content="{Binding SyncButtonText}" Command="{Binding SyncCommand}" Style="{StaticResource ProminentPrimaryButton}" HorizontalAlignment="Left" Margin="0,10,0,0"/>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
+                <StackPanel>
+                    <TextBlock Text="GitHub 同步" Style="{StaticResource SectionHeaderText}"/>
+                    <TextBlock Text="同步歌单、循环点和评分到 GitHub sync.json；不会上传音乐文件。Token 当前明文保存在本机数据库。" Style="{StaticResource SectionDescriptionText}" Margin="0,0,0,16" TextWrapping="Wrap"/>
+
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel Grid.Row="0" Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Owner" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubOwner, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="0" Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Repository" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubRepository, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="0" Margin="0,0,10,12">
+                            <TextBlock Text="Branch" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubBranch, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="1" Grid.Column="1" Margin="10,0,0,12">
+                            <TextBlock Text="Path" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubPath, UpdateSourceTrigger=PropertyChanged}"/>
+                        </StackPanel>
+
+                        <StackPanel Grid.Row="2" Grid.ColumnSpan="2">
+                            <TextBlock Text="Token" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,0,0,6"/>
+                            <TextBox Text="{Binding GitHubToken, UpdateSourceTrigger=PropertyChanged}"/>
+                            <TextBlock Text="当前为 MVP：Token 以明文保存，仅建议在受信任的本机环境使用。" Foreground="{DynamicResource BrushTextSecondary}" FontSize="12" Margin="0,6,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Grid>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button Content="保存配置"
+                                Command="{Binding SaveGitHubConfigCommand}"
+                                Style="{StaticResource ProminentPrimaryButton}"
+                                Margin="0,0,10,0"/>
+                        <Button Content="{Binding GitHubSyncButtonText}"
+                                Command="{Binding GitHubSyncNowCommand}"
+                                Style="{StaticResource ProminentPrimaryButton}"/>
+                    </StackPanel>
+
+                    <Border Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="上次同步时间" Foreground="{DynamicResource BrushTextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding LastGitHubSyncTime}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,10"/>
+                            <TextBlock Text="当前状态" Foreground="{DynamicResource BrushTextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding GitHubStatusText}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
+
+                    <Separator Margin="0,18,0,16" Background="{DynamicResource BrushSeparator}"/>
+
+                    <Grid Margin="0,0,0,10">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+                        <Grid.RowDefinitions>
+                            <RowDefinition Height="Auto"/>
+                            <RowDefinition Height="Auto"/>
+                        </Grid.RowDefinitions>
+
+                        <StackPanel>
+                            <TextBlock Text="{Binding [PlaybackStatisticsSourceDevicesHeader], Source={StaticResource Loc}}" Style="{StaticResource SectionHeaderText}" Margin="0,0,0,4"/>
+                            <TextBlock Text="{Binding [PlaybackStatisticsSourceDevicesDescription], Source={StaticResource Loc}}" Style="{StaticResource SectionDescriptionText}" TextWrapping="Wrap"/>
+                        </StackPanel>
+
+                        <WrapPanel Grid.Row="1" Margin="0,10,0,0">
+                            <Button Command="{Binding RefreshSourceDeviceCommand}"
+                                    Style="{StaticResource GhostIconButton}"
+                                    ToolTip="{Binding SourceDevicesRefreshButtonToolTip}"
+                                    Margin="0,0,8,0">
+                                <md:PackIcon Kind="Refresh" Width="18" Height="18"/>
+                            </Button>
+                            <Button Command="{Binding DeleteSelectedSourceDevicesCommand}"
+                                    Style="{StaticResource SecondaryButton}">
+                                <StackPanel Orientation="Horizontal">
+                                    <md:PackIcon Kind="DeleteOutline" Width="16" Height="16" Margin="0,0,8,0"/>
+                                    <TextBlock Text="{Binding [PlaybackStatisticsSourceDeviceDeleteSelected], Source={StaticResource Loc}}" VerticalAlignment="Center"/>
+                                </StackPanel>
+                            </Button>
+                        </WrapPanel>
+                    </Grid>
+
+                    <ProgressBar IsIndeterminate="True"
+                                 Height="3"
+                                 Margin="0,0,0,10"
+                                 Visibility="{Binding IsSourceDevicesBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <TextBlock Text="{Binding SourceDevicesStatusText}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,10"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding IsSourceDevicesBusy, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+                    <TextBlock Text="{Binding SourceDevicesStatusText}"
+                               Foreground="{DynamicResource BrushDanger}"
+                               Margin="0,0,0,10"
+                               TextWrapping="Wrap"
+                               Visibility="{Binding HasSourceDevicesError, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <TextBlock Text="{Binding [PlaybackStatisticsSourceDevicesEmpty], Source={StaticResource Loc}}"
+                               Foreground="{DynamicResource BrushTextSecondary}"
+                               Margin="0,0,0,10"
+                               Visibility="{Binding HasNoSourceDevices, Converter={StaticResource BooleanToVisibilityConverter}}"/>
+
+                    <ItemsControl ItemsSource="{Binding SourceDevices}"
+                                  Visibility="{Binding HasSourceDevices, Converter={StaticResource BooleanToVisibilityConverter}}">
+                        <ItemsControl.ItemTemplate>
+                            <DataTemplate>
+                                <Grid>
+                                    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="0,0,0,1" Padding="0,10">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Visible"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDeletedDataSummary}" Value="True">
+                                                        <Setter Property="Visibility" Value="Collapsed"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="28"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                                <ColumnDefinition Width="Auto"/>
+                                            </Grid.ColumnDefinitions>
+
+                                            <CheckBox Grid.Column="0"
+                                                      VerticalAlignment="Center"
+                                                      IsChecked="{Binding IsSelected, Mode=TwoWay}"
+                                                      IsEnabled="{Binding CanSelect}">
+                                                <CheckBox.Style>
+                                                    <Style TargetType="CheckBox">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                        <Style.Triggers>
+                                                            <DataTrigger Binding="{Binding CanSelect}" Value="False">
+                                                                <Setter Property="Visibility" Value="Hidden"/>
+                                                            </DataTrigger>
+                                                        </Style.Triggers>
+                                                    </Style>
+                                                </CheckBox.Style>
+                                            </CheckBox>
+
+                                            <md:PackIcon Grid.Column="1"
+                                                         Kind="{Binding PlatformIconKind}"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Foreground="{DynamicResource BrushTextSecondary}"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,12,0"/>
+
+                                            <Grid Grid.Column="2" Margin="0,0,12,0" VerticalAlignment="Center">
+                                                <Grid.RowDefinitions>
+                                                    <RowDefinition Height="Auto"/>
+                                                    <RowDefinition Height="Auto"/>
+                                                </Grid.RowDefinitions>
+                                                <Grid Grid.Row="0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding DisplayName}"
+                                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                                               FontWeight="SemiBold"
+                                                               TextTrimming="CharacterEllipsis"
+                                                               ToolTip="{Binding DisplayName}"
+                                                               VerticalAlignment="Center"/>
+                                                    <Border Grid.Column="1"
+                                                            Background="{DynamicResource BrushPrimaryContainer}"
+                                                            BorderBrush="{DynamicResource BrushOutlineVariant}"
+                                                            BorderThickness="1"
+                                                            CornerRadius="4"
+                                                            Padding="6,2"
+                                                            Margin="8,0,0,0"
+                                                            VerticalAlignment="Center"
+                                                            Visibility="{Binding IsLocalDevice, Converter={StaticResource BooleanToVisibilityConverter}}">
+                                                        <TextBlock Text="{Binding LocalBadgeText}" Foreground="{DynamicResource BrushAccent}" FontSize="11" FontWeight="SemiBold"/>
+                                                    </Border>
+                                                </Grid>
+                                                <Grid Grid.Row="1" Margin="0,4,0,0">
+                                                    <Grid.ColumnDefinitions>
+                                                        <ColumnDefinition Width="*"/>
+                                                        <ColumnDefinition Width="Auto"/>
+                                                    </Grid.ColumnDefinitions>
+                                                    <TextBlock Text="{Binding SecondaryText}"
+                                                               Foreground="{DynamicResource BrushTextSecondary}"
+                                                               FontSize="12"
+                                                               TextTrimming="CharacterEllipsis"/>
+                                                    <TextBlock Grid.Column="1"
+                                                               Text="{Binding EffectiveListeningDurationText}"
+                                                               Foreground="{DynamicResource BrushTextPrimary}"
+                                                               FontSize="12"
+                                                               Margin="12,0,0,0"/>
+                                                </Grid>
+                                            </Grid>
+
+                                            <Button Grid.Column="3"
+                                                    Command="{Binding DataContext.RenameSourceDeviceCommand, RelativeSource={RelativeSource AncestorType=UserControl}}"
+                                                    CommandParameter="{Binding}"
+                                                    Style="{StaticResource GhostIconButton}"
+                                                    ToolTip="{Binding [PlaybackStatisticsSourceDeviceRenameToolTip], Source={StaticResource Loc}}">
+                                                <md:PackIcon Kind="PencilOutline" Width="16" Height="16"/>
+                                            </Button>
+                                        </Grid>
+                                    </Border>
+
+                                    <Border BorderBrush="{DynamicResource BrushSeparator}" BorderThickness="0,0,0,1" Padding="0,8">
+                                        <Border.Style>
+                                            <Style TargetType="Border">
+                                                <Setter Property="Visibility" Value="Collapsed"/>
+                                                <Style.Triggers>
+                                                    <DataTrigger Binding="{Binding IsDeletedDataSummary}" Value="True">
+                                                        <Setter Property="Visibility" Value="Visible"/>
+                                                    </DataTrigger>
+                                                </Style.Triggers>
+                                            </Style>
+                                        </Border.Style>
+                                        <Grid>
+                                            <Grid.ColumnDefinitions>
+                                                <ColumnDefinition Width="Auto"/>
+                                                <ColumnDefinition Width="*"/>
+                                            </Grid.ColumnDefinitions>
+                                            <md:PackIcon Kind="{Binding PlatformIconKind}"
+                                                         Width="18"
+                                                         Height="18"
+                                                         Foreground="{DynamicResource BrushTextSecondary}"
+                                                         VerticalAlignment="Center"
+                                                         Margin="0,0,12,0"/>
+                                            <StackPanel Grid.Column="1" VerticalAlignment="Center">
+                                                <TextBlock Text="{Binding DisplayName}"
+                                                           Foreground="{DynamicResource BrushTextPrimary}"
+                                                           FontWeight="SemiBold"/>
+                                                <TextBlock Text="{Binding SecondaryText}"
+                                                           Foreground="{DynamicResource BrushTextSecondary}"
+                                                           FontSize="12"
+                                                           Margin="0,2,0,0"/>
+                                            </StackPanel>
+                                        </Grid>
+                                    </Border>
+                                </Grid>
+                            </DataTemplate>
+                        </ItemsControl.ItemTemplate>
+                    </ItemsControl>
+                </StackPanel>
+            </Border>
+
+            <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
+                <StackPanel>
+                    <TextBlock Text="数据管理" Style="{StaticResource SectionHeaderText}"/>
+                    <TextBlock Text="预览本机和云端同步数据，或执行明确的覆盖、删除、清理操作。" Style="{StaticResource SectionDescriptionText}" Margin="0,0,0,14" TextWrapping="Wrap"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,14">
+                        <Button Content="{Binding RefreshOverviewButtonText}"
+                                Command="{Binding RefreshOverviewCommand}"
+                                Style="{StaticResource ProminentSecondaryButton}"/>
+                    </StackPanel>
+
+                    <Grid Margin="0,0,0,14">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*"/>
+                            <ColumnDefinition Width="12"/>
+                            <ColumnDefinition Width="*"/>
+                        </Grid.ColumnDefinitions>
+
+                        <Border Grid.Column="0" Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="本机数据" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="歌曲" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding LocalSongCount}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Grid.Row="1" Text="歌单" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding LocalPlaylistCount}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Text="循环点" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding LocalLoopPointCount}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Text="评分" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding LocalRatingCount}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+
+                        <Border Grid.Column="2" Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                            <StackPanel>
+                                <TextBlock Text="云端数据" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+                                <Grid>
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*"/>
+                                        <ColumnDefinition Width="Auto"/>
+                                    </Grid.ColumnDefinitions>
+                                    <Grid.RowDefinitions>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                        <RowDefinition Height="Auto"/>
+                                    </Grid.RowDefinitions>
+
+                                    <TextBlock Text="歌曲引用" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                    <TextBlock Grid.Column="1" Text="{Binding CloudSongReferenceCount}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                                    <TextBlock Grid.Row="1" Text="歌单" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="1" Grid.Column="1" Text="{Binding CloudPlaylistCount}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Text="循环点" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="2" Grid.Column="1" Text="{Binding CloudLoopPointCount}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Text="评分" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,8,0,0"/>
+                                    <TextBlock Grid.Row="3" Grid.Column="1" Text="{Binding CloudRatingCount}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,8,0,0"/>
+                                </Grid>
+                            </StackPanel>
+                        </Border>
+                    </Grid>
+
+                    <Border Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12" Margin="0,0,0,14">
+                        <StackPanel>
+                            <TextBlock Text="匹配摘要" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,8"/>
+                            <WrapPanel>
+                                <TextBlock Text="云端状态：" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <TextBlock Text="{Binding CloudStatusText}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock Text="已匹配云端引用：" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <TextBlock Text="{Binding MatchedCloudSongReferences}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                            </WrapPanel>
+                            <WrapPanel Margin="0,6,0,0">
+                                <TextBlock Text="本机未找到：" Foreground="{DynamicResource BrushTextSecondary}"/>
+                                <TextBlock Text="{Binding MissingCloudSongReferences}" Foreground="{DynamicResource BrushTextPrimary}"/>
+                            </WrapPanel>
+                        </StackPanel>
+                    </Border>
+
+                    <TextBlock Text="操作" Foreground="{DynamicResource BrushTextPrimary}" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+                    <StackPanel Orientation="Horizontal" Margin="0,0,0,12">
+                        <Button Content="用本机覆盖云端"
+                                Command="{Binding ForcePushLocalToCloudCommand}"
+                                Style="{StaticResource ProminentSecondaryButton}"
+                                Margin="0,0,10,0"/>
+                        <Button Content="删除云端同步文件"
+                                Command="{Binding DeleteCloudSnapshotCommand}"
+                                Style="{StaticResource ProminentDangerButton}"
+                                Margin="0,0,10,0"/>
+                        <Button Content="清除所选本机数据"
+                                Command="{Binding ClearLocalSyncDataCommand}"
+                                Style="{StaticResource ProminentDangerButton}"/>
+                    </StackPanel>
+
+                    <Border Background="#12000000" BorderBrush="#14FFFFFF" BorderThickness="1" CornerRadius="8" Padding="12">
+                        <StackPanel>
+                            <TextBlock Text="当前状态" Foreground="{DynamicResource BrushTextSecondary}" FontSize="12"/>
+                            <TextBlock Text="{Binding ManagementStatusText}" Foreground="{DynamicResource BrushTextPrimary}" Margin="0,2,0,0" TextWrapping="Wrap"/>
+                        </StackPanel>
+                    </Border>
                 </StackPanel>
             </Border>
         </StackPanel>

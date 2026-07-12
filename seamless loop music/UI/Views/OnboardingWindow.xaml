@@ -5,8 +5,8 @@
         Height="470" Width="600"
         ResizeMode="NoResize"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BrushBackground}"
-        Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushBackground}"
+        Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="Microsoft YaHei">
     <Grid Margin="28">
         <Grid.RowDefinitions>
@@ -21,7 +21,7 @@
                 <ColumnDefinition Width="*"/>
             </Grid.ColumnDefinitions>
 
-            <Border Width="64" Height="64" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,18,0">
+            <Border Width="64" Height="64" CornerRadius="10" Background="{DynamicResource BrushSurfaceHighlight}" Margin="0,0,18,0">
                 <TextBlock Text="{StaticResource IconMusic}" FontSize="32" HorizontalAlignment="Center" VerticalAlignment="Center"/>
             </Border>
 
@@ -29,18 +29,18 @@
                 <TextBlock Text="{Binding [OnboardingHeading], Source={StaticResource Loc}}"
                            FontSize="26"
                            FontWeight="Bold"
-                           Foreground="{StaticResource BrushAccent}"
+                           Foreground="{DynamicResource BrushAccent}"
                            TextWrapping="Wrap"/>
                 <TextBlock Text="{Binding [OnboardingIntro], Source={StaticResource Loc}}"
                            Margin="0,8,0,0"
                            FontSize="14"
-                           Foreground="{StaticResource BrushTextSecondary}"
+                           Foreground="{DynamicResource BrushTextSecondary}"
                            TextWrapping="Wrap"
                            LineHeight="22"/>
             </StackPanel>
         </Grid>
 
-        <Border Grid.Row="1" Background="{StaticResource BrushSurface}" CornerRadius="8" Padding="20">
+        <Border Grid.Row="1" Background="{DynamicResource BrushSurface}" CornerRadius="8" Padding="20">
             <StackPanel>
                 <Grid Margin="0,0,0,18">
                     <Grid.ColumnDefinitions>
@@ -52,11 +52,11 @@
                         <TextBlock Text="{Binding [OnboardingStepFolderTitle], Source={StaticResource Loc}}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                                   Foreground="{DynamicResource BrushTextPrimary}"/>
                         <TextBlock Text="{Binding [OnboardingStepFolderDesc], Source={StaticResource Loc}}"
                                    Margin="0,4,0,0"
                                    FontSize="13"
-                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
@@ -71,11 +71,11 @@
                         <TextBlock Text="{Binding [OnboardingStepScanTitle], Source={StaticResource Loc}}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                                   Foreground="{DynamicResource BrushTextPrimary}"/>
                         <TextBlock Text="{Binding [OnboardingStepScanDesc], Source={StaticResource Loc}}"
                                    Margin="0,4,0,0"
                                    FontSize="13"
-                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
@@ -90,11 +90,11 @@
                         <TextBlock Text="{Binding [OnboardingStepPlayTitle], Source={StaticResource Loc}}"
                                    FontSize="16"
                                    FontWeight="SemiBold"
-                                   Foreground="{StaticResource BrushTextPrimary}"/>
+                                   Foreground="{DynamicResource BrushTextPrimary}"/>
                         <TextBlock Text="{Binding [OnboardingStepPlayDesc], Source={StaticResource Loc}}"
                                    Margin="0,4,0,0"
                                    FontSize="13"
-                                   Foreground="{StaticResource BrushTextSecondary}"
+                                   Foreground="{DynamicResource BrushTextSecondary}"
                                    TextWrapping="Wrap"/>
                     </StackPanel>
                 </Grid>
@@ -109,7 +109,7 @@
 
             <TextBlock x:Name="txtStatus"
                        Text="{Binding [OnboardingStatusReady], Source={StaticResource Loc}}"
-                       Foreground="{StaticResource BrushTextSecondary}"
+                       Foreground="{DynamicResource BrushTextSecondary}"
                        FontSize="13"
                        VerticalAlignment="Center"
                        TextWrapping="Wrap"/>

@@ -1,59 +1,52 @@
 <ResourceDictionary xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
                     xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml">
+    <ResourceDictionary.MergedDictionaries>
+        <!-- Default palette. Theme infrastructure can replace this dictionary at runtime. -->
+        <ResourceDictionary Source="Palettes/Dark.xaml"/>
+    </ResourceDictionary.MergedDictionaries>
 
-    <!-- Color Tokens: base dark theme surfaces and semantic accents -->
-    <Color x:Key="ColorBackground">#1E1E2E</Color>
-    <Color x:Key="ColorSurface">#313244</Color>
-    <Color x:Key="ColorSurfaceHighlight">#45475A</Color>
-    <Color x:Key="ColorAccent">#89B4FA</Color>
-    <Color x:Key="ColorAccentHover">#B4D0FF</Color>
-    <Color x:Key="ColorTextPrimary">#CDD6F4</Color>
-    <Color x:Key="ColorTextSecondary">#6C7086</Color>
-    <Color x:Key="ColorTextMuted">#585B70</Color>
-    <Color x:Key="ColorDanger">#F38BA8</Color>
-    <Color x:Key="ColorWarning">#F9E2AF</Color>
-    <Color x:Key="ColorMauve">#CBA6F7</Color>
-    <Color x:Key="ColorSelection">#2D3F5E</Color>
-    <Color x:Key="ColorSurfaceDark">#181825</Color>
-    <Color x:Key="ColorTitleBar">#11111B</Color>
-    <Color x:Key="ColorSky">#89DCEB</Color>
-    <Color x:Key="ColorTeal">#94E2D5</Color>
-    <Color x:Key="ColorPink">#F5C2E7</Color>
-    <Color x:Key="ColorRosewater">#F2CDCD</Color>
-    <Color x:Key="ColorOverlayHover">#1FFFFFFF</Color>
-    <Color x:Key="ColorOverlayPressed">#2FFFFFFF</Color>
-    <Color x:Key="ColorAnalyzing">#FF4500</Color>
-    <Color x:Key="ColorScrollThumb">#66CDD6F4</Color>
-    <Color x:Key="ColorScrollThumbHover">#8ACDD6F4</Color>
-    <Color x:Key="ColorScrollThumbPressed">#B3CDD6F4</Color>
+    <!-- Existing shared brushes remain stable while their underlying palette colors can change. -->
+    <SolidColorBrush x:Key="BrushBackground" Color="{DynamicResource ColorBackground}"/>
+    <SolidColorBrush x:Key="BrushSurface" Color="{DynamicResource ColorSurface}"/>
+    <SolidColorBrush x:Key="BrushSurfaceHighlight" Color="{DynamicResource ColorSurfaceHighlight}"/>
+    <SolidColorBrush x:Key="BrushAccent" Color="{DynamicResource ColorAccent}"/>
+    <SolidColorBrush x:Key="BrushAccentHover" Color="{DynamicResource ColorAccentHover}"/>
+    <SolidColorBrush x:Key="BrushTextPrimary" Color="{DynamicResource ColorTextPrimary}"/>
+    <SolidColorBrush x:Key="BrushTextSecondary" Color="{DynamicResource ColorTextSecondary}"/>
+    <SolidColorBrush x:Key="BrushTextMuted" Color="{DynamicResource ColorTextMuted}"/>
+    <SolidColorBrush x:Key="BrushDanger" Color="{DynamicResource ColorDanger}"/>
+    <SolidColorBrush x:Key="BrushWarning" Color="{DynamicResource ColorWarning}"/>
+    <SolidColorBrush x:Key="BrushMauve" Color="{DynamicResource ColorMauve}"/>
+    <SolidColorBrush x:Key="BrushSelection" Color="{DynamicResource ColorSelection}"/>
+    <SolidColorBrush x:Key="BrushSurfaceDark" Color="{DynamicResource ColorSurfaceDark}"/>
+    <SolidColorBrush x:Key="BrushTitleBar" Color="{DynamicResource ColorTitleBar}"/>
+    <SolidColorBrush x:Key="BrushSky" Color="{DynamicResource ColorSky}"/>
+    <SolidColorBrush x:Key="BrushTeal" Color="{DynamicResource ColorTeal}"/>
+    <SolidColorBrush x:Key="BrushPink" Color="{DynamicResource ColorPink}"/>
+    <SolidColorBrush x:Key="BrushRosewater" Color="{DynamicResource ColorRosewater}"/>
+    <SolidColorBrush x:Key="BrushOverlayHover" Color="{DynamicResource ColorOverlayHover}"/>
+    <SolidColorBrush x:Key="BrushOverlayPressed" Color="{DynamicResource ColorOverlayPressed}"/>
+    <SolidColorBrush x:Key="BrushAnalyzing" Color="{DynamicResource ColorAnalyzing}"/>
+    <SolidColorBrush x:Key="BrushScrollThumb" Color="{DynamicResource ColorScrollThumb}"/>
+    <SolidColorBrush x:Key="BrushScrollThumbHover" Color="{DynamicResource ColorScrollThumbHover}"/>
+    <SolidColorBrush x:Key="BrushScrollThumbPressed" Color="{DynamicResource ColorScrollThumbPressed}"/>
+    <SolidColorBrush x:Key="BrushBorder" Color="{DynamicResource ColorBorder}"/>
+    <SolidColorBrush x:Key="BrushSeparator" Color="{DynamicResource ColorSeparator}"/>
 
-    <!-- Brush Resources: preferred shared brushes for views and controls -->
-    <SolidColorBrush x:Key="BrushBackground" Color="{StaticResource ColorBackground}"/>
-    <SolidColorBrush x:Key="BrushSurface" Color="{StaticResource ColorSurface}"/>
-    <SolidColorBrush x:Key="BrushSurfaceHighlight" Color="{StaticResource ColorSurfaceHighlight}"/>
-    <SolidColorBrush x:Key="BrushAccent" Color="{StaticResource ColorAccent}"/>
-    <SolidColorBrush x:Key="BrushAccentHover" Color="{StaticResource ColorAccentHover}"/>
-    <SolidColorBrush x:Key="BrushTextPrimary" Color="{StaticResource ColorTextPrimary}"/>
-    <SolidColorBrush x:Key="BrushTextSecondary" Color="{StaticResource ColorTextSecondary}"/>
-    <SolidColorBrush x:Key="BrushTextMuted" Color="{StaticResource ColorTextMuted}"/>
-    <SolidColorBrush x:Key="BrushDanger" Color="{StaticResource ColorDanger}"/>
-    <SolidColorBrush x:Key="BrushWarning" Color="{StaticResource ColorWarning}"/>
-    <SolidColorBrush x:Key="BrushMauve" Color="{StaticResource ColorMauve}"/>
-    <SolidColorBrush x:Key="BrushSelection" Color="{StaticResource ColorSelection}"/>
-    <SolidColorBrush x:Key="BrushSurfaceDark" Color="{StaticResource ColorSurfaceDark}"/>
-    <SolidColorBrush x:Key="BrushTitleBar" Color="{StaticResource ColorTitleBar}"/>
-    <SolidColorBrush x:Key="BrushSky" Color="{StaticResource ColorSky}"/>
-    <SolidColorBrush x:Key="BrushTeal" Color="{StaticResource ColorTeal}"/>
-    <SolidColorBrush x:Key="BrushPink" Color="{StaticResource ColorPink}"/>
-    <SolidColorBrush x:Key="BrushRosewater" Color="{StaticResource ColorRosewater}"/>
-    <SolidColorBrush x:Key="BrushOverlayHover" Color="{StaticResource ColorOverlayHover}"/>
-    <SolidColorBrush x:Key="BrushOverlayPressed" Color="{StaticResource ColorOverlayPressed}"/>
-    <SolidColorBrush x:Key="BrushAnalyzing" Color="{StaticResource ColorAnalyzing}"/>
-    <SolidColorBrush x:Key="BrushScrollThumb" Color="{StaticResource ColorScrollThumb}"/>
-    <SolidColorBrush x:Key="BrushScrollThumbHover" Color="{StaticResource ColorScrollThumbHover}"/>
-    <SolidColorBrush x:Key="BrushScrollThumbPressed" Color="{StaticResource ColorScrollThumbPressed}"/>
-    
-    <SolidColorBrush x:Key="BrushBorder" Color="{StaticResource ColorSurface}"/>
-    <SolidColorBrush x:Key="BrushSeparator" Color="{StaticResource ColorSurfaceHighlight}"/>
+    <SolidColorBrush x:Key="BrushPrimaryContainer" Color="{DynamicResource ColorPrimaryContainer}"/>
+    <SolidColorBrush x:Key="BrushSecondaryTeal" Color="{DynamicResource ColorSecondaryTeal}"/>
+    <SolidColorBrush x:Key="BrushSurfaceVariant" Color="{DynamicResource ColorSurfaceVariant}"/>
+    <SolidColorBrush x:Key="BrushOutlineVariant" Color="{DynamicResource ColorOutlineVariant}"/>
 
+    <!-- Fixed palette for the immersive playback surface. -->
+    <SolidColorBrush x:Key="BrushImmersiveGradientStart" Color="{DynamicResource ColorImmersiveGradientStart}"/>
+    <SolidColorBrush x:Key="BrushImmersiveGradientEnd" Color="{DynamicResource ColorImmersiveGradientEnd}"/>
+    <SolidColorBrush x:Key="BrushImmersivePanel" Color="{DynamicResource ColorImmersivePanel}"/>
+    <SolidColorBrush x:Key="BrushImmersiveControl" Color="{DynamicResource ColorImmersiveControl}"/>
+    <SolidColorBrush x:Key="BrushImmersivePrimaryAction" Color="{DynamicResource ColorImmersivePrimaryAction}"/>
+    <SolidColorBrush x:Key="BrushImmersiveTextPrimary" Color="{DynamicResource ColorImmersiveTextPrimary}"/>
+    <SolidColorBrush x:Key="BrushImmersiveTextSecondary" Color="{DynamicResource ColorImmersiveTextSecondary}"/>
+    <SolidColorBrush x:Key="BrushImmersiveTextMuted" Color="{DynamicResource ColorImmersiveTextMuted}"/>
+    <SolidColorBrush x:Key="BrushImmersiveProgressTrack" Color="{DynamicResource ColorImmersiveProgressTrack}"/>
+    <SolidColorBrush x:Key="BrushImmersiveLoopMarker" Color="{DynamicResource ColorImmersiveLoopMarker}"/>
 </ResourceDictionary>

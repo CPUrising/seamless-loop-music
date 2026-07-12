@@ -1,0 +1,129 @@
+name: Windows Build
+
+on:
+  workflow_dispatch:
+  pull_request:
+    branches:
+      - main
+      - master
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    name: Build app and loopfinder.dll
+    runs-on: windows-2022
+
+    env:
+      CONFIGURATION: Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Resolve action build version
+        id: version
+        uses: actions/github-script@v9
+        with:
+          script: |
+            const fs = require('fs');
+
+            function fallbackVersionFromProject() {
+              const projectFile = 'seamless loop music/seamless loop music.csproj';
+              const projectText = fs.readFileSync(projectFile, 'utf8');
+              const version = projectText.match(/<Version>([^<]+)<\/Version>/)?.[1]
+                || projectText.match(/<AssemblyVersion>([^<]+)<\/AssemblyVersion>/)?.[1]
+                || projectText.match(/<FileVersion>([^<]+)<\/FileVersion>/)?.[1]
+                || '0.0.0';
+
+              return version.startsWith('v') ? version : `v${version}`;
+            }
+
+            let baseVersion;
+            try {
+              const latestRelease = await github.rest.repos.getLatestRelease({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+              });
+              baseVersion = latestRelease.data.tag_name;
+            } catch (error) {
+              if (error.status !== 404) {
+                throw error;
+              }
+              baseVersion = fallbackVersionFromProject();
+            }
+
+            const safeBaseVersion = baseVersion.replace(/[^0-9A-Za-z._-]/g, '-');
+            const shortSha = context.sha.substring(0, 7);
+            const buildVersion = `${safeBaseVersion}-action.${context.runNumber}-${shortSha}`;
+
+            core.info(`Base release version: ${baseVersion}`);
+            core.info(`Action build version: ${buildVersion}`);
+            core.setOutput('base_version', baseVersion);
+            core.setOutput('build_version', buildVersion);
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Configure loopfinder
+        run: cmake -S loopfinder -B loopfinder/build -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build loopfinder.dll
+        run: cmake --build loopfinder/build --config Release --target loopfinder --parallel
+
+      - name: Verify loopfinder.dll
+        shell: pwsh
+        run: |
+          $candidates = @(
+            'loopfinder/build/Release/loopfinder.dll',
+            'loopfinder/build/loopfinder.dll'
+          )
+          $dll = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $dll) {
+            throw 'loopfinder.dll was not generated.'
+          }
+
+          $dll = (Resolve-Path -LiteralPath $dll).Path
+          "LOOPFINDER_DLL=$dll" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "Generated loopfinder.dll at $dll"
+
+      - name: Restore NuGet packages
+        run: dotnet restore "seamless loop music.sln"
+
+      - name: Build solution
+        shell: pwsh
+        run: |
+          msbuild "seamless loop music.sln" `
+            /m `
+            /p:Configuration="$env:CONFIGURATION" `
+            /p:Platform="Any CPU" `
+            /p:ContinuousIntegrationBuild=true `
+            /p:InformationalVersion="${{ steps.version.outputs.build_version }}"
+
+      - name: Verify app output contains loopfinder.dll
+        shell: pwsh
+        run: |
+          $outputDir = "seamless loop music/bin/$env:CONFIGURATION/net48"
+          $outputDll = Join-Path $outputDir 'loopfinder.dll'
+
+          if (-not (Test-Path -LiteralPath $outputDll)) {
+            throw "App output is missing loopfinder.dll: $outputDll"
+          }
+
+          "Verified loopfinder.dll in $outputDir"
+
+      - name: Stage artifact
+        shell: pwsh
+        run: |
+          $outputDir = "seamless loop music/bin/$env:CONFIGURATION/net48"
+          $artifactDir = 'artifacts/seamless-loop-music'
+          New-Item -ItemType Directory -Path $artifactDir -Force | Out-Null
+          Copy-Item -Path "$outputDir/*" -Destination $artifactDir -Recurse -Force
+
+      - name: Upload build artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: seamless-loop-music-${{ steps.version.outputs.build_version }}
+          path: artifacts/seamless-loop-music
+          if-no-files-found: error

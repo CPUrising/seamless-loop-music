@@ -3,7 +3,7 @@
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         Title="{Binding [TitleLoopCandidates], Source={StaticResource Loc}}" Height="500" Width="650"
         WindowStartupLocation="CenterOwner"
-        Background="{StaticResource BrushBackground}" Foreground="{StaticResource BrushTextPrimary}"
+        Background="{DynamicResource BrushBackground}" Foreground="{DynamicResource BrushTextPrimary}"
         FontFamily="Microsoft YaHei">
     <Grid Margin="20">
         <Grid.RowDefinitions>
@@ -12,10 +12,10 @@
             <RowDefinition Height="Auto"/>
         </Grid.RowDefinitions>
 
-        <TextBlock Text="{Binding [PromptSelectLoop], Source={StaticResource Loc}}" Margin="0,0,0,15" Foreground="{StaticResource BrushAccent}" FontSize="16" FontWeight="Bold"/>
+        <TextBlock Text="{Binding [PromptSelectLoop], Source={StaticResource Loc}}" Margin="0,0,0,15" Foreground="{DynamicResource BrushAccent}" FontSize="16" FontWeight="Bold"/>
 
-        <Border Grid.Row="1" Background="{StaticResource BrushSurfaceDark}" CornerRadius="12" BorderThickness="1" BorderBrush="{StaticResource BrushBorder}">
-            <ListView Name="lstCandidates" Background="Transparent" Foreground="{StaticResource BrushTextPrimary}" BorderThickness="0"
+        <Border Grid.Row="1" Background="{DynamicResource BrushSurfaceDark}" CornerRadius="12" BorderThickness="1" BorderBrush="{DynamicResource BrushBorder}">
+            <ListView Name="lstCandidates" Background="Transparent" Foreground="{DynamicResource BrushTextPrimary}" BorderThickness="0"
                       SelectionMode="Single" MouseDoubleClick="LstCandidates_MouseDoubleClick" Margin="5">
                 <ListView.ItemContainerStyle>
                     <Style TargetType="ListViewItem" BasedOn="{StaticResource ModernListViewItem}">

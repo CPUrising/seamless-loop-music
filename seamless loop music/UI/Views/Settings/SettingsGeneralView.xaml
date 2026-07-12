@@ -7,11 +7,93 @@
              prism:ViewModelLocator.AutoWireViewModel="True"
              mc:Ignorable="d"
              d:DesignHeight="520" d:DesignWidth="720">
+    <UserControl.Resources>
+        <Style x:Key="ThemeModeLabelStyle" TargetType="TextBlock">
+            <Setter Property="Foreground" Value="{DynamicResource BrushTextMuted}"/>
+            <Setter Property="FontSize" Value="12"/>
+            <Setter Property="VerticalAlignment" Value="Center"/>
+        </Style>
+        <Style x:Key="ThemeToggleStyle" TargetType="ToggleButton" BasedOn="{StaticResource ImmediateToolTipStyle}">
+            <Setter Property="Width" Value="56"/>
+            <Setter Property="Height" Value="30"/>
+            <Setter Property="Background" Value="{DynamicResource BrushSurfaceVariant}"/>
+            <Setter Property="BorderBrush" Value="{DynamicResource BrushOutlineVariant}"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="Cursor" Value="Hand"/>
+            <Setter Property="Template">
+                <Setter.Value>
+                    <ControlTemplate TargetType="ToggleButton">
+                        <Border x:Name="Track" Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="15" Padding="3">
+                            <Ellipse x:Name="Thumb" Width="22" Height="22" Fill="{DynamicResource BrushTextSecondary}" HorizontalAlignment="Left"/>
+                        </Border>
+                        <ControlTemplate.Triggers>
+                            <Trigger Property="IsChecked" Value="True">
+                                <Setter TargetName="Track" Property="Background" Value="{DynamicResource BrushPrimaryContainer}"/>
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="Thumb" Property="Fill" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="Thumb" Property="HorizontalAlignment" Value="Right"/>
+                            </Trigger>
+                            <Trigger Property="IsMouseOver" Value="True">
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                            </Trigger>
+                            <Trigger Property="IsKeyboardFocused" Value="True">
+                                <Setter TargetName="Track" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
+                                <Setter TargetName="Track" Property="BorderThickness" Value="2"/>
+                            </Trigger>
+                            <Trigger Property="IsEnabled" Value="False">
+                                <Setter Property="Opacity" Value="0.5"/>
+                            </Trigger>
+                        </ControlTemplate.Triggers>
+                    </ControlTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
+    </UserControl.Resources>
     <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
         <StackPanel>
             <!-- General page header. -->
-            <TextBlock Text="{Binding [SettingsGeneral], Source={StaticResource Loc}}" FontSize="{DynamicResource HeaderFontSize}" FontWeight="Bold" Foreground="{StaticResource BrushTextPrimary}"/>
-            <TextBlock Text="{Binding [SettingsGeneralSub], Source={StaticResource Loc}}" FontSize="{DynamicResource SubHeaderFontSize}" Foreground="{StaticResource BrushTextSecondary}" Margin="0,6,0,22"/>
+            <TextBlock Text="{Binding [SettingsGeneral], Source={StaticResource Loc}}" FontSize="{DynamicResource HeaderFontSize}" FontWeight="Bold" Foreground="{DynamicResource BrushTextPrimary}"/>
+            <TextBlock Text="{Binding [SettingsGeneralSub], Source={StaticResource Loc}}" FontSize="{DynamicResource SubHeaderFontSize}" Foreground="{DynamicResource BrushTextSecondary}" Margin="0,6,0,22"/>
+
+            <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="8" BorderBrush="{DynamicResource BrushOutlineVariant}" BorderThickness="1">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*"/>
+                        <ColumnDefinition Width="Auto"/>
+                    </Grid.ColumnDefinitions>
+                    <StackPanel Grid.Column="0" Margin="0,0,18,0">
+                        <TextBlock Text="{Binding [ThemeHeader], Source={StaticResource Loc}}" Style="{StaticResource SectionHeaderText}"/>
+                        <TextBlock Text="{Binding [ThemeSub], Source={StaticResource Loc}}" Style="{StaticResource SectionDescriptionText}" TextWrapping="Wrap"/>
+                    </StackPanel>
+                    <StackPanel Grid.Column="1" VerticalAlignment="Center" Orientation="Horizontal">
+                        <TextBlock Text="{Binding [ThemeLight], Source={StaticResource Loc}}" Margin="0,0,8,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource ThemeModeLabelStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDarkTheme}" Value="False">
+                                            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                        <ToggleButton IsChecked="{Binding IsDarkTheme, Mode=TwoWay}" Style="{StaticResource ThemeToggleStyle}" ToolTip="{Binding [ThemeHeader], Source={StaticResource Loc}}" AutomationProperties.Name="{Binding [ThemeHeader], Source={StaticResource Loc}}" AutomationProperties.HelpText="{Binding [ThemeSub], Source={StaticResource Loc}}"/>
+                        <TextBlock Text="{Binding [ThemeDark], Source={StaticResource Loc}}" Margin="8,0,0,0">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock" BasedOn="{StaticResource ThemeModeLabelStyle}">
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsDarkTheme}" Value="True">
+                                            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
+                                            <Setter Property="FontWeight" Value="SemiBold"/>
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </StackPanel>
+                </Grid>
+            </Border>
 
             <!-- Language settings card. -->
             <Border Style="{StaticResource SurfaceCard}" Padding="18" Margin="0,0,0,16" CornerRadius="10">
@@ -24,7 +106,7 @@
                               DisplayMemberPath="NativeName"
                               HorizontalAlignment="Left"
                               Style="{StaticResource FlatComboBoxStyle}"
-                              Foreground="{StaticResource BrushTextPrimary}"/>
+                              Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
             </Border>
 
@@ -39,7 +121,7 @@
                               DisplayMemberPath="DisplayName"
                               HorizontalAlignment="Left"
                               Style="{StaticResource FlatComboBoxStyle}"
-                              Foreground="{StaticResource BrushTextPrimary}"/>
+                              Foreground="{DynamicResource BrushTextPrimary}"/>
                 </StackPanel>
             </Border>
         </StackPanel>

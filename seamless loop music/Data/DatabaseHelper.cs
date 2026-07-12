@@ -86,6 +86,7 @@ namespace seamless_loop_music.Data
         {
             var conn = new SQLiteConnection(_connectionString);
             conn.Open();
+            conn.Execute("PRAGMA foreign_keys=ON;");
             return conn;
         }
 
@@ -100,7 +101,7 @@ namespace seamless_loop_music.Data
                 // --- 纯净 3NF 架构创建 (Artist 挂载到 Track) ---
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Artists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE, CoverPath TEXT);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Albums (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL UNIQUE, CoverPath TEXT);");
-                db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, ArtistId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
+                db.Execute(@"CREATE TABLE IF NOT EXISTS Tracks (Id INTEGER PRIMARY KEY AUTOINCREMENT, FileName TEXT NOT NULL, FilePath TEXT, DisplayName TEXT, TotalSamples INTEGER DEFAULT 0, DurationMs INTEGER DEFAULT 0, LastModified DATETIME, CoverPath TEXT, AlbumId INTEGER, ArtistId INTEGER, FOREIGN KEY(AlbumId) REFERENCES Albums(Id) ON DELETE SET NULL, FOREIGN KEY(ArtistId) REFERENCES Artists(Id) ON DELETE SET NULL, UNIQUE(FileName, TotalSamples));");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS LoopPoints (TrackId INTEGER PRIMARY KEY, LoopStart INTEGER DEFAULT 0, LoopEnd INTEGER DEFAULT 0, LoopCandidatesJson TEXT, AnalysisLastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS UserRatings (TrackId INTEGER PRIMARY KEY, Rating INTEGER DEFAULT 0, LastModified DATETIME, FOREIGN KEY(TrackId) REFERENCES Tracks(Id) ON DELETE CASCADE);");
                 db.Execute(@"CREATE TABLE IF NOT EXISTS Playlists (Id INTEGER PRIMARY KEY AUTOINCREMENT, Name TEXT NOT NULL, SortOrder INTEGER DEFAULT 0, CreatedAt DATETIME DEFAULT CURRENT_TIMESTAMP);");
@@ -121,7 +122,7 @@ namespace seamless_loop_music.Data
 
         private const string FullTrackSelect = @"
             SELECT 
-                t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.LastModified, t.CoverPath,
+                t.Id, t.FileName, t.FilePath, t.DisplayName, t.TotalSamples, t.DurationMs, t.LastModified, t.CoverPath,
                 al.Name AS Album, ar.Name AS Artist, ar.Name AS AlbumArtist, 
                 al.CoverPath AS AlbumCoverPath, ar.CoverPath AS ArtistCoverPath,
                 COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
@@ -154,8 +155,8 @@ namespace seamless_loop_music.Data
             {
                 var (albumId, artistId) = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
                 
-                db.Execute(@"UPDATE Tracks SET DisplayName=@DisplayName, CoverPath=@CoverPath, AlbumId=@AlbumId, ArtistId=@ArtistId WHERE Id=@Id", 
-                    new { track.DisplayName, track.CoverPath, AlbumId = albumId, ArtistId = artistId, track.Id }, transaction: trans);
+                db.Execute(@"UPDATE Tracks SET DisplayName=@DisplayName, CoverPath=@CoverPath, DurationMs=@DurationMs, AlbumId=@AlbumId, ArtistId=@ArtistId WHERE Id=@Id",
+                    new { track.DisplayName, track.CoverPath, track.DurationMs, AlbumId = albumId, ArtistId = artistId, track.Id }, transaction: trans);
 
                 db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@Id, @LoopStart, @LoopEnd, @LoopCandidatesJson) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", 
                     track, transaction: trans);
@@ -202,11 +203,11 @@ namespace seamless_loop_music.Data
                     var (albumId, artistId) = UpsertArtistAlbum(db, track.Artist, track.AlbumArtist, track.Album, track.CoverPath, trans);
                     
                     long trackId = db.ExecuteScalar<long>(@"
-                        INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, LastModified, CoverPath, AlbumId, ArtistId) 
-                        VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @LastModified, @CoverPath, @AlbumId, @ArtistId)
-                        ON CONFLICT(FileName, TotalSamples) DO UPDATE SET FilePath=excluded.FilePath, DisplayName=excluded.DisplayName, AlbumId=excluded.AlbumId, ArtistId=excluded.ArtistId;
+                        INSERT INTO Tracks (FileName, FilePath, DisplayName, TotalSamples, DurationMs, LastModified, CoverPath, AlbumId, ArtistId)
+                        VALUES (@FileName, @FilePath, @DisplayName, @TotalSamples, @DurationMs, @LastModified, @CoverPath, @AlbumId, @ArtistId)
+                        ON CONFLICT(FileName, TotalSamples) DO UPDATE SET FilePath=excluded.FilePath, DisplayName=excluded.DisplayName, DurationMs=excluded.DurationMs, AlbumId=excluded.AlbumId, ArtistId=excluded.ArtistId;
                         SELECT Id FROM Tracks WHERE FileName=@FileName AND TotalSamples=@TotalSamples;", 
-                        new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId }, transaction: trans);
+                        new { track.FileName, track.FilePath, track.DisplayName, track.TotalSamples, track.DurationMs, track.LastModified, track.CoverPath, AlbumId = albumId, ArtistId = artistId }, transaction: trans);
 
                     track.Id = (int)trackId;
                     db.Execute(@"INSERT INTO LoopPoints (TrackId, LoopStart, LoopEnd, LoopCandidatesJson) VALUES (@TrackId, @LoopStart, @LoopEnd, @LoopCandidatesJson) ON CONFLICT(TrackId) DO UPDATE SET LoopStart=excluded.LoopStart, LoopEnd=excluded.LoopEnd, LoopCandidatesJson=excluded.LoopCandidatesJson", 
@@ -377,6 +378,7 @@ namespace seamless_loop_music.Data
                         
                         bool hasDisplayName = trackColSet.Contains("DisplayName");
                         bool hasCover = trackColSet.Contains("CoverPath");
+                        bool hasDurationMs = trackColSet.Contains("DurationMs");
 
                         bool hasArtists = tables.Contains("Artists", StringComparer.OrdinalIgnoreCase);
                         bool hasAlbums = tables.Contains("Albums", StringComparer.OrdinalIgnoreCase);
@@ -396,6 +398,7 @@ namespace seamless_loop_music.Data
                                 {(hasArtists ? "ar.Name" : "NULL")} AS Artist, 
                                 {(hasAlbums ? "al.Name" : "NULL")} AS Album, 
                                 {(hasArtists ? "ar.Name" : "NULL")} AS AlbumArtist,
+                                {(hasDurationMs ? "t.DurationMs" : "0")} AS DurationMs,
                                 {(hasLoopPoints ? "lp.LoopStart" : "0")} AS LoopStart, 
                                 {(hasLoopPoints ? "lp.LoopEnd" : "0")} AS LoopEnd, 
                                 {(hasLoopPoints ? "lp.LoopCandidatesJson" : "NULL")} AS LoopCandidatesJson,
@@ -423,6 +426,7 @@ namespace seamless_loop_music.Data
                         bool hasArtist = colSet.Contains("Artist");
                         bool hasAlbum = colSet.Contains("Album");
                         bool hasAlbumArtist = colSet.Contains("AlbumArtist");
+                        bool hasDurationMs = colSet.Contains("DurationMs");
 
                         string syncSqlFlat = $@"
                             SELECT 
@@ -431,6 +435,7 @@ namespace seamless_loop_music.Data
                                 {(hasArtist ? "Artist" : "NULL AS Artist")}, 
                                 {(hasAlbum ? "Album" : "NULL AS Album")}, 
                                 {(hasAlbumArtist ? "AlbumArtist" : (hasArtist ? "Artist AS AlbumArtist" : "NULL AS AlbumArtist"))}, 
+                                {(hasDurationMs ? "DurationMs" : "0 AS DurationMs")},
                                 LoopStart, LoopEnd, 
                                 {(hasCandidates ? "LoopCandidatesJson" : "NULL AS LoopCandidatesJson")}, 
                                 {(hasRating ? "Rating" : "0 AS Rating")}, 
@@ -448,7 +453,7 @@ namespace seamless_loop_music.Data
                     {
                         var localTrack = db.QueryFirstOrDefault<MusicTrack>(@"
                             SELECT 
-                                t.Id, t.FileName, t.TotalSamples, t.DisplayName, t.CoverPath,
+                                t.Id, t.FileName, t.TotalSamples, t.DisplayName, t.DurationMs, t.CoverPath,
                                 al.Name AS Album, ar.Name AS Artist,
                                 COALESCE(lp.LoopStart, 0) AS LoopStart, COALESCE(lp.LoopEnd, 0) AS LoopEnd,
                                 COALESCE(ur.Rating, 0) AS Rating
@@ -597,6 +602,18 @@ namespace seamless_loop_music.Data
 
         private void ApplyMigrations(IDbConnection db)
         {
+            PlaybackStatisticsSyncSchema.EnsureSchema(db);
+
+            // 0. DurationMs 列迁移（为旧数据库兼容）
+            var existingCols = db.Query("PRAGMA table_info(Tracks)")
+                .Cast<IDictionary<string, object>>()
+                .Select(c => c["name"].ToString())
+                .ToHashSet(StringComparer.OrdinalIgnoreCase);
+            if (!existingCols.Contains("DurationMs"))
+            {
+                db.Execute("ALTER TABLE Tracks ADD COLUMN DurationMs INTEGER DEFAULT 0");
+            }
+
             // 1. 歌单查重与合并 (针对已存在数据的用户)
             // 将重复歌单里的歌曲搬运到 ID 最小的那个同名歌单里
             db.Execute(@"

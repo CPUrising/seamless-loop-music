@@ -16,7 +16,7 @@
 
         <!-- 播放按钮样式 (复用 IconButton) -->
         <Style x:Key="TrackPlayButton" TargetType="Button" BasedOn="{StaticResource GhostIconButton}">
-            <Setter Property="Foreground" Value="{StaticResource BrushAccent}"/>
+            <Setter Property="Foreground" Value="{DynamicResource BrushAccent}"/>
             <Setter Property="FontSize" Value="18"/>
         </Style>
         
@@ -28,16 +28,16 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <Border Grid.Column="0" Width="35" Height="35" CornerRadius="4" Background="{StaticResource BrushSurfaceHighlight}" ClipToBounds="True" VerticalAlignment="Center">
+                <Border Grid.Column="0" Width="35" Height="35" CornerRadius="4" Background="{DynamicResource BrushSurfaceHighlight}" ClipToBounds="True" VerticalAlignment="Center">
                     <Grid>
-                        <TextBlock Text="{StaticResource IconMusic}" Foreground="{StaticResource BrushTextMuted}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="{StaticResource IconMusic}" Foreground="{DynamicResource BrushTextMuted}" FontSize="16" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <Image Source="{Binding EffectiveCoverPath}" Stretch="UniformToFill"/>
                     </Grid>
                 </Border>
 
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="10,0">
-                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
+                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="14" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource BrushTextSecondary}" FontSize="11" TextTrimming="CharacterEllipsis" Margin="0,2,0,0"/>
                 </StackPanel>
             </Grid>
         </DataTemplate>
@@ -55,9 +55,9 @@
                 </Grid.ColumnDefinitions>
 
                 <!-- Cover Image -->
-                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="4" Background="{StaticResource BrushSurfaceHighlight}" ClipToBounds="True" VerticalAlignment="Center">
+                <Border Grid.Column="0" Width="38" Height="38" CornerRadius="4" Background="{DynamicResource BrushSurfaceHighlight}" ClipToBounds="True" VerticalAlignment="Center">
                     <Grid>
-                        <TextBlock Text="{StaticResource IconMusic}" Foreground="{StaticResource BrushTextMuted}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+                        <TextBlock Text="{StaticResource IconMusic}" Foreground="{DynamicResource BrushTextMuted}" FontSize="18" HorizontalAlignment="Center" VerticalAlignment="Center"/>
                         <Image Source="{Binding EffectiveCoverPath}" Stretch="UniformToFill"/>
                     </Grid>
                 </Border>
@@ -65,23 +65,23 @@
 
                 <!-- Title & Filename -->
                 <StackPanel Grid.Column="1" VerticalAlignment="Center" Margin="15,0">
-                    <TextBlock Text="{Binding Title}" Foreground="{StaticResource BrushTextPrimary}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
-                    <TextBlock Text="{Binding FileName}" Foreground="{StaticResource BrushTextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
+                    <TextBlock Text="{Binding Title}" Foreground="{DynamicResource BrushTextPrimary}" FontSize="15" FontWeight="SemiBold" TextTrimming="CharacterEllipsis"/>
+                    <TextBlock Text="{Binding FileName}" Foreground="{DynamicResource BrushTextSecondary}" FontSize="12" TextTrimming="CharacterEllipsis" Margin="0,3,0,0"/>
                 </StackPanel>
 
                 <!-- Artist -->
-                <TextBlock Grid.Column="2" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
+                <TextBlock Grid.Column="2" Text="{Binding Artist}" VerticalAlignment="Center" Foreground="{DynamicResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0"/>
 
                 <!-- Album -->
-                <TextBlock Grid.Column="3" Text="{Binding Album}" VerticalAlignment="Center" Foreground="{StaticResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0" Opacity="0.8"/>
+                <TextBlock Grid.Column="3" Text="{Binding Album}" VerticalAlignment="Center" Foreground="{DynamicResource BrushTextPrimary}" FontSize="14" TextTrimming="CharacterEllipsis" Margin="8,0" Opacity="0.8"/>
 
                 <!-- Rating -->
                 <Button Grid.Column="4" Command="{Binding DataContext.RateCommand, RelativeSource={RelativeSource AncestorType=ListBox}}"
                         CommandParameter="{Binding}"
                         Background="Transparent" BorderThickness="0" Margin="8,0" Cursor="Hand">
                     <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                        <TextBlock Text="{StaticResource IconStar}" Foreground="{StaticResource BrushWarning}" FontSize="16" VerticalAlignment="Center"/>
-                        <TextBlock Text="{Binding Rating}" Foreground="{StaticResource BrushWarning}" FontSize="14" Margin="4,0,0,0" VerticalAlignment="Center"/>
+                        <TextBlock Text="{StaticResource IconStar}" Foreground="{DynamicResource BrushWarning}" FontSize="16" VerticalAlignment="Center"/>
+                        <TextBlock Text="{Binding Rating}" Foreground="{DynamicResource BrushWarning}" FontSize="14" Margin="4,0,0,0" VerticalAlignment="Center"/>
                     </StackPanel>
                 </Button>
 
@@ -105,7 +105,7 @@
         </Grid.RowDefinitions>
 
         <!-- Surface card: category summary keeps the track pane visually anchored -->
-        <Border Grid.Row="0" Margin="20,20,20,10" Padding="25,20">
+        <Border Grid.Row="0" Margin="20,20,20,10" Padding="25,20" Background="{DynamicResource BrushSurface}">
             <Border.Style>
                 <Style TargetType="Border" BasedOn="{StaticResource SurfaceCard}">
                     <Style.Triggers>
@@ -120,7 +120,7 @@
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Border Grid.Column="0" Width="70" Height="70" CornerRadius="10" Background="{StaticResource BrushSurfaceHighlight}" Margin="0,0,25,0">
+                <Border Grid.Column="0" Width="70" Height="70" CornerRadius="10" Background="{DynamicResource BrushSurfaceHighlight}" Margin="0,0,25,0">
                     <Grid>
                         <TextBlock Text="{StaticResource IconFolder}" FontSize="36" HorizontalAlignment="Center" VerticalAlignment="Center"
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"/>
@@ -135,19 +135,19 @@
                         <RowDefinition Height="Auto"/>
                     </Grid.RowDefinitions>
                     <ContentControl Grid.Row="0" Style="{StaticResource Marquee}" Content="{Binding CategoryName}"
-                                   Foreground="{StaticResource BrushTextPrimary}"
+                                   Foreground="{DynamicResource BrushTextPrimary}"
                                    FontSize="28" FontWeight="Bold"
                                    HorizontalAlignment="Stretch"/>
                     
-                        <!--<TextBlock Text="{Binding CurrentFolderPath}" Foreground="{StaticResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
+                        <!--<TextBlock Text="{Binding CurrentFolderPath}" Foreground="{DynamicResource BrushTextSecondary}" FontSize="13" Margin="0,4,0,0"
                                    Visibility="{Binding CurrentFolderPath, Converter={StaticResource NullToVisibilityConverter}}"
                                    TextTrimming="CharacterEllipsis"
                                    ToolTip="{Binding CurrentFolderPath}"/>-->
 
                         <Grid Grid.Row="2" Margin="0,8,0,0">
-                        <TextBlock Text="{Binding PlaylistStats}" Foreground="{StaticResource BrushTextSecondary}" FontSize="15" 
+                        <TextBlock Text="{Binding PlaylistStats}" Foreground="{DynamicResource BrushTextSecondary}" FontSize="15"
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityInverseConverter}, ConverterParameter='Inverse'}"/>
-                        <TextBlock Text="{Binding StatusMessage}" Foreground="{StaticResource BrushAccent}" FontSize="15" FontWeight="Medium"
+                        <TextBlock Text="{Binding StatusMessage}" Foreground="{DynamicResource BrushAccent}" FontSize="15" FontWeight="Medium"
                                    Visibility="{Binding IsAnalyzing, Converter={StaticResource NullToVisibilityConverter}}"/>
                     </Grid>
                 </Grid>
@@ -155,22 +155,22 @@
         </Border>
 
         <!-- Shared surface treatment for lightweight search inputs -->
-        <Border Grid.Row="1" Margin="20,5,20,10" Style="{StaticResource SurfaceCard}" CornerRadius="10" Height="44">
+        <Border Grid.Row="1" Margin="20,5,20,10" Style="{StaticResource SurfaceCard}" Background="{DynamicResource BrushSurface}" CornerRadius="10" Height="44">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <TextBlock Text="{StaticResource IconSearch}" VerticalAlignment="Center" Margin="15,0,8,0" Foreground="{StaticResource BrushTextSecondary}" IsHitTestVisible="False" FontSize="14"/>
+                <TextBlock Text="{StaticResource IconSearch}" VerticalAlignment="Center" Margin="15,0,8,0" Foreground="{DynamicResource BrushTextSecondary}" IsHitTestVisible="False" FontSize="14"/>
                 <TextBox Grid.Column="1" x:Name="SearchTextBox"
                          Text="{Binding SearchText, UpdateSourceTrigger=PropertyChanged}"
                          Background="Transparent" BorderThickness="0" 
-                         Foreground="{StaticResource BrushTextPrimary}" VerticalContentAlignment="Center"
-                         FontSize="15" CaretBrush="{StaticResource BrushAccent}"
+                         Foreground="{DynamicResource BrushTextPrimary}" VerticalContentAlignment="Center"
+                         FontSize="15" CaretBrush="{DynamicResource BrushAccent}"
                          Margin="5,0,15,0"/>
                 
                 <TextBlock Grid.Column="1" Text="{Binding SearchPlaceholder}" 
-                           Foreground="{StaticResource BrushTextMuted}" VerticalAlignment="Center" 
+                           Foreground="{DynamicResource BrushTextMuted}" VerticalAlignment="Center"
                            Margin="8,0,0,0" IsHitTestVisible="False"
                            FontSize="15">
                     <TextBlock.Style>
@@ -230,7 +230,7 @@
                     <Setter Property="ContextMenu">
                         <Setter.Value>
                             <!-- 通过 VmProxy 访问 ViewModel，PlacementTarget.DataContext 获取当前行 MusicTrack -->
-                            <ContextMenu Background="{StaticResource BrushSurface}" BorderThickness="0" Padding="4" Foreground="{StaticResource BrushTextPrimary}">
+                            <ContextMenu Background="{DynamicResource BrushSurface}" BorderThickness="0" Padding="4" Foreground="{DynamicResource BrushTextPrimary}">
                                 <MenuItem Header="{Binding [MenuPlay], Source={StaticResource Loc}}"
                                           Command="{Binding Data.PlayCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
@@ -241,19 +241,19 @@
                                 <MenuItem Header="{Binding [MenuRenameAlias], Source={StaticResource Loc}}"
                                           Command="{Binding Data.RenameAliasCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
+                                <Separator Background="{DynamicResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Header="{Binding [MenuShowExplorer], Source={StaticResource Loc}}"
                                           Command="{Binding Data.ShowInExplorerCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <MenuItem Header="{Binding [MenuAddToPlaylist], Source={StaticResource Loc}}"
                                           Command="{Binding Data.AddToPlaylistCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
-                                <Separator Background="{StaticResource BrushSeparator}" Margin="4,2"/>
+                                <Separator Background="{DynamicResource BrushSeparator}" Margin="4,2"/>
                                 <MenuItem Header="{Binding [MenuRemove], Source={StaticResource Loc}}"
                                           Command="{Binding Data.RemoveFromListCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                                 <MenuItem Header="{Binding [MenuDelete], Source={StaticResource Loc}}"
-                                          Foreground="{StaticResource BrushDanger}"
+                                          Foreground="{DynamicResource BrushDanger}"
                                           Command="{Binding Data.DeleteFromDiskCommand, Source={StaticResource VmProxy}}"
                                           CommandParameter="{Binding PlacementTarget.DataContext, RelativeSource={RelativeSource AncestorType=ContextMenu}}"/>
                             </ContextMenu>
@@ -262,18 +262,19 @@
                     <Setter Property="Template">
                         <Setter.Value>
                             <ControlTemplate TargetType="ListBoxItem">
-                                <Border x:Name="Border" Background="{TemplateBinding Background}" CornerRadius="6" Padding="2" Margin="2">
+                                <Border x:Name="Border" Background="{TemplateBinding Background}" BorderBrush="Transparent" BorderThickness="1" CornerRadius="6" Padding="2" Margin="2">
                                     <ContentPresenter HorizontalAlignment="Stretch" VerticalAlignment="Center"/>
                                 </Border>
                                 <ControlTemplate.Triggers>
                                     <Trigger Property="IsMouseOver" Value="True">
-                                        <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSurface}"/>
+                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushSurface}"/>
                                     </Trigger>
                                     <DataTrigger Binding="{Binding IsPlaying}" Value="True">
-                                        <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSelection}"/>
+                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushSelection}"/>
+                                        <Setter TargetName="Border" Property="BorderBrush" Value="{DynamicResource BrushAccent}"/>
                                     </DataTrigger>
                                     <Trigger Property="IsSelected" Value="True">
-                                        <Setter TargetName="Border" Property="Background" Value="{StaticResource BrushSurfaceHighlight}"/>
+                                        <Setter TargetName="Border" Property="Background" Value="{DynamicResource BrushSurfaceHighlight}"/>
                                     </Trigger>
                                 </ControlTemplate.Triggers>
                             </ControlTemplate>

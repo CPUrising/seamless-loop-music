@@ -13,10 +13,10 @@
             <!-- Page header -->
             <TextBlock Text="{Binding [SettingsMusic], Source={StaticResource Loc}}"
                        FontSize="26" FontWeight="Bold"
-                       Foreground="{StaticResource BrushTextPrimary}"/>
+                       Foreground="{DynamicResource BrushTextPrimary}"/>
             <TextBlock Text="{Binding [SettingsMusicSub], Source={StaticResource Loc}}"
                        FontSize="13"
-                       Foreground="{StaticResource BrushTextSecondary}"
+                       Foreground="{DynamicResource BrushTextSecondary}"
                        Margin="0,6,0,22"/>
 
             <!-- Music folders card -->
@@ -49,10 +49,10 @@
                             <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
                                 <TextBlock Text="{Binding MusicFolders.Count}"
                                            FontSize="12" FontWeight="Medium"
-                                           Foreground="{StaticResource BrushTextSecondary}"/>
+                                           Foreground="{DynamicResource BrushTextSecondary}"/>
                                 <TextBlock Text=" folders"
                                            FontSize="12"
-                                           Foreground="{StaticResource BrushTextSecondary}"/>
+                                           Foreground="{DynamicResource BrushTextSecondary}"/>
                             </StackPanel>
                         </Border>
                     </Grid>
@@ -63,7 +63,7 @@
 
                     <!-- Folder list: Border.Clip provides true rounded clipping in WPF -->
                     <Border x:Name="FolderListBorder"
-                            Background="{StaticResource BrushSurfaceDark}"
+                            Background="{DynamicResource BrushSurfaceDark}"
                             BorderBrush="#10FFFFFF"
                             BorderThickness="1"
                             CornerRadius="8"
@@ -73,7 +73,7 @@
                                  SelectedItem="{Binding SelectedFolder}"
                                  Tag="{Binding}"
                                  Background="Transparent"
-                                 Foreground="{StaticResource BrushTextPrimary}"
+                                 Foreground="{DynamicResource BrushTextPrimary}"
                                  BorderThickness="0"
                                  MaxHeight="220"
                                  Padding="0"
@@ -116,7 +116,7 @@
                                                                        Text="&#xE8B7;"
                                                                        FontFamily="Segoe MDL2 Assets"
                                                                        FontSize="14"
-                                                                       Foreground="{StaticResource BrushTextSecondary}"
+                                                                       Foreground="{DynamicResource BrushTextSecondary}"
                                                                        VerticalAlignment="Center"
                                                                        Margin="0,0,10,0"/>
 
@@ -190,7 +190,7 @@
                             <ListBox.ItemTemplate>
                                 <DataTemplate>
                                     <TextBlock Text="{Binding}"
-                                               Foreground="{StaticResource BrushTextPrimary}"
+                                               Foreground="{DynamicResource BrushTextPrimary}"
                                                FontSize="13"
                                                TextTrimming="CharacterEllipsis"
                                                VerticalAlignment="Center"/>

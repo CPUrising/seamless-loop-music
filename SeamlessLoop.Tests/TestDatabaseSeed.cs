@@ -21,6 +21,7 @@ namespace SeamlessLoop.Tests
                     Artist = "Normal Artist",
                     Album = "Normal Album",
                     TotalSamples = 1000000,
+                    DurationMs = 45000,
                     LoopStart = 1000,
                     LoopEnd = 900000,
                     Rating = 4
@@ -34,6 +35,7 @@ namespace SeamlessLoop.Tests
                     Artist = "Pop Star",
                     Album = "Greatest Hits", // 重名专辑名
                     TotalSamples = 800000,
+                    DurationMs = 35000,
                     LoopStart = 500,
                     LoopEnd = 790000
                 },
@@ -44,6 +46,7 @@ namespace SeamlessLoop.Tests
                     Artist = "Rock Legend",
                     Album = "Greatest Hits", // 重名专辑名
                     TotalSamples = 900000,
+                    DurationMs = 42000,
                     LoopStart = 2000,
                     LoopEnd = 880000
                 },
@@ -56,6 +59,7 @@ namespace SeamlessLoop.Tests
                     Artist = "Artist_With_#",
                     Album = "Album_With_$",
                     TotalSamples = 1200000,
+                    DurationMs = 55000,
                     LoopStart = 0,
                     LoopEnd = 1200000
                 },
@@ -68,6 +72,7 @@ namespace SeamlessLoop.Tests
                     Artist = "Prog Rocker",
                     Album = "Infinite Loop",
                     TotalSamples = 5000000, // 总采样数包含 B 部分
+                    DurationMs = 300000,
                     LoopStart = 2500000,   // 循环点在衔接处
                     LoopEnd = 5000000
                 }
@@ -89,6 +94,7 @@ namespace SeamlessLoop.Tests
                     Artist = $"Artist {i % 100}", // 100 个歌手
                     Album = $"Album {i % 500}",   // 500 个专辑
                     TotalSamples = 100000 + i,
+                    DurationMs = (100000 + i) / 44, // 模拟约 44.1kHz 下的毫秒换算
                     LoopStart = 0,
                     LoopEnd = 100000 + i,
                     LastModified = DateTime.Now

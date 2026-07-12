@@ -105,12 +105,12 @@ namespace seamless_loop_music.UI.ViewModels.Settings
                 await _playerService.ScanMusicFoldersAsync();
                 _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
                 SelectAllTracks();
-                MessageBox.Show(LocalizationService.Instance["MsgScanCompleted"],
+                seamless_loop_music.AppDialogService.Show(LocalizationService.Instance["MsgScanCompleted"],
                     LocalizationService.Instance["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Information);
             }
             catch (System.Exception ex)
             {
-                MessageBox.Show($"Scan error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
+                seamless_loop_music.AppDialogService.Show($"Scan error: {ex.Message}", "Error", MessageBoxButton.OK, MessageBoxImage.Error);
             }
             finally
             {

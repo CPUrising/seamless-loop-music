@@ -73,6 +73,7 @@ namespace seamless_loop_music.Data.Repositories
                             FilePath      TEXT,
                             DisplayName   TEXT,
                             TotalSamples  INTEGER DEFAULT 0,
+                            DurationMs    INTEGER DEFAULT 0,
                             LastModified  DATETIME,
                             CoverPath     TEXT,
                             AlbumId       INTEGER,

@@ -301,5 +301,93 @@ namespace SeamlessLoop.Tests
         }
 
         #endregion
+
+        #region 6. DurationMs 迁移测试
+
+        [Test]
+        public void DurationMs_Column_ShouldExist_AfterMigration()
+        {
+            // 模拟一个旧库场景：手动创建无 DurationMs 列的 Tracks 表，
+            // 然后调用 InitializeDatabase 触发 ApplyMigrations 来添加列。
+            using (var db = _dbHelper.GetConnection())
+            {
+                // 1. 删除当前 Tracks 表
+                db.Execute("DROP TABLE IF EXISTS Tracks");
+                db.Execute("DROP TABLE IF EXISTS LoopPoints");
+                db.Execute("DROP TABLE IF EXISTS UserRatings");
+                db.Execute("DROP TABLE IF EXISTS PlaylistItems");
+                db.Execute("DROP TABLE IF EXISTS QueuedTracks");
+
+                // 2. 创建旧版 Tracks 表（不含 DurationMs 列）
+                db.Execute(@"CREATE TABLE Tracks (
+                    Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    FileName TEXT NOT NULL,
+                    FilePath TEXT,
+                    DisplayName TEXT,
+                    TotalSamples INTEGER DEFAULT 0,
+                    LastModified DATETIME,
+                    CoverPath TEXT,
+                    AlbumId INTEGER,
+                    ArtistId INTEGER
+                )");
+
+                // 3. 验证刚创建的表确实没 DurationMs
+                var colsBefore = db.Query("PRAGMA table_info(Tracks)")
+                    .Cast<IDictionary<string, object>>()
+                    .Select(c => c["name"].ToString())
+                    .ToList();
+                Assert.That(colsBefore, Does.Not.Contain("DurationMs"), "模拟旧表不应存在 DurationMs 列");
+
+                // 4. 重新触发初始化（含 ApplyMigrations）
+                _dbHelper.InitializeDatabase();
+
+                // 5. 验证 DurationMs 列已被迁移添加
+                var colsAfter = db.Query("PRAGMA table_info(Tracks)")
+                    .Cast<IDictionary<string, object>>()
+                    .Select(c => c["name"].ToString())
+                    .ToList();
+                Assert.That(colsAfter, Does.Contain("DurationMs"), "ApplyMigrations 后 DurationMs 列应存在");
+            }
+        }
+
+        [Test]
+        public void DurationMs_ShouldDefaultToZero()
+        {
+            var track = new MusicTrack
+            {
+                FileName = "duration_test.mp3",
+                TotalSamples = 100000
+                // DurationMs 不设置，默认应为 0
+            };
+            _trackRepo.Save(track);
+
+            var saved = _trackRepo.GetByFingerprint(track.FileName, track.TotalSamples);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved.DurationMs, Is.EqualTo(0), "新曲目不设置 DurationMs 时应默认为 0");
+        }
+
+        [Test]
+        public void DurationMs_ShouldBePersisted_AndRetrievable()
+        {
+            var track = new MusicTrack
+            {
+                FileName = "duration_full.mp3",
+                TotalSamples = 200000,
+                DurationMs = 123456
+            };
+            _trackRepo.Save(track);
+
+            var saved = _trackRepo.GetByFingerprint(track.FileName, track.TotalSamples);
+            Assert.That(saved, Is.Not.Null);
+            Assert.That(saved.DurationMs, Is.EqualTo(123456), "DurationMs 应持久化并读取正确");
+
+            // 验证通过 GetAllAsync 也能正确返回
+            var all = _trackRepo.GetAllAsync().Result;
+            var found = all.FirstOrDefault(t => t.FileName == "duration_full.mp3");
+            Assert.That(found, Is.Not.Null);
+            Assert.That(found.DurationMs, Is.EqualTo(123456), "GetAllAsync 应返回正确的 DurationMs");
+        }
+
+        #endregion
     }
 }

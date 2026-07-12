@@ -17,6 +17,8 @@ using seamless_loop_music.UI.Views;
 using seamless_loop_music.UI.ViewModels;
 using seamless_loop_music.UI.Views.Settings;
 using seamless_loop_music.UI.ViewModels.Settings;
+using seamless_loop_music.Services.Sync;
+using seamless_loop_music.Services.Sync.Backend;
 
 namespace seamless_loop_music
 {
@@ -86,6 +88,8 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IDatabaseHelper, DatabaseHelper>();
             containerRegistry.RegisterSingleton<ITrackRepository, TrackRepository>();
             containerRegistry.RegisterSingleton<IPlaylistRepository, PlaylistRepository>();
+            containerRegistry.RegisterSingleton<IPlaybackStatisticsSyncRepository, PlaybackStatisticsSyncRepository>();
+            containerRegistry.RegisterSingleton<IPlaybackStatisticsLocalService, PlaybackStatisticsLocalService>();
 
             containerRegistry.RegisterSingleton<IPlaybackService, PlaybackService>();
             containerRegistry.RegisterSingleton<IPlaylistManager, PlaylistManager>();
@@ -96,12 +100,19 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<ITaskbarService, TaskbarService>();
             containerRegistry.RegisterSingleton<INotifyIconService, NotifyIconService>();
             containerRegistry.RegisterSingleton<IFoldersService, FoldersService>();
+            containerRegistry.RegisterSingleton<ISyncSnapshotStore, SQLiteSyncSnapshotStore>();
+            containerRegistry.RegisterSingleton<ISyncBackend, GitHubContentsSyncBackend>();
+            containerRegistry.RegisterSingleton<IGitHubSyncPreparationService, GitHubSyncPreparationService>();
+            containerRegistry.RegisterSingleton<GitHubSyncCoordinator>();
+            containerRegistry.RegisterSingleton<IGitHubSyncService, GitHubSyncService>();
+            containerRegistry.RegisterSingleton<IGitHubSyncManagementService, GitHubSyncManagementService>();
 
             containerRegistry.RegisterForNavigation<LibraryView, LibraryViewModel>();
             containerRegistry.RegisterForNavigation<DetailView, DetailViewModel>();
             containerRegistry.RegisterForNavigation<TrackListView, TrackListViewModel>();
             containerRegistry.RegisterForNavigation<NowPlayingView, NowPlayingViewModel>();
             containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
+            containerRegistry.RegisterForNavigation<PlaybackStatisticsView, PlaybackStatisticsViewModel>();
             containerRegistry.RegisterForNavigation<SettingsGeneralView, SettingsGeneralViewModel>();
             containerRegistry.RegisterForNavigation<SettingsMusicView, SettingsMusicViewModel>();
             containerRegistry.RegisterForNavigation<SettingsDataView, SettingsDataViewModel>();
@@ -113,6 +124,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IPlayerService, PlayerService>();
             containerRegistry.RegisterSingleton<IPlaylistManagerService, PlaylistManagerService>();
             containerRegistry.RegisterSingleton<IAppStateService, AppStateService>();
+            containerRegistry.RegisterSingleton<IThemeService, ThemeService>();
             containerRegistry.RegisterSingleton<AudioDeviceMonitorService>();
             containerRegistry.RegisterSingleton<IFolderWatcherService, FolderWatcherService>();
         }
@@ -130,6 +142,8 @@ namespace seamless_loop_music
                 // Initialize database before anything else
                 var db = Container.Resolve<IDatabaseHelper>();
                 db.InitializeDatabase();
+
+                Container.Resolve<IAppStateService>().RestoreTheme();
 
                 base.OnInitialized();
 
@@ -167,7 +181,7 @@ namespace seamless_loop_music
             catch (Exception ex)
             {
                 System.IO.File.WriteAllText("crash_log.txt", ex.ToString());
-                MessageBox.Show("Initialization error. Check crash_log.txt for details.");
+                seamless_loop_music.AppDialogService.Show("Initialization error. Check crash_log.txt for details.");
             }
         }
     }
