@@ -673,4 +673,13 @@
   <data name="ThemeLight" xml:space="preserve">
     <value>Light</value>
   </data>
+  <data name="UpdateTitle" xml:space="preserve">
+    <value>Update Available</value>
+  </data>
+  <data name="UpdateAvailable" xml:space="preserve">
+    <value>Current version {0} - new version {1} is available. Install now?</value>
+  </data>
+  <data name="UpdateInstallFailed" xml:space="preserve">
+    <value>Update failed: {0}</value>
+  </data>
 </root>

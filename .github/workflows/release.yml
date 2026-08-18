@@ -1,0 +1,134 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    name: Build and publish release
+    runs-on: windows-2022
+
+    env:
+      CONFIGURATION: Release
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+
+      - name: Resolve release version
+        id: version
+        shell: pwsh
+        env:
+          REF: ${{ github.ref_name }}
+        run: |
+          $version = $env:REF
+          if ($version -notmatch '^v?[0-9]') {
+            # workflow_dispatch on a branch - read the version from the project file
+            $project = Get-Content 'seamless loop music/seamless loop music.csproj' -Raw
+            $m = [regex]::Match($project, '<Version>([^<]+)</Version>')
+            $version = if ($m.Success) { $m.Groups[1].Value } else { '1.11.0' }
+          }
+          if ($version -match '^v(?<v>[0-9].*)$') { $version = $Matches['v'] }
+          # strip pre-release/build suffix for MSBuild compatibility
+          $version = ($version -split '[-+]')[0]
+          $assemblyVersion = "$version.0"
+          "version=$version" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          "assembly_version=$assemblyVersion" | Out-File -FilePath $env:GITHUB_OUTPUT -Encoding utf8 -Append
+          Write-Host "Release version: $version"
+
+      - name: Setup MSBuild
+        uses: microsoft/setup-msbuild@v3
+
+      - name: Configure loopfinder
+        run: cmake -S loopfinder -B loopfinder/build -A x64 -DCMAKE_BUILD_TYPE=Release
+
+      - name: Build loopfinder.dll
+        run: cmake --build loopfinder/build --config Release --target loopfinder --parallel
+
+      - name: Verify loopfinder.dll
+        shell: pwsh
+        run: |
+          $candidates = @(
+            'loopfinder/build/Release/loopfinder.dll',
+            'loopfinder/build/loopfinder.dll'
+          )
+          $dll = $candidates | Where-Object { Test-Path -LiteralPath $_ } | Select-Object -First 1
+          if (-not $dll) {
+            throw 'loopfinder.dll was not generated.'
+          }
+
+          $dll = (Resolve-Path -LiteralPath $dll).Path
+          "LOOPFINDER_DLL=$dll" | Out-File -FilePath $env:GITHUB_ENV -Encoding utf8 -Append
+          "Generated loopfinder.dll at $dll"
+
+      - name: Restore NuGet packages
+        run: dotnet restore "seamless loop music.sln"
+
+      - name: Build solution
+        shell: pwsh
+        run: |
+          msbuild "seamless loop music.sln" `
+            /m `
+            /p:Configuration="$env:CONFIGURATION" `
+            /p:Platform="Any CPU" `
+            /p:ContinuousIntegrationBuild=true `
+            /p:Version="${{ steps.version.outputs.version }}" `
+            /p:AssemblyVersion="${{ steps.version.outputs.assembly_version }}" `
+            /p:FileVersion="${{ steps.version.outputs.assembly_version }}"
+
+      - name: Verify app output contains loopfinder.dll
+        shell: pwsh
+        run: |
+          $outputDir = "seamless loop music/bin/$env:CONFIGURATION/net48"
+          $outputDll = Join-Path $outputDir 'loopfinder.dll'
+
+          if (-not (Test-Path -LiteralPath $outputDll)) {
+            throw "App output is missing loopfinder.dll: $outputDll"
+          }
+
+          "Verified loopfinder.dll in $outputDir"
+
+      - name: Stage portable zip
+        shell: pwsh
+        run: |
+          $outputDir = "seamless loop music/bin/$env:CONFIGURATION/net48"
+          $staging = "artifacts/seamless-loop-music"
+          New-Item -ItemType Directory -Path $staging -Force | Out-Null
+          Copy-Item -Path "$outputDir/*" -Destination $staging -Recurse -Force
+
+          $zipPath = "artifacts/SeamlessLoopMusic-Portable-${{ steps.version.outputs.version }}.zip"
+          Compress-Archive -Path "$staging/*" -DestinationPath $zipPath -CompressionLevel Optimal
+          Write-Host "Packed portable zip: $zipPath"
+
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc)) {
+            $iscc = Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe" | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $iscc) { throw 'Inno Setup (ISCC.exe) was not found after install.' }
+
+          $sourceDir = (Resolve-Path "seamless loop music/bin/$env:CONFIGURATION/net48").Path
+          & $iscc `
+            "/DAppVersion=${{ steps.version.outputs.version }}" `
+            "/DSourceDir=`"$sourceDir`"" `
+            "installer\SeamlessLoopMusic.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: Publish GitHub release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ startsWith(github.ref, 'refs/tags/') && github.ref_name || format('v{0}', steps.version.outputs.version) }}
+          name: Seamless Loop Music ${{ steps.version.outputs.version }}
+          generate_release_notes: true
+          files: |
+            artifacts/SeamlessLoopMusic-Portable-${{ steps.version.outputs.version }}.zip
+            artifacts/installer/SeamlessLoopMusic-Setup-${{ steps.version.outputs.version }}.exe

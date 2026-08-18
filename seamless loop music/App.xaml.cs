@@ -19,6 +19,7 @@ using seamless_loop_music.UI.Views.Settings;
 using seamless_loop_music.UI.ViewModels.Settings;
 using seamless_loop_music.Services.Sync;
 using seamless_loop_music.Services.Sync.Backend;
+using seamless_loop_music.Services.Update;
 
 namespace seamless_loop_music
 {
@@ -127,6 +128,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IThemeService, ThemeService>();
             containerRegistry.RegisterSingleton<AudioDeviceMonitorService>();
             containerRegistry.RegisterSingleton<IFolderWatcherService, FolderWatcherService>();
+            containerRegistry.RegisterSingleton<IAppUpdateService, AppUpdateService>();
         }
 
         protected override void OnInitialized()
@@ -176,6 +178,63 @@ namespace seamless_loop_music
                     // 2. Restore state
                     var appState = Container.Resolve<IAppStateService>();
                     await appState.RestoreStateAsync();
+                });
+
+                // 3. Background check for app updates
+                Task.Run(async () =>
+                {
+                    await Task.Delay(3000);
+
+                    try
+                    {
+                        var updateService = Container.Resolve<IAppUpdateService>();
+                        var result = await updateService.CheckForUpdateAsync();
+
+                        if (result.IsError)
+                        {
+                            Debug.WriteLine($"Update check error: {result.ErrorMessage}");
+                            return;
+                        }
+
+                        if (result.UpdateAvailable && !string.IsNullOrEmpty(result.InstallerDownloadUrl))
+                        {
+                            var message = string.Format(
+                                LocalizationService.Instance["UpdateAvailable"],
+                                result.CurrentVersion, result.LatestVersion);
+
+                            if (!string.IsNullOrWhiteSpace(result.ReleaseNotes))
+                            {
+                                message += "\n\n" + result.ReleaseNotes;
+                            }
+
+                            var updateNow = AppDialogService.Show(
+                                message,
+                                LocalizationService.Instance["UpdateTitle"],
+                                MessageBoxButton.YesNo,
+                                MessageBoxImage.Information);
+
+                            if (updateNow == MessageBoxResult.Yes)
+                            {
+                                try
+                                {
+                                    var installerPath = await updateService.DownloadInstallerAsync(result);
+                                    updateService.ApplyUpdate(installerPath);
+                                }
+                                catch (Exception ex)
+                                {
+                                    AppDialogService.Show(
+                                        string.Format(LocalizationService.Instance["UpdateInstallFailed"], ex.Message),
+                                        LocalizationService.Instance["UpdateTitle"],
+                                        MessageBoxButton.OK,
+                                        MessageBoxImage.Error);
+                                }
+                            }
+                        }
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine($"Update check error: {ex.Message}");
+                    }
                 });
             }
             catch (Exception ex)
