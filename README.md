@@ -1,3 +1,5 @@
+
+
 # Seamless Loop Music Player (无缝循环音乐播放器)
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
@@ -24,7 +26,7 @@
 - **音频引擎**：NAudio + BunLabs.NAudio.Flac (基于环形缓冲区的无缝流处理技术)
 - **开发框架**：WPF + Prism (MVVM) + Unity (依赖注入)
 - **数据管理**：SQLite + Dapper (开启 WAL 并发模式)
-- **核心算法**：时域互相关 (自研) + PyMusicLooper (集成)
+- **核心算法**：时域互相关 (自研) + `loopfinder` (PyMusicLooper C++ 重写)
 
 ---
 
