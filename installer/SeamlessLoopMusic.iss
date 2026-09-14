@@ -56,8 +56,10 @@ Name: "chinesesimp"; MessagesFile: "Languages\ChineseSimplified.isl"
 Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Data,*.pdb,start_log.txt,crash_log.txt"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
-Name: "{autoprograms}\Seamless Loop Music"; Filename: "{app}\seamless loop music.exe"; IconFilename: "{#AppIcon}"
-Name: "{autodesktop}\Seamless Loop Music"; Filename: "{app}\seamless loop music.exe"; IconFilename: "{#AppIcon}"; Tasks: desktopicon
+; No IconFilename is set so Windows uses the exe's own embedded icon,
+; guaranteeing the shortcut icon matches the app icon.
+Name: "{autoprograms}\Seamless Loop Music"; Filename: "{app}\seamless loop music.exe"; WorkingDir: "{app}"
+Name: "{autodesktop}\Seamless Loop Music"; Filename: "{app}\seamless loop music.exe"; WorkingDir: "{app}"; Tasks: desktopicon
 
 [Tasks]
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"
