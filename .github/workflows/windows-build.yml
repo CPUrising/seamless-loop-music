@@ -141,11 +141,7 @@ jobs:
           }
           if (-not $iscc) { throw 'Inno Setup (ISCC.exe) was not found after install.' }
 
-          $sourceDir = (Resolve-Path "seamless loop music/bin/$env:CONFIGURATION/net48").Path
-          & $iscc `
-            "/DAppVersion=${{ steps.version.outputs.project_version }}" `
-            "/DSourceDir=`"$sourceDir`"" `
-            "installer\SeamlessLoopMusic.iss"
+          & $iscc "/DAppVersion=${{ steps.version.outputs.project_version }}" "installer\SeamlessLoopMusic.iss"
           if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
 
       - name: Upload installer artifact

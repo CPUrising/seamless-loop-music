@@ -1,16 +1,21 @@
 ; Seamless Loop Music installer script (Inno Setup 6.3+).
 ;
-; Usage:
-;   ISCC.exe /DAppVersion=1.11.0 /DSourceDir="..\seamless loop music\bin\Release\net48" SeamlessLoopMusic.iss
+; Usage (CI):
+;   ISCC.exe /DAppVersion=1.11.0 SeamlessLoopMusic.iss
+;   The app files are read from ..\artifacts\seamless-loop-music (staged by CI).
 ;
-; Version and source dir can be overridden from CI. Defaults are provided below.
+; Local build:
+;   Copy the Release output into artifacts\seamless-loop-music first, or override:
+;   ISCC.exe /DSourceDir="..\seamless loop music\bin\Release\net48" SeamlessLoopMusic.iss
 
 #ifndef AppVersion
   #define AppVersion "1.11.0"
 #endif
 
+; SourceDir is intentionally relative so it never has to be passed on the
+; command line (PowerShell mangles /D values that contain spaces).
 #ifndef SourceDir
-  #define SourceDir "..\seamless loop music\bin\Release\net48"
+  #define SourceDir "..\artifacts\seamless-loop-music"
 #endif
 
 #ifndef AppIcon
