@@ -57,11 +57,14 @@ jobs:
             const safeBaseVersion = baseVersion.replace(/[^0-9A-Za-z._-]/g, '-');
             const shortSha = context.sha.substring(0, 7);
             const buildVersion = `${safeBaseVersion}-action.${context.runNumber}-${shortSha}`;
+            const projectVersion = fallbackVersionFromProject().replace(/^v/, '');
 
             core.info(`Base release version: ${baseVersion}`);
             core.info(`Action build version: ${buildVersion}`);
+            core.info(`Project version: ${projectVersion}`);
             core.setOutput('base_version', baseVersion);
             core.setOutput('build_version', buildVersion);
+            core.setOutput('project_version', projectVersion);
 
       - name: Setup MSBuild
         uses: microsoft/setup-msbuild@v3
@@ -126,4 +129,28 @@ jobs:
         with:
           name: seamless-loop-music-${{ steps.version.outputs.build_version }}
           path: artifacts/seamless-loop-music
+          if-no-files-found: error
+
+      - name: Build installer with Inno Setup
+        shell: pwsh
+        run: |
+          choco install innosetup -y --no-progress
+          $iscc = Join-Path ${env:ProgramFiles(x86)} 'Inno Setup 6\ISCC.exe'
+          if (-not (Test-Path -LiteralPath $iscc)) {
+            $iscc = Get-ChildItem "${env:ProgramFiles(x86)}\Inno Setup*\ISCC.exe" | Sort-Object FullName -Descending | Select-Object -First 1 -ExpandProperty FullName
+          }
+          if (-not $iscc) { throw 'Inno Setup (ISCC.exe) was not found after install.' }
+
+          $sourceDir = (Resolve-Path "seamless loop music/bin/$env:CONFIGURATION/net48").Path
+          & $iscc `
+            "/DAppVersion=${{ steps.version.outputs.project_version }}" `
+            "/DSourceDir=`"$sourceDir`"" `
+            "installer\SeamlessLoopMusic.iss"
+          if ($LASTEXITCODE -ne 0) { throw "ISCC failed with exit code $LASTEXITCODE" }
+
+      - name: Upload installer artifact
+        uses: actions/upload-artifact@v7
+        with:
+          name: seamless-loop-music-setup-${{ steps.version.outputs.project_version }}
+          path: artifacts/installer
           if-no-files-found: error
