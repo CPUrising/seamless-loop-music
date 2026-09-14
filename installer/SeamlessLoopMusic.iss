@@ -48,12 +48,12 @@ WizardStyle=modern
 
 [Languages]
 Name: "english"; MessagesFile: "compiler:Default.isl"
-Name: "chinesesimp"; MessagesFile: "compiler:Languages\ChineseSimplified.isl"
+Name: "chinesesimp"; MessagesFile: "Languages\ChineseSimplified.isl"
 
 [Files]
 ; Ship program files only. The Data folder (user library DB) is intentionally
 ; excluded so updates preserve user data in place.
-Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Data\,*.pdb,start_log.txt,crash_log.txt"; Flags: recursesubdirs createallsubdirs ignoreversion
+Source: "{#SourceDir}\*"; DestDir: "{app}"; Excludes: "Data,*.pdb,start_log.txt,crash_log.txt"; Flags: recursesubdirs createallsubdirs ignoreversion
 
 [Icons]
 Name: "{autoprograms}\Seamless Loop Music"; Filename: "{app}\seamless loop music.exe"; IconFilename: "{#AppIcon}"
