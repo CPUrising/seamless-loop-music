@@ -1,0 +1,3 @@
+schema: spec-driven
+created: 2026-11-06
+skip_specs: true   # 本变更只落地流程资产，不改变任何行为合同
