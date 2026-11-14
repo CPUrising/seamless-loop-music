@@ -10,7 +10,9 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstdio>
 #include <cstring>
+#include <utility>
 
 #ifdef _WIN32
 #define strcasecmp _stricmp
@@ -18,9 +20,9 @@
 
 namespace loopfinder {
 
-AudioDecoder::~AudioDecoder() {}
+namespace {
 
-AudioFormat AudioDecoder::detectFormat(const char* filepath) {
+AudioFormat detectFormat(const char* filepath) {
     const char* ext = std::strrchr(filepath, '.');
     if (!ext) return AudioFormat::UNKNOWN;
     if (strcasecmp(ext, ".wav") == 0 || strcasecmp(ext, ".wave") == 0) return AudioFormat::WAV;
@@ -30,124 +32,19 @@ AudioFormat AudioDecoder::detectFormat(const char* filepath) {
     return AudioFormat::UNKNOWN;
 }
 
-bool AudioDecoder::decode(const char* filepath, PCMData& out) {
-    AudioFormat fmt = detectFormat(filepath);
-    switch (fmt) {
-        case AudioFormat::WAV:  return decodeWAV(filepath, out);
-        case AudioFormat::FLAC: return decodeFLAC(filepath, out);
-        case AudioFormat::MP3:  return decodeMP3(filepath, out);
-        case AudioFormat::OGG:  return decodeOGG(filepath, out);
-        default: return false;
-    }
+#ifdef _WIN32
+AudioFormat detectFormat(const wchar_t* filepath) {
+    const wchar_t* ext = std::wcsrchr(filepath, L'.');
+    if (!ext) return AudioFormat::UNKNOWN;
+    if (_wcsicmp(ext, L".wav") == 0 || _wcsicmp(ext, L".wave") == 0) return AudioFormat::WAV;
+    if (_wcsicmp(ext, L".flac") == 0) return AudioFormat::FLAC;
+    if (_wcsicmp(ext, L".mp3") == 0)  return AudioFormat::MP3;
+    if (_wcsicmp(ext, L".ogg") == 0)  return AudioFormat::OGG;
+    return AudioFormat::UNKNOWN;
 }
+#endif
 
-bool AudioDecoder::decodeWAV(const char* path, PCMData& out) {
-    drwav wav;
-    if (!drwav_init_file(&wav, path, nullptr)) return false;
-
-    out.sampleRate  = static_cast<int>(wav.sampleRate);
-    out.numChannels = wav.channels;
-    out.totalSamples = static_cast<int64_t>(wav.totalPCMFrameCount);
-
-    std::vector<float> interleaved(out.totalSamples * out.numChannels);
-    drwav_read_pcm_frames_f32(&wav, wav.totalPCMFrameCount, interleaved.data());
-    drwav_uninit(&wav);
-
-    out.samples.resize(out.totalSamples);
-    if (out.numChannels == 1) {
-        std::copy(interleaved.begin(), interleaved.end(), out.samples.begin());
-    } else {
-        toMono(interleaved, out.numChannels);
-        out.samples.resize(out.totalSamples);
-        for (int64_t i = 0; i < out.totalSamples; ++i)
-            out.samples[i] = interleaved[i];
-    }
-    normalize(out.samples);
-    trimSilence(out.samples, out.sampleRate, out.trimStart);
-    return true;
-}
-
-bool AudioDecoder::decodeFLAC(const char* path, PCMData& out) {
-    drflac* flac = drflac_open_file(path, nullptr);
-    if (!flac) return false;
-
-    out.sampleRate  = flac->sampleRate;
-    out.numChannels = flac->channels;
-    out.totalSamples = static_cast<int64_t>(flac->totalPCMFrameCount);
-
-    std::vector<float> interleaved(out.totalSamples * out.numChannels);
-    drflac_read_pcm_frames_f32(flac, flac->totalPCMFrameCount, interleaved.data());
-    drflac_close(flac);
-
-    out.samples.resize(out.totalSamples);
-    if (out.numChannels == 1) {
-        std::copy(interleaved.begin(), interleaved.end(), out.samples.begin());
-    } else {
-        toMono(interleaved, out.numChannels);
-        out.samples.resize(out.totalSamples);
-        for (int64_t i = 0; i < out.totalSamples; ++i)
-            out.samples[i] = interleaved[i];
-    }
-    normalize(out.samples);
-    trimSilence(out.samples, out.sampleRate, out.trimStart);
-    return true;
-}
-
-bool AudioDecoder::decodeMP3(const char* path, PCMData& out) {
-    drmp3 mp3;
-    if (!drmp3_init_file(&mp3, path, nullptr)) return false;
-
-    out.sampleRate  = static_cast<int>(mp3.sampleRate);
-    out.numChannels = mp3.channels;
-    out.totalSamples = static_cast<int64_t>(drmp3_get_pcm_frame_count(&mp3));
-
-    std::vector<float> interleaved(out.totalSamples * out.numChannels);
-    drmp3_read_pcm_frames_f32(&mp3, out.totalSamples, interleaved.data());
-    drmp3_uninit(&mp3);
-
-    out.samples.resize(out.totalSamples);
-    if (out.numChannels == 1) {
-        std::copy(interleaved.begin(), interleaved.end(), out.samples.begin());
-    } else {
-        toMono(interleaved, out.numChannels);
-        out.samples.resize(out.totalSamples);
-        for (int64_t i = 0; i < out.totalSamples; ++i)
-            out.samples[i] = interleaved[i];
-    }
-    normalize(out.samples);
-    trimSilence(out.samples, out.sampleRate, out.trimStart);
-    return true;
-}
-
-bool AudioDecoder::decodeOGG(const char* path, PCMData& out) {
-    int channels = 0, sampleRate = 0;
-    short* raw = nullptr;
-    int numSamples = stb_vorbis_decode_filename(path, &channels, &sampleRate, &raw);
-    if (numSamples < 0) return false;
-
-    out.sampleRate  = sampleRate;
-    out.numChannels = channels;
-    out.totalSamples = numSamples;
-
-    out.samples.resize(numSamples);
-    if (channels == 1) {
-        for (int i = 0; i < numSamples; ++i)
-            out.samples[i] = raw[i] / 32768.0f;
-    } else {
-        for (int i = 0; i < numSamples; ++i) {
-            float sum = 0.0f;
-            for (int ch = 0; ch < channels; ++ch)
-                sum += raw[i * channels + ch] / 32768.0f;
-            out.samples[i] = sum / channels;
-        }
-    }
-    free(raw);
-    normalize(out.samples);
-    trimSilence(out.samples, out.sampleRate, out.trimStart);
-    return true;
-}
-
-void AudioDecoder::toMono(std::vector<float>& samples, int channels) {
+void toMono(std::vector<float>& samples, int channels) {
     if (channels <= 1) return;
     int64_t numFrames = samples.size() / channels;
     for (int64_t i = 0; i < numFrames; ++i) {
@@ -159,7 +56,7 @@ void AudioDecoder::toMono(std::vector<float>& samples, int channels) {
     samples.resize(numFrames);
 }
 
-void AudioDecoder::normalize(std::vector<float>& samples) {
+void normalize(std::vector<float>& samples) {
     float maxAbs = 0.0f;
     for (float s : samples)
         maxAbs = std::max(maxAbs, std::abs(s));
@@ -169,7 +66,7 @@ void AudioDecoder::normalize(std::vector<float>& samples) {
     }
 }
 
-void AudioDecoder::trimSilence(std::vector<float>& samples, int sampleRate, int& trimStart) {
+void trimSilence(std::vector<float>& samples, int sampleRate, int& trimStart) {
     trimStart = 0;
     constexpr int frameLen = 2048;
     constexpr int hopLen = 512;
@@ -216,5 +113,180 @@ void AudioDecoder::trimSilence(std::vector<float>& samples, int sampleRate, int&
     std::vector<float> trimmed(samples.begin() + cutStart, samples.begin() + cutEnd);
     samples = std::move(trimmed);
 }
+
+// 统一收尾：单声道 / 归一化 / 去静音，窄字符与宽字符入口共用，避免两套实现漂移
+void finalizeSamples(std::vector<float>&& samples, int channels, int sampleRate,
+                     int64_t frames, PCMData& out) {
+    if (channels > 1) toMono(samples, channels);
+    if (static_cast<int64_t>(samples.size()) > frames)
+        samples.resize(static_cast<size_t>(frames));
+
+    out.sampleRate = sampleRate;
+    out.numChannels = channels;
+    out.totalSamples = frames;
+    out.samples = std::move(samples);
+
+    normalize(out.samples);
+    trimSilence(out.samples, out.sampleRate, out.trimStart);
+}
+
+bool openWav(const char* path, drwav& wav) {
+    return drwav_init_file(&wav, path, nullptr) != 0;
+}
+
+template <typename PathT>
+bool decodeWavFile(const PathT* path, PCMData& out) {
+    drwav wav;
+    if (!openWav(path, wav)) return false;
+
+    const int channels = wav.channels;
+    const int sampleRate = static_cast<int>(wav.sampleRate);
+    const int64_t frames = static_cast<int64_t>(wav.totalPCMFrameCount);
+
+    std::vector<float> interleaved(static_cast<size_t>(frames) * static_cast<size_t>(channels));
+    drwav_read_pcm_frames_f32(&wav, wav.totalPCMFrameCount, interleaved.data());
+    drwav_uninit(&wav);
+
+    finalizeSamples(std::move(interleaved), channels, sampleRate, frames, out);
+    return true;
+}
+
+bool openFlac(const char* path, drflac*& flac) {
+    flac = drflac_open_file(path, nullptr);
+    return flac != nullptr;
+}
+
+template <typename PathT>
+bool decodeFlacFile(const PathT* path, PCMData& out) {
+    drflac* flac = nullptr;
+    if (!openFlac(path, flac)) return false;
+
+    const int channels = flac->channels;
+    const int sampleRate = static_cast<int>(flac->sampleRate);
+    const int64_t frames = static_cast<int64_t>(flac->totalPCMFrameCount);
+
+    std::vector<float> interleaved(static_cast<size_t>(frames) * static_cast<size_t>(channels));
+    drflac_read_pcm_frames_f32(flac, flac->totalPCMFrameCount, interleaved.data());
+    drflac_close(flac);
+
+    finalizeSamples(std::move(interleaved), channels, sampleRate, frames, out);
+    return true;
+}
+
+bool openMp3(const char* path, drmp3& mp3) {
+    return drmp3_init_file(&mp3, path, nullptr) != 0;
+}
+
+template <typename PathT>
+bool decodeMp3File(const PathT* path, PCMData& out) {
+    drmp3 mp3;
+    if (!openMp3(path, mp3)) return false;
+
+    const int channels = mp3.channels;
+    const int sampleRate = static_cast<int>(mp3.sampleRate);
+    const int64_t frames = static_cast<int64_t>(drmp3_get_pcm_frame_count(&mp3));
+
+    std::vector<float> interleaved(static_cast<size_t>(frames) * static_cast<size_t>(channels));
+    drmp3_read_pcm_frames_f32(&mp3, static_cast<drmp3_uint64>(frames), interleaved.data());
+    drmp3_uninit(&mp3);
+
+    finalizeSamples(std::move(interleaved), channels, sampleRate, frames, out);
+    return true;
+}
+
+void finalizeOgg(short* raw, int numSamples, int channels, int sampleRate, PCMData& out) {
+    std::vector<float> samples(static_cast<size_t>(numSamples));
+    for (int i = 0; i < numSamples; ++i) {
+        float sum = 0.0f;
+        for (int ch = 0; ch < channels; ++ch)
+            sum += raw[i * channels + ch] / 32768.0f;
+        samples[i] = sum / channels;
+    }
+    finalizeSamples(std::move(samples), channels, sampleRate, numSamples, out);
+}
+
+bool decodeOggFile(const char* path, PCMData& out) {
+    int channels = 0, sampleRate = 0;
+    short* raw = nullptr;
+    int numSamples = stb_vorbis_decode_filename(path, &channels, &sampleRate, &raw);
+    if (numSamples < 0) return false;
+
+    finalizeOgg(raw, numSamples, channels, sampleRate, out);
+    free(raw);
+    return true;
+}
+
+#ifdef _WIN32
+bool openWav(const wchar_t* path, drwav& wav) {
+    return drwav_init_file_w(&wav, path, nullptr) != 0;
+}
+
+bool openFlac(const wchar_t* path, drflac*& flac) {
+    flac = drflac_open_file_w(path, nullptr);
+    return flac != nullptr;
+}
+
+bool openMp3(const wchar_t* path, drmp3& mp3) {
+    return drmp3_init_file_w(&mp3, path, nullptr) != 0;
+}
+
+// stb_vorbis 无宽字符文件名接口：先整文件读入内存，再按内存解码
+bool decodeOggFile(const wchar_t* path, PCMData& out) {
+    FILE* file = nullptr;
+    if (_wfopen_s(&file, path, L"rb") != 0 || !file) return false;
+
+    if (_fseeki64(file, 0, SEEK_END) != 0) {
+        std::fclose(file);
+        return false;
+    }
+    const long long size = _ftelli64(file);
+    if (size <= 0 || size > INT32_MAX) {
+        std::fclose(file);
+        return false;
+    }
+    std::rewind(file);
+
+    std::vector<unsigned char> bytes(static_cast<size_t>(size));
+    const size_t read = std::fread(bytes.data(), 1, bytes.size(), file);
+    std::fclose(file);
+    if (read != bytes.size()) return false;
+
+    int channels = 0, sampleRate = 0;
+    short* raw = nullptr;
+    int numSamples = stb_vorbis_decode_memory(
+        bytes.data(), static_cast<int>(bytes.size()), &channels, &sampleRate, &raw);
+    if (numSamples < 0) return false;
+
+    finalizeOgg(raw, numSamples, channels, sampleRate, out);
+    free(raw);
+    return true;
+}
+#endif
+
+} // namespace
+
+AudioDecoder::~AudioDecoder() {}
+
+bool AudioDecoder::decode(const char* filepath, PCMData& out) {
+    switch (detectFormat(filepath)) {
+        case AudioFormat::WAV:  return decodeWavFile(filepath, out);
+        case AudioFormat::FLAC: return decodeFlacFile(filepath, out);
+        case AudioFormat::MP3:  return decodeMp3File(filepath, out);
+        case AudioFormat::OGG:  return decodeOggFile(filepath, out);
+        default: return false;
+    }
+}
+
+#ifdef _WIN32
+bool AudioDecoder::decode(const wchar_t* filepath, PCMData& out) {
+    switch (detectFormat(filepath)) {
+        case AudioFormat::WAV:  return decodeWavFile(filepath, out);
+        case AudioFormat::FLAC: return decodeFlacFile(filepath, out);
+        case AudioFormat::MP3:  return decodeMp3File(filepath, out);
+        case AudioFormat::OGG:  return decodeOggFile(filepath, out);
+        default: return false;
+    }
+}
+#endif
 
 } // namespace loopfinder

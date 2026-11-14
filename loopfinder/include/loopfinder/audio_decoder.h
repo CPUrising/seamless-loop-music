@@ -11,17 +11,10 @@ public:
 
     bool decode(const char* filepath, PCMData& out);
 
-private:
-    static AudioFormat detectFormat(const char* filepath);
-
-    bool decodeWAV(const char* path, PCMData& out);
-    bool decodeFLAC(const char* path, PCMData& out);
-    bool decodeMP3(const char* path, PCMData& out);
-    bool decodeOGG(const char* path, PCMData& out);
-
-    void toMono(std::vector<float>& samples, int channels);
-    void normalize(std::vector<float>& samples);
-    void trimSilence(std::vector<float>& samples, int sampleRate, int& trimStart);
+#ifdef _WIN32
+    // 宽字符路径入口：系统 ANSI 代码页无法表示非 ASCII 路径时仍能打开文件
+    bool decode(const wchar_t* filepath, PCMData& out);
+#endif
 };
 
 } // namespace loopfinder

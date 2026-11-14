@@ -7,22 +7,11 @@
 
 static std::string g_lastError;
 
-int lf_analyze_file(const char* filepath, int topN,
-                    lf_loop_point_t* outPoints, int capacity) {
-    g_lastError.clear();
+namespace {
 
-    if (!filepath || !outPoints || capacity <= 0) {
-        g_lastError = "invalid arguments";
-        return -1;
-    }
-
-    loopfinder::PCMData audio;
-    loopfinder::AudioDecoder decoder;
-    if (!decoder.decode(filepath, audio)) {
-        g_lastError = "decode failed";
-        return -1;
-    }
-
+// 解码成功后共用的分析主体：窄/宽入口只负责打开文件
+int analyzeDecoded(loopfinder::PCMData& audio, int topN,
+                   lf_loop_point_t* outPoints, int capacity) {
     loopfinder::LoopFinder::Config config;
     config.topN = topN;
 
@@ -49,7 +38,48 @@ int lf_analyze_file(const char* filepath, int topN,
     return count;
 }
 
+} // namespace
+
+int lf_analyze_file(const char* filepath, int topN,
+                    lf_loop_point_t* outPoints, int capacity) {
+    g_lastError.clear();
+
+    if (!filepath || !outPoints || capacity <= 0) {
+        g_lastError = "invalid arguments";
+        return -1;
+    }
+
+    loopfinder::PCMData audio;
+    loopfinder::AudioDecoder decoder;
+    if (!decoder.decode(filepath, audio)) {
+        g_lastError = "decode failed";
+        return -1;
+    }
+
+    return analyzeDecoded(audio, topN, outPoints, capacity);
+}
+
+#ifdef _WIN32
+int lf_analyze_file_w(const wchar_t* filepath, int topN,
+                      lf_loop_point_t* outPoints, int capacity) {
+    g_lastError.clear();
+
+    if (!filepath || !outPoints || capacity <= 0) {
+        g_lastError = "invalid arguments";
+        return -1;
+    }
+
+    loopfinder::PCMData audio;
+    loopfinder::AudioDecoder decoder;
+    if (!decoder.decode(filepath, audio)) {
+        g_lastError = "decode failed";
+        return -1;
+    }
+
+    return analyzeDecoded(audio, topN, outPoints, capacity);
+}
+#endif
+
 const char* lf_get_last_error() {
     return g_lastError.c_str();
 }
-

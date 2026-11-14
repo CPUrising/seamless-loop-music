@@ -41,7 +41,7 @@ namespace seamless_loop_music.Services.LoopFinder
                     return;
                 }
 
-                IntPtr pAnalyze = GetProcAddress(hModule, "lf_analyze_file");
+                IntPtr pAnalyze = GetProcAddress(hModule, "lf_analyze_file_w");
                 IntPtr pError   = GetProcAddress(hModule, "lf_get_last_error");
 
                 FreeLibrary(hModule);
@@ -49,7 +49,7 @@ namespace seamless_loop_music.Services.LoopFinder
                 if (pAnalyze == IntPtr.Zero || pError == IntPtr.Zero)
                 {
                     DllPresent = false;
-                    LastError = "DLL exports not found. Rebuild with `cmake --build build --config Release`";
+                    LastError = "DLL exports (lf_analyze_file_w) not found. Rebuild with `cmake --build build --config Release`";
                 }
                 else
                 {
@@ -74,10 +74,11 @@ namespace seamless_loop_music.Services.LoopFinder
             public float score;
         }
 
+        // 必须走宽字符入口：LPStr 会按系统 ANSI 代码页转换，非 ASCII 路径会被破坏
         [DllImport("loopfinder.dll", CallingConvention = CallingConvention.Cdecl,
-                   ExactSpelling = true)]
-        private static extern int lf_analyze_file(
-            [MarshalAs(UnmanagedType.LPStr)] string filepath,
+                   CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern int lf_analyze_file_w(
+            [MarshalAs(UnmanagedType.LPWStr)] string filepath,
             int topN,
             [Out] LfLoopPoint[] outPoints,
             int capacity);
@@ -138,7 +139,7 @@ namespace seamless_loop_music.Services.LoopFinder
                 var capacity = Math.Max(topN, 10);
                 var buffer = new LfLoopPoint[capacity];
 
-                int count = lf_analyze_file(filePath, topN, buffer, buffer.Length);
+                int count = lf_analyze_file_w(filePath, topN, buffer, buffer.Length);
 
                 if (count > 0)
                 {
