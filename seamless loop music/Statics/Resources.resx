@@ -181,6 +181,18 @@
   <data name="BtnScanning" xml:space="preserve">
     <value>Scanning...</value>
   </data>
+  <data name="MsgFolderAddNothing" xml:space="preserve">
+    <value>No folders were added: the selection is already covered by an existing music folder.</value>
+  </data>
+  <data name="MsgFolderUnsupported" xml:space="preserve">
+    <value>Cannot use this location: {0}. Open the library and pick a folder inside it.</value>
+  </data>
+  <data name="MsgFolderPickerError" xml:space="preserve">
+    <value>Failed to open the folder picker: {0}</value>
+  </data>
+  <data name="MsgFolderAddError" xml:space="preserve">
+    <value>Failed to add folder: {0}</value>
+  </data>
   <data name="DataManagementHeader" xml:space="preserve">
     <value>Data Management</value>
   </data>

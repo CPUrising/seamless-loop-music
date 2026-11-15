@@ -80,11 +80,64 @@ namespace seamless_loop_music.UI.ViewModels.Settings
 
         private void OnAddFolder()
         {
-            var dialog = new FolderPicker();
-            if (dialog.ShowDialog(Application.Current.MainWindow) && !string.IsNullOrEmpty(dialog.ResultPath))
+            var loc = LocalizationService.Instance;
+            var result = new FolderPicker().PickFolders(Application.Current.MainWindow);
+
+            if (result.Canceled) return;
+
+            if (!string.IsNullOrEmpty(result.ErrorMessage))
             {
-                _playerService.AddMusicFolder(dialog.ResultPath);
+                seamless_loop_music.AppDialogService.Show(
+                    string.Format(loc["MsgFolderPickerError"], result.ErrorMessage),
+                    loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Error);
+                return;
+            }
+
+            if (result.Folders.Count == 0)
+            {
+                ShowNothingAddedMessage(result, loc);
+                return;
+            }
+
+            try
+            {
+                var added = _playerService.AddMusicFolders(result.Folders);
                 LoadFolders();
+
+                if (result.Unresolved.Count > 0)
+                {
+                    seamless_loop_music.AppDialogService.Show(
+                        string.Format(loc["MsgFolderUnsupported"], result.Unresolved[0]),
+                        loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
+                }
+                else if (added.Added.Count == 0)
+                {
+                    seamless_loop_music.AppDialogService.Show(
+                        loc["MsgFolderAddNothing"],
+                        loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Information);
+                }
+            }
+            catch (System.Exception ex)
+            {
+                seamless_loop_music.AppDialogService.Show(
+                    string.Format(loc["MsgFolderAddError"], ex.Message),
+                    loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Error);
+            }
+        }
+
+        private static void ShowNothingAddedMessage(seamless_loop_music.UI.FolderPickerResult result, LocalizationService loc)
+        {
+            if (result.Unresolved.Count > 0)
+            {
+                seamless_loop_music.AppDialogService.Show(
+                    string.Format(loc["MsgFolderUnsupported"], result.Unresolved[0]),
+                    loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Warning);
+            }
+            else
+            {
+                seamless_loop_music.AppDialogService.Show(
+                    loc["MsgFolderAddNothing"],
+                    loc["SettingsTitle"], MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 

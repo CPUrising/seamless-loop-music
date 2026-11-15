@@ -181,6 +181,18 @@
   <data name="BtnScanning" xml:space="preserve">
     <value>正在扫描...</value>
   </data>
+  <data name="MsgFolderAddNothing" xml:space="preserve">
+    <value>未新增文件夹：所选目录已被现有音乐文件夹包含。</value>
+  </data>
+  <data name="MsgFolderUnsupported" xml:space="preserve">
+    <value>无法使用该位置：{0}。请进入库中选择具体文件夹。</value>
+  </data>
+  <data name="MsgFolderPickerError" xml:space="preserve">
+    <value>打开文件夹选择器失败：{0}</value>
+  </data>
+  <data name="MsgFolderAddError" xml:space="preserve">
+    <value>添加文件夹失败：{0}</value>
+  </data>
   <data name="DataManagementHeader" xml:space="preserve">
     <value>数据管理</value>
   </data>

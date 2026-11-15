@@ -34,7 +34,7 @@ namespace seamless_loop_music.Data
         
         // Folder related
         List<string> GetMusicFolders();
-        void AddMusicFolder(string folderPath);
+        void ApplyMusicFolderChange(IEnumerable<string> folderPathsToAdd, IEnumerable<string> folderPathsToRemove);
         void RemoveMusicFolder(string folderPath);
         int CleanupTracksOutsideMusicFolders(IEnumerable<string> folderPaths);
         
@@ -295,14 +295,64 @@ namespace seamless_loop_music.Data
             using (var db = GetConnection()) return db.Query<string>("SELECT FolderPath FROM MusicFolders ORDER BY AddedAt").ToList();
         }
 
-        public void AddMusicFolder(string folderPath)
+        public void ApplyMusicFolderChange(IEnumerable<string> folderPathsToAdd, IEnumerable<string> folderPathsToRemove)
         {
-            using (var db = GetConnection()) db.Execute("INSERT OR IGNORE INTO MusicFolders (FolderPath) VALUES (@Path)", new { Path = folderPath });
+            var toAdd = (folderPathsToAdd ?? Enumerable.Empty<string>())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+            var toRemove = (folderPathsToRemove ?? Enumerable.Empty<string>())
+                .Where(p => !string.IsNullOrWhiteSpace(p))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            if (toAdd.Count == 0 && toRemove.Count == 0)
+            {
+                return;
+            }
+
+            using (var db = GetConnection())
+            using (var trans = db.BeginTransaction())
+            {
+                foreach (var path in toRemove)
+                {
+                    db.Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = path }, trans);
+                }
+
+                foreach (var path in toAdd)
+                {
+                    db.Execute("INSERT OR IGNORE INTO MusicFolders (FolderPath) VALUES (@Path)", new { Path = path }, trans);
+                }
+
+                trans.Commit();
+            }
         }
 
         public void RemoveMusicFolder(string folderPath)
         {
-            using (var db = GetConnection()) db.Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = folderPath });
+            var target = NormalizePath(folderPath);
+            if (string.IsNullOrEmpty(target))
+            {
+                return;
+            }
+
+            using (var db = GetConnection())
+            {
+                var stored = db.Query<string>("SELECT FolderPath FROM MusicFolders").ToList();
+                using (var trans = db.BeginTransaction())
+                {
+                    foreach (var row in stored)
+                    {
+                        // 按归一化后比较，避免大小写/末尾分隔符不同导致删不掉
+                        if (string.Equals(NormalizePath(row), target, StringComparison.OrdinalIgnoreCase))
+                        {
+                            db.Execute("DELETE FROM MusicFolders WHERE FolderPath=@Path", new { Path = row }, trans);
+                        }
+                    }
+
+                    trans.Commit();
+                }
+            }
         }
 
         public int CleanupTracksOutsideMusicFolders(IEnumerable<string> folderPaths)

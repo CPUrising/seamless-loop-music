@@ -58,11 +58,22 @@ namespace seamless_loop_music.Services
 
         // 音乐文件夹管理
         List<string> GetMusicFolders();
-        void AddMusicFolder(string folderPath);
+        MusicFolderAddResult AddMusicFolders(IEnumerable<string> folderPaths);
         void RemoveMusicFolder(string folderPath);
         Task ScanMusicFoldersAsync();
         Task<(int tracks, int playlists)> SyncDatabaseAsync(string externalDbPath);
 
         new void Dispose();
+    }
+
+    /// <summary>
+    /// 添加音乐文件夹的结果：用于 UI 给出"未新增 / 被覆盖 / 被拒"等反馈。
+    /// </summary>
+    public sealed class MusicFolderAddResult
+    {
+        public List<string> Added { get; } = new List<string>();
+        public List<string> SkippedCovered { get; } = new List<string>();
+        public List<string> Rejected { get; } = new List<string>();
+        public List<string> ReplacedChildren { get; } = new List<string>();
     }
 }

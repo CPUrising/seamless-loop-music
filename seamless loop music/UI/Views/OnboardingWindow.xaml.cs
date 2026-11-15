@@ -21,20 +21,52 @@ namespace seamless_loop_music.UI.Views
 
         private async void BtnChooseFolder_Click(object sender, RoutedEventArgs e)
         {
-            var dialog = new UI.FolderPicker();
-            if (!dialog.ShowDialog(this) || string.IsNullOrWhiteSpace(dialog.ResultPath))
+            var loc = LocalizationService.Instance;
+            var picked = new UI.FolderPicker().PickFolders(this);
+
+            if (picked.Canceled)
             {
                 return;
             }
 
-            var loc = LocalizationService.Instance;
+            if (!string.IsNullOrEmpty(picked.ErrorMessage))
+            {
+                seamless_loop_music.AppDialogService.Show(
+                    string.Format(loc["MsgFolderPickerError"], picked.ErrorMessage),
+                    loc["OnboardingTitle"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Error);
+                return;
+            }
+
+            if (picked.Folders.Count == 0)
+            {
+                ShowPickerProblem(picked, loc);
+                return;
+            }
+
             btnChooseFolder.IsEnabled = false;
             btnLater.IsEnabled = false;
             txtStatus.Text = loc["OnboardingStatusScanning"];
 
             try
             {
-                _playerService.AddMusicFolder(dialog.ResultPath);
+                var added = _playerService.AddMusicFolders(picked.Folders);
+
+                if (added.Added.Count == 0 && picked.Unresolved.Count == 0)
+                {
+                    seamless_loop_music.AppDialogService.Show(
+                        loc["MsgFolderAddNothing"],
+                        loc["OnboardingTitle"],
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+
+                    btnChooseFolder.IsEnabled = true;
+                    btnLater.IsEnabled = true;
+                    txtStatus.Text = loc["OnboardingStatusReady"];
+                    return;
+                }
+
                 await _playerService.ScanMusicFoldersAsync();
 
                 _eventAggregator.GetEvent<LibraryRefreshedEvent>().Publish();
@@ -60,6 +92,26 @@ namespace seamless_loop_music.UI.Views
                 btnChooseFolder.IsEnabled = true;
                 btnLater.IsEnabled = true;
                 txtStatus.Text = loc["OnboardingStatusReady"];
+            }
+        }
+
+        private static void ShowPickerProblem(seamless_loop_music.UI.FolderPickerResult picked, LocalizationService loc)
+        {
+            if (picked.Unresolved.Count > 0)
+            {
+                seamless_loop_music.AppDialogService.Show(
+                    string.Format(loc["MsgFolderUnsupported"], picked.Unresolved[0]),
+                    loc["OnboardingTitle"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+            }
+            else
+            {
+                seamless_loop_music.AppDialogService.Show(
+                    loc["MsgFolderAddNothing"],
+                    loc["OnboardingTitle"],
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
             }
         }
 

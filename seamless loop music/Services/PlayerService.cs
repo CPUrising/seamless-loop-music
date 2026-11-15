@@ -147,10 +147,23 @@ namespace seamless_loop_music.Services
         private static readonly string[] SupportedExtensions = { ".mp3", ".flac", ".wav", ".m4a", ".ogg", ".wma", ".aiff", ".opus" };
 
         public List<string> GetMusicFolders() => _databaseHelper.GetMusicFolders();
-        public void AddMusicFolder(string folderPath)
+
+        public MusicFolderAddResult AddMusicFolders(IEnumerable<string> folderPaths)
         {
-            _databaseHelper.AddMusicFolder(folderPath);
-            _folderWatcherService.Value.RefreshWatchers(); // 同步刷新监视器
+            var plan = MusicFolderPath.BuildPlan(GetMusicFolders(), folderPaths);
+
+            if (plan.ToAdd.Count > 0 || plan.ToRemove.Count > 0)
+            {
+                _databaseHelper.ApplyMusicFolderChange(plan.ToAdd, plan.ToRemove);
+                _folderWatcherService.Value.RefreshWatchers(); // 同步刷新监视器
+            }
+
+            var result = new MusicFolderAddResult();
+            result.Added.AddRange(plan.ToAdd);
+            result.SkippedCovered.AddRange(plan.SkippedCovered);
+            result.Rejected.AddRange(plan.Rejected);
+            result.ReplacedChildren.AddRange(plan.ToRemove);
+            return result;
         }
         public void RemoveMusicFolder(string folderPath)
         {
