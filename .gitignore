@@ -368,6 +368,9 @@ Release_Build/
 Release_*/
 *.zip
 
+# AI 工具本地计划/草稿目录
+.trae/
+
 # App Configs (User Data)
 loop_config.csv
 settings.conf
