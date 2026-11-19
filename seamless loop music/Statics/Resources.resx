@@ -232,6 +232,9 @@
   <data name="NavPlaybackStatistics" xml:space="preserve">
     <value>Playback statistics</value>
   </data>
+  <data name="NavMusicClassification" xml:space="preserve">
+    <value>Music classification</value>
+  </data>
   <data name="PlaybackStatisticsTitle" xml:space="preserve">
     <value>Playback statistics</value>
   </data>

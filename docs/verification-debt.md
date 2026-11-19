@@ -14,3 +14,7 @@
 | VD-0004-01 | 0004-audio-stream-container-fallback | 常规输出目录 `dotnet build` | — | 否 | ~~被运行中的播放器锁定~~ 关闭播放器后已重跑 | **已关闭**：0 错误，exe 于 2026-11-15 10:13:36 更新 |
 | VD-0004-02 | 0004-audio-stream-container-fallback | 真实 `.m4a` / `.wma` / `.aiff` / `.flac` 样本的工厂创建 | 一般 | 否 | 手头无对应容器样本（M4A 内容已通过 `.mp3` 扩展名等价覆盖） | 找到样本后补测 |
 | VD-0004-03 | 0004-audio-stream-container-fallback | WPF 内实际播放 `cet6_2024_06_2.mp3` 并设置循环点 | 严重 | 否 | ~~需要图形界面操作与重新构建~~ 人类已于 2026-11-16 完成 | **已关闭**：人工播放确认正常，未留存截图 |
+| VD-0006-01 | 0006-music-classification | WPF 界面手工冒烟：侧边栏「音乐分类」→ 选文件夹 → 开始分析 → 列表展示 → 四象限统计 | 严重 | 否 | 需人类在图形界面操作；服务层与规则层已由自动化覆盖 | 人类在 WPF 中确认后关闭 |
+| VD-0006-02 | 0006-music-classification | T07 故障注入：用不含 `lf_classify_file_w` 的旧版 DLL 验证报错文案 | 一般 | 否 | 未构造旧 DLL 运行场景，仅静态探针检查 | 用旧版 DLL 替换输出目录后启动应用确认提示文案 |
+| VD-0006-03 | 0006-music-classification | FLAC / OGG 格式的分类特征提取实测 | 一般 | 否 | 测试曲库仅含 MP3 | 找到 FLAC/OGG 样本后补测 |
+| VD-0006-04 | 0006-music-classification | 低置信阈值调参（30 首中 26 首 `IsUncertain=True`） | 一般 | 否 | 属算法特性，非缺陷；阈值集中可配置 | 另开变更调参并复验分布 |

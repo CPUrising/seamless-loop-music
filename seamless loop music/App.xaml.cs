@@ -96,6 +96,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterSingleton<IPlaylistManager, PlaylistManager>();
             containerRegistry.RegisterSingleton<IQueueManager, QueueManager>();
             containerRegistry.RegisterSingleton<ILoopAnalysisService, LoopAnalysisService>();
+            containerRegistry.RegisterSingleton<seamless_loop_music.Services.MusicClassification.IMusicClassificationService, seamless_loop_music.Services.MusicClassification.MusicClassificationService>();
             containerRegistry.RegisterSingleton<ISearchService, SearchService>();
             containerRegistry.RegisterSingleton<TrackMetadataService>();
             containerRegistry.RegisterSingleton<ITaskbarService, TaskbarService>();
@@ -114,6 +115,7 @@ namespace seamless_loop_music
             containerRegistry.RegisterForNavigation<NowPlayingView, NowPlayingViewModel>();
             containerRegistry.RegisterForNavigation<SettingsView, SettingsViewModel>();
             containerRegistry.RegisterForNavigation<PlaybackStatisticsView, PlaybackStatisticsViewModel>();
+            containerRegistry.RegisterForNavigation<MusicClassificationView, MusicClassificationViewModel>();
             containerRegistry.RegisterForNavigation<SettingsGeneralView, SettingsGeneralViewModel>();
             containerRegistry.RegisterForNavigation<SettingsMusicView, SettingsMusicViewModel>();
             containerRegistry.RegisterForNavigation<SettingsDataView, SettingsDataViewModel>();

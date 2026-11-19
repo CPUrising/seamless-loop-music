@@ -64,6 +64,7 @@ set(LOOPFINDER_SRC
     src/beat_detector.cpp
     src/loop_finder.cpp
     src/loopfinder_api.cpp
+    src/feature_extractor.cpp
 )
 
 if(BUILD_FOR_ANDROID)
@@ -104,6 +105,7 @@ endif()
 if(MSVC)
     set(CMAKE_MSVC_RUNTIME_LIBRARY "MultiThreaded$<$<CONFIG:Debug>:Debug>")
     target_compile_options(loopfinder PRIVATE
+        /utf-8
         /W3
         $<$<CONFIG:Debug>:/Od /Zi>
         $<$<CONFIG:Release>:/O2>

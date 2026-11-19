@@ -43,6 +43,7 @@ namespace seamless_loop_music.Services.LoopFinder
 
                 IntPtr pAnalyze = GetProcAddress(hModule, "lf_analyze_file_w");
                 IntPtr pError   = GetProcAddress(hModule, "lf_get_last_error");
+                IntPtr pClassify = GetProcAddress(hModule, "lf_classify_file_w");
 
                 FreeLibrary(hModule);
 
@@ -50,6 +51,11 @@ namespace seamless_loop_music.Services.LoopFinder
                 {
                     DllPresent = false;
                     LastError = "DLL exports (lf_analyze_file_w) not found. Rebuild with `cmake --build build --config Release`";
+                }
+                else if (pClassify == IntPtr.Zero)
+                {
+                    DllPresent = false;
+                    LastError = "DLL export (lf_classify_file_w) not found. Rebuild loopfinder with feature_extractor.";
                 }
                 else
                 {
@@ -86,6 +92,61 @@ namespace seamless_loop_music.Services.LoopFinder
         [DllImport("loopfinder.dll", CallingConvention = CallingConvention.Cdecl,
                    ExactSpelling = true)]
         private static extern IntPtr lf_get_last_error();
+
+        [StructLayout(LayoutKind.Sequential)]
+        public struct LfTrackFeatures
+        {
+            public double bpm;
+            public double bpmConfidence;
+            public double onsetDensity;
+            public double rmsEnergy;
+            public double spectralCentroid;
+            public long durationSamples;
+            public int sampleRate;
+        }
+
+        [DllImport("loopfinder.dll", CallingConvention = CallingConvention.Cdecl,
+                   CharSet = CharSet.Unicode, ExactSpelling = true)]
+        private static extern int lf_classify_file_w(
+            [MarshalAs(UnmanagedType.LPWStr)] string filepath,
+            out LfTrackFeatures outFeatures);
+
+        /// <summary>
+        /// 提取音频的纯信号处理特征（BPM/能量/频谱质心等）。DLL 缺失或失败返回 null。
+        /// </summary>
+        [HandleProcessCorruptedStateExceptions]
+        [SecurityCritical]
+        public LfTrackFeatures? ClassifyFile(string filePath)
+        {
+            if (!DllPresent || !File.Exists(filePath)) return null;
+            try
+            {
+                int rc = lf_classify_file_w(filePath, out LfTrackFeatures f);
+                if (rc == 0) return f;
+
+                var errorPtr = lf_get_last_error();
+                var errorMsg = errorPtr != IntPtr.Zero
+                    ? Marshal.PtrToStringAnsi(errorPtr)
+                    : "unknown error";
+                OnStatusMessage?.Invoke($"[loopfinder] classify: {errorMsg}");
+                return null;
+            }
+            catch (AccessViolationException ex)
+            {
+                OnStatusMessage?.Invoke($"[loopfinder] classify native crash: {ex.Message}");
+                return null;
+            }
+            catch (SEHException ex)
+            {
+                OnStatusMessage?.Invoke($"[loopfinder] classify native error 0x{ex.ErrorCode:X8}");
+                return null;
+            }
+            catch (Exception ex)
+            {
+                OnStatusMessage?.Invoke($"[loopfinder] classify: {ex.Message}");
+                return null;
+            }
+        }
 
         public Task<int> CheckEnvironmentAsync()
         {

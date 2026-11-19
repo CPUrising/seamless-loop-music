@@ -1,6 +1,7 @@
 #include "loopfinder/loopfinder_api.h"
 #include "loopfinder/audio_decoder.h"
 #include "loopfinder/loop_finder.h"
+#include "loopfinder/feature_extractor.h"
 
 #include <algorithm>
 #include <string>
@@ -77,6 +78,40 @@ int lf_analyze_file_w(const wchar_t* filepath, int topN,
     }
 
     return analyzeDecoded(audio, topN, outPoints, capacity);
+}
+
+int lf_classify_file_w(const wchar_t* filepath, lf_track_features_t* outFeatures) {
+    g_lastError.clear();
+
+    if (!filepath || !outFeatures) {
+        g_lastError = "invalid arguments";
+        return -1;
+    }
+
+    loopfinder::PCMData audio;
+    loopfinder::AudioDecoder decoder;
+    if (!decoder.decode(filepath, audio)) {
+        g_lastError = "decode failed";
+        return -1;
+    }
+
+    loopfinder::TrackFeatures f;
+    if (!loopfinder::FeatureExtractor().extract(
+            audio.samples.data(),
+            static_cast<int>(audio.samples.size()),
+            audio.sampleRate, f)) {
+        g_lastError = "feature extraction failed";
+        return -2;
+    }
+
+    outFeatures->bpm              = f.bpm;
+    outFeatures->bpmConfidence    = f.bpmConfidence;
+    outFeatures->onsetDensity     = f.onsetDensity;
+    outFeatures->rmsEnergy        = f.rmsEnergy;
+    outFeatures->spectralCentroid = f.spectralCentroid;
+    outFeatures->durationSamples  = f.durationSamples;
+    outFeatures->sampleRate       = f.sampleRate;
+    return 0;
 }
 #endif
 

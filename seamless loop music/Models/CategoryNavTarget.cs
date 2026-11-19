@@ -9,5 +9,6 @@ namespace seamless_loop_music.Models
         public CategoryType Type { get; set; }
         public bool IsSettings { get; set; } // 侧边栏里的设置入口，不参与分类过滤
         public bool IsStatistics { get; set; } // 侧边栏里的播放统计入口，不参与分类过滤
+        public bool IsClassification { get; set; } // 侧边栏里的音乐分类入口，不参与分类过滤
     }
 }
