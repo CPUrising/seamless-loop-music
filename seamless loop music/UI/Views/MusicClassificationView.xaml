@@ -114,8 +114,9 @@
         <!-- 结果列表 -->
         <Border Grid.Row="3" Background="{DynamicResource BrushSurface}" BorderBrush="{DynamicResource BrushBorder}"
                 BorderThickness="1" CornerRadius="6" Padding="0,0,0,0" ClipToBounds="True">
-            <ListView ItemsSource="{Binding Results}" Background="Transparent" BorderThickness="0"
+            <ListView x:Name="ResultList" ItemsSource="{Binding Results}" Background="Transparent" BorderThickness="0"
                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                      MouseDoubleClick="ResultList_MouseDoubleClick"
                       VirtualizingPanel.IsVirtualizing="True" VirtualizingPanel.VirtualizationMode="Recycling">
                 <ListView.View>
                     <GridView>

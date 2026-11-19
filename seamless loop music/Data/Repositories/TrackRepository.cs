@@ -67,6 +67,16 @@ namespace seamless_loop_music.Data.Repositories
             }
         }
 
+        public async Task<MusicTrack> GetByFilePathAsync(string filePath)
+        {
+            if (string.IsNullOrWhiteSpace(filePath)) return null;
+            using (var db = GetConnection())
+            {
+                return await db.QueryFirstOrDefaultAsync<MusicTrack>(
+                    FullTrackSelect + " WHERE t.FilePath = @FilePath", new { FilePath = filePath });
+            }
+        }
+
         public MusicTrack GetByFingerprint(string fileName, long totalSamples)
         {
             using (var db = GetConnection())

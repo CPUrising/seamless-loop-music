@@ -9,6 +9,7 @@ namespace seamless_loop_music.Data.Repositories
         IEnumerable<MusicTrack> GetAll();
         Task<List<MusicTrack>> GetAllAsync();
         Task<MusicTrack> GetByIdAsync(int id);
+        Task<MusicTrack> GetByFilePathAsync(string filePath);
         MusicTrack GetByFingerprint(string fileName, long totalSamples);
         void Save(MusicTrack track);
         void BulkInsert(IEnumerable<MusicTrack> tracks);

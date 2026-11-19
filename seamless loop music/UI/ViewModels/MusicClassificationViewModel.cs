@@ -6,7 +6,9 @@ using System.Threading.Tasks;
 using System.Windows;
 using Prism.Commands;
 using Prism.Mvvm;
+using seamless_loop_music.Data.Repositories;
 using seamless_loop_music.Models;
+using seamless_loop_music.Services;
 using seamless_loop_music.Services.MusicClassification;
 
 namespace seamless_loop_music.UI.ViewModels
@@ -17,6 +19,8 @@ namespace seamless_loop_music.UI.ViewModels
     public class MusicClassificationViewModel : BindableBase
     {
         private readonly IMusicClassificationService _classificationService;
+        private readonly IPlaybackService _playbackService;
+        private readonly ITrackRepository _trackRepository;
         private CancellationTokenSource _cts;
 
         public ObservableCollection<TrackClassificationResult> Results { get; }
@@ -70,14 +74,24 @@ namespace seamless_loop_music.UI.ViewModels
         public DelegateCommand AnalyzeCommand { get; }
         public DelegateCommand CancelCommand { get; }
 
-        public MusicClassificationViewModel(IMusicClassificationService classificationService)
+        /// <summary>双击结果行播放该曲目。</summary>
+        public DelegateCommand<TrackClassificationResult> PlayCommand { get; }
+
+        public MusicClassificationViewModel(
+            IMusicClassificationService classificationService,
+            IPlaybackService playbackService,
+            ITrackRepository trackRepository)
         {
             _classificationService = classificationService;
+            _playbackService = playbackService;
+            _trackRepository = trackRepository;
 
             BrowseCommand = new DelegateCommand(OnBrowse, () => !IsAnalyzing);
             AnalyzeCommand = new DelegateCommand(async () => await OnAnalyzeAsync(),
                 () => !IsAnalyzing && !string.IsNullOrWhiteSpace(FolderPath));
             CancelCommand = new DelegateCommand(() => _cts?.Cancel(), () => IsAnalyzing);
+            PlayCommand = new DelegateCommand<TrackClassificationResult>(
+                async r => await OnPlayAsync(r), r => r != null && r.Succeeded);
 
             if (classificationService is MusicClassificationService svc)
             {
@@ -136,6 +150,32 @@ namespace seamless_loop_music.UI.ViewModels
                 BrowseCommand.RaiseCanExecuteChanged();
                 _cts?.Dispose();
                 _cts = null;
+            }
+        }
+
+        /// <summary>
+        /// 双击播放：按文件路径解析出媒体库中的曲目（保证有真实 Id，避免外键写入失败），
+        /// 未入库的文件直接提示，不静默失败。
+        /// </summary>
+        private async Task OnPlayAsync(TrackClassificationResult result)
+        {
+            if (result == null || !result.Succeeded) return;
+
+            try
+            {
+                var track = await _trackRepository.GetByFilePathAsync(result.FilePath);
+                if (track == null)
+                {
+                    StatusText = $"未在媒体库中找到：{result.FileName}（请先扫描该文件夹）";
+                    return;
+                }
+
+                await _playbackService.LoadTrackAsync(track, true);
+                StatusText = $"正在播放：{result.FileName}";
+            }
+            catch (Exception ex)
+            {
+                StatusText = $"播放失败：{ex.Message}";
             }
         }
 

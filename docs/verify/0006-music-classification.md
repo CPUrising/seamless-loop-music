@@ -42,6 +42,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File artifacts/classify-smoke.ps1
 | 全量单测 | 310 通过 / 2 失败（312） | 失败为既有 `VD-0003-02` 环境依赖（见偏差 D1） |
 | 真实曲库批量 | **30/30 成功，0 失败，无 decode failed** | [verify-0006-classify-smoke.log](file:///d:/seamless-loop-music/seamless%20loop%20music/artifacts/verify-0006-classify-smoke.log) |
 | `lf_analyze_file_w` 回归 | **未退化**：`dusk.mp3` 寻环 `start=825355 end=4588607 score=0.982` | [verify-0006-loopfinder-regression.log](file:///d:/seamless-loop-music/seamless%20loop%20music/artifacts/verify-0006-loopfinder-regression.log) |
+| 双击播放路径解析 | **通过**：`dusk.mp3` 解析为库内 `Id=668`；未入库路径返回 null（不静默播放） | [verify-0006-resolve-track.log](file:///d:/seamless-loop-music/seamless%20loop%20music/artifacts/verify-0006-resolve-track.log) |
 
 ## 场景覆盖
 
@@ -52,6 +53,7 @@ powershell -NoProfile -ExecutionPolicy Bypass -File artifacts/classify-smoke.ps1
 | Rule-Based Quadrant Classification | T03 四象限规则映射 | `MusicClassificationRuleTests` 7 个用例（四象限 + 阈值边界 + 退化 + 双轴合成） | **PASS** |
 | Rule-Based Quadrant Classification | T04 低置信结果显式标记 | `T04_Classify_LowConfidence_StillLabelledButMarkedUncertain`、`T04_Classify_HighConfidence_NotMarkedUncertain` | **PASS** |
 | Batch Folder Classification Display | T05 批量分析并展示 | 服务层批量 30 首成功；UI 视图与导航入口已实现，**人工 UI 冒烟 NOT RUN**（见偏差 D2） | **PASS（服务层）/ NOT RUN（UI 手工）** |
+| Batch Folder Classification Display | T08 双击结果行播放 | `GetByFilePathAsync` 路径解析实测（Id=668 / 未入库返回 null）；**UI 双击手势人工冒烟 NOT RUN** | **PASS（解析层）/ NOT RUN（UI 手工）** |
 | Batch Folder Classification Display | T06 测试曲库批量成功 | 30/30 成功，0 decode failed | **PASS** |
 | Native Classification Export Contract | T07 导出缺失时明确报错 | `Native` 静态探针检查 `lf_classify_file_w`，缺失时 `LastError` 含 "DLL export (lf_classify_file_w) not found"；**未构造旧版 DLL 实测** | **PASS（代码路径）/ NOT RUN（故障注入）** |
 
