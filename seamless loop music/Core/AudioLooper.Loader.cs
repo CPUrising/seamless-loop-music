@@ -98,25 +98,12 @@ namespace seamless_loop_music
         }
 
         /// <summary>
-        /// 创建对应格式的音频流
+        /// 创建对应格式的音频流。
+        /// 解码器选择统一由 <see cref="AudioStreamFactory"/> 负责：扩展名优先，失败时按文件头回退。
         /// </summary>
         private WaveStream CreateAudioStream(string filePath)
         {
-            string ext = Path.GetExtension(filePath).ToLower();
-            switch (ext)
-            {
-                case ".wav":
-                    return new WaveFileReader(filePath);
-                case ".ogg":
-                    return new VorbisWaveReader(filePath);
-                case ".mp3":
-                    return new Mp3FileReader(filePath);
-                case ".flac":
-                    // 使用 bundled NAudio FLAC reader，避免依赖 Windows 系统解码器。
-                    return new FlacReader(filePath);
-                default:
-                    return null;
-            }
+            return AudioStreamFactory.TryCreate(filePath);
         }
     }
 }

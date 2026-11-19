@@ -11,3 +11,6 @@
 | VD-0002-04 | 0002-loopfinder-unicode-path | WPF 界面手工冒烟（打开中文路径曲目 → 自动寻环） | 严重 | 否 | ~~需人类在图形界面操作~~ 人类已于 2026-11-13 完成 | **已关闭**：人工见证通过，未留存截图/日志（证据强度弱于自动化用例） |
 | VD-0003-01 | 0003-music-folder-picker-library-multiselect | 选择器人工冒烟：①设置页选中「音乐」库并添加 ②Ctrl 多选两个目录 ③添加父目录替换子目录 ④重复添加提示 ⑤选中「此电脑」提示 ⑥引导页添加并扫描 | 严重 | 否 | ~~需要图形界面交互~~ 人类已于 2026-11-14 完成 | **已关闭**：人工见证全部通过，未留存截图 |
 | VD-0003-02 | 0003-music-folder-picker-library-multiselect | 全量单测中 `PlaybackStatisticsAndroidWpfInteropTests` 的 2 个 fixture 缺失失败 | 一般 | 否 | 既有问题：`Fixtures/Sync/*` 未复制到测试输出目录；已用 stash 基线复跑确认与本变更无关 | 另开变更修复测试工程 fixture 复制 |
+| VD-0004-01 | 0004-audio-stream-container-fallback | 常规输出目录 `dotnet build` | — | 否 | ~~被运行中的播放器锁定~~ 关闭播放器后已重跑 | **已关闭**：0 错误，exe 于 2026-11-15 10:13:36 更新 |
+| VD-0004-02 | 0004-audio-stream-container-fallback | 真实 `.m4a` / `.wma` / `.aiff` / `.flac` 样本的工厂创建 | 一般 | 否 | 手头无对应容器样本（M4A 内容已通过 `.mp3` 扩展名等价覆盖） | 找到样本后补测 |
+| VD-0004-03 | 0004-audio-stream-container-fallback | WPF 内实际播放 `cet6_2024_06_2.mp3` 并设置循环点 | 严重 | 否 | ~~需要图形界面操作与重新构建~~ 人类已于 2026-11-16 完成 | **已关闭**：人工播放确认正常，未留存截图 |

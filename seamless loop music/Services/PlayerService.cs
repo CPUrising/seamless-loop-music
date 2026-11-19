@@ -378,33 +378,12 @@ namespace seamless_loop_music.Services
         }
 
         /// <summary>
-        /// 使用 NAudio 创建音频流（与 AudioLooper.CreateAudioStream 保持一致）
-        /// 确保扫描时和加载时的采样数计算方式完全相同
+        /// 使用 NAudio 创建音频流。
+        /// 与播放端共用 <see cref="AudioStreamFactory"/>，确保扫描时和加载时的采样数计算方式完全相同。
         /// </summary>
         private WaveStream CreateNAudioStream(string filePath)
         {
-            try
-            {
-                string ext = Path.GetExtension(filePath).ToLower();
-                switch (ext)
-                {
-                    case ".wav":
-                        return new WaveFileReader(filePath);
-                    case ".ogg":
-                        return new NAudio.Vorbis.VorbisWaveReader(filePath);
-                    case ".mp3":
-                        return new Mp3FileReader(filePath);
-                    case ".flac":
-                        // 与播放端保持一致：FLAC 使用 bundled reader，确保采样数计算和实际加载一致。
-                        return new FlacReader(filePath);
-                    default:
-                        return null;
-                }
-            }
-            catch
-            {
-                return null;
-            }
+            return AudioStreamFactory.TryCreate(filePath);
         }
 
         public void Dispose() { }

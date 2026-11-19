@@ -333,6 +333,23 @@ namespace seamless_loop_music.Services
                     }
                     else
                     {
+                        // 元数据（TagLib）与实际解码器的采样数可能不一致（例如扩展名与容器不符的文件），
+                        // 以解码器为准校正 TotalSamples 与循环点，避免播放中途被判为循环终点而跳回开头。
+                        long realTotal = _audioLooper.TotalSamples;
+                        long newStart;
+                        long newEnd;
+                        if (LoopPointReconciler.Reconcile(
+                                track.TotalSamples, track.LoopStart, track.LoopEnd, realTotal,
+                                out newStart, out newEnd))
+                        {
+                            track.TotalSamples = realTotal;
+                            track.LoopStart = newStart;
+                            track.LoopEnd = newEnd;
+                            _trackRepository.UpdateLoopPoints(track.Id, newStart, newEnd);
+                            System.Diagnostics.Debug.WriteLine(
+                                $"[LoopReconcile] {track.FileName}: total {realTotal}, loop {newStart} - {newEnd}");
+                        }
+
                         _audioLooper.SetLoopStartSample(track.LoopStart);
                         _audioLooper.SetLoopEndSample(track.LoopEnd);
                     }

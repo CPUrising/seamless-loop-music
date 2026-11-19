@@ -93,7 +93,12 @@ namespace seamless_loop_music
                                 Thread.Sleep(20);
                             }
                         }
-                        catch { break; }
+                        catch (Exception ex)
+                        {
+                            // 保留诊断信息：此前异常被完全吞掉，导致"约 1 秒后静默停止"难以定位
+                            System.Diagnostics.Debug.WriteLine($"[AudioLooperFiller] {ex.GetType().Name}: {ex.Message}");
+                            break;
+                        }
                     }
                     else 
                     {
@@ -102,7 +107,10 @@ namespace seamless_loop_music
                 }
             }
             catch (ThreadAbortException) { }
-            catch (Exception) { }
+            catch (Exception ex)
+            {
+                System.Diagnostics.Debug.WriteLine($"[AudioLooperFiller] outer {ex.GetType().Name}: {ex.Message}");
+            }
         }
     }
 }

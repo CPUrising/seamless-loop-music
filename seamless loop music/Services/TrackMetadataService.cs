@@ -160,34 +160,17 @@ namespace seamless_loop_music.Services
             try
             {
                 if (string.IsNullOrEmpty(filePath) || !File.Exists(filePath)) return 44100;
-                string ext = Path.GetExtension(filePath).ToLower();
-                WaveStream reader = null;
+
+                var reader = AudioStreamFactory.TryCreate(filePath);
+                if (reader == null) return 44100;
+
                 try
                 {
-                    switch (ext)
-                    {
-                        case ".ogg":
-                            reader = new NAudio.Vorbis.VorbisWaveReader(filePath);
-                            break;
-                        case ".wav":
-                            reader = new NAudio.Wave.WaveFileReader(filePath);
-                            break;
-                        case ".mp3":
-                            reader = new NAudio.Wave.Mp3FileReader(filePath);
-                            break;
-                        case ".flac":
-                            // FLAC 使用 bundled reader，避免依赖 Windows 系统解码器。
-                            reader = new FlacReader(filePath);
-                            break;
-                        default:
-                            reader = new NAudio.Wave.AudioFileReader(filePath);
-                            break;
-                    }
                     return reader.WaveFormat.SampleRate;
                 }
                 finally
                 {
-                    reader?.Dispose();
+                    reader.Dispose();
                 }
             }
             catch
